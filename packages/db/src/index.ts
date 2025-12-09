@@ -25,6 +25,8 @@ export class InMemoryDBClient implements DBClient {
   }
 
   async query<T>(_config: DataSourceConfig, sql: string): Promise<QueryResult<T>> {
+    void _config;
+    void sql;
     return { rows: [] };
   }
 }

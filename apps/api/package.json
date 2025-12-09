@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc -b",
-    "lint": "echo 'TODO: add api lint'",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "echo 'TODO: add api tests'"
   },
   "dependencies": {},

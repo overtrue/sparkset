@@ -3,4 +3,4 @@ const boot = async () => {
   console.log('[API] Sparkline placeholder service running.');
 };
 
-boot();
+void boot();
