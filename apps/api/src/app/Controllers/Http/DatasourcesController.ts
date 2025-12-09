@@ -1,23 +1,36 @@
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply } from 'fastify';
+import { DatasourceService } from '../../services/datasourceService';
+import { datasourceCreateSchema, datasourceUpdateSchema } from '../../validators/datasource';
+import { TypedRequest } from '../types';
 
 export class DatasourcesController {
-  async index(_req: FastifyRequest, reply: FastifyReply) {
-    return reply.send({ items: [] });
+  constructor(private service: DatasourceService) {}
+
+  async index(_req: TypedRequest, reply: FastifyReply) {
+    return reply.send({ items: this.service.list() });
   }
 
-  async store(req: FastifyRequest, reply: FastifyReply) {
-    return reply.code(201).send({ message: 'Created', body: req.body });
+  async store(req: TypedRequest, reply: FastifyReply) {
+    const parsed = datasourceCreateSchema.parse(req.body);
+    const record = this.service.create(parsed);
+    return reply.code(201).send(record);
   }
 
-  async update(req: FastifyRequest, reply: FastifyReply) {
-    return reply.send({ message: 'Updated', params: req.params, body: req.body });
+  async update(req: TypedRequest, reply: FastifyReply) {
+    const parsed = datasourceUpdateSchema.parse({ ...req.body, ...req.params });
+    const record = this.service.update(parsed);
+    return reply.send(record);
   }
 
-  async destroy(req: FastifyRequest, reply: FastifyReply) {
-    return reply.send({ message: 'Deleted', params: req.params });
+  async destroy(req: TypedRequest, reply: FastifyReply) {
+    const id = Number((req.params as { id: string }).id);
+    this.service.remove(id);
+    return reply.code(204).send();
   }
 
-  async sync(req: FastifyRequest, reply: FastifyReply) {
-    return reply.send({ message: 'Sync triggered', params: req.params });
+  async sync(req: TypedRequest, reply: FastifyReply) {
+    const id = Number((req.params as { id: string }).id);
+    const lastSyncAt = this.service.sync(id);
+    return reply.send({ id, lastSyncAt });
   }
 }

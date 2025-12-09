@@ -3,9 +3,10 @@ import { ActionsController } from '../app/Controllers/Http/ActionsController';
 import { DatasourcesController } from '../app/Controllers/Http/DatasourcesController';
 import { HealthController } from '../app/Controllers/Http/HealthController';
 import { QueriesController } from '../app/Controllers/Http/QueriesController';
+import { DatasourceService } from '../app/services/datasourceService';
 
 const healthController = new HealthController();
-const datasourcesController = new DatasourcesController();
+const datasourcesController = new DatasourcesController(new DatasourceService());
 const actionsController = new ActionsController();
 const queriesController = new QueriesController();
 
