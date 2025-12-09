@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc -b",
+    "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "migrate": "echo \"Apply SQL in database/migrations with your DB client (TODO: wire real tool)\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "echo 'TODO: add api tests'"
   },
