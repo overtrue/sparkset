@@ -1,6 +1,18 @@
-// Placeholder for AdonisJS bootstrap; replace with real HTTP server later.
-const boot = async () => {
-  console.log('[API] Sparkline placeholder service running.');
-};
+import Fastify from 'fastify';
+import { loadEnv } from './env';
+import { registerRoutes } from './start/routes';
 
-void boot();
+const env = loadEnv();
+const app = Fastify({ logger: env.LOG_LEVEL });
+
+registerRoutes(app);
+
+void app
+  .listen({ host: env.HOST, port: Number(env.PORT) })
+  .then((address) => {
+    app.log.info(`Sparkline API listening on ${address}`);
+  })
+  .catch((err) => {
+    app.log.error(err, 'Failed to start Sparkline API');
+    process.exit(1);
+  });
