@@ -7,30 +7,31 @@ export class DatasourcesController {
   constructor(private service: DatasourceService) {}
 
   async index(_req: TypedRequest, reply: FastifyReply) {
-    return reply.send({ items: this.service.list() });
+    const items = await this.service.list();
+    return reply.send({ items });
   }
 
   async store(req: TypedRequest, reply: FastifyReply) {
     const parsed = datasourceCreateSchema.parse(req.body);
-    const record = this.service.create(parsed);
+    const record = await this.service.create(parsed);
     return reply.code(201).send(record);
   }
 
   async update(req: TypedRequest, reply: FastifyReply) {
     const parsed = datasourceUpdateSchema.parse({ ...req.body, ...req.params });
-    const record = this.service.update(parsed);
+    const record = await this.service.update(parsed);
     return reply.send(record);
   }
 
   async destroy(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    this.service.remove(id);
+    await this.service.remove(id);
     return reply.code(204).send();
   }
 
   async sync(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    const lastSyncAt = this.service.sync(id);
+    const lastSyncAt = await this.service.sync(id);
     return reply.send({ id, lastSyncAt });
   }
 }

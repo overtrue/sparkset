@@ -9,19 +9,33 @@ import { ConversationsController } from '../app/Controllers/Http/ConversationsCo
 import { ConversationService } from '../app/services/conversationService';
 
 const healthController = new HealthController();
-const datasourcesController = new DatasourcesController(new DatasourceService());
 const actionsController = new ActionsController(new ActionService());
 const queriesController = new QueriesController();
 const conversationsController = new ConversationsController(new ConversationService());
 
-export const registerRoutes = (app: FastifyInstance) => {
+interface RouteDeps {
+  datasourceService: DatasourceService;
+}
+
+export const registerRoutes = (app: FastifyInstance, deps: RouteDeps) => {
   app.get('/health', (req, reply) => healthController.handle(req, reply));
 
-  app.get('/datasources', (req, reply) => datasourcesController.index(req, reply));
-  app.post('/datasources', (req, reply) => datasourcesController.store(req, reply));
-  app.put('/datasources/:id', (req, reply) => datasourcesController.update(req, reply));
-  app.delete('/datasources/:id', (req, reply) => datasourcesController.destroy(req, reply));
-  app.post('/datasources/:id/sync', (req, reply) => datasourcesController.sync(req, reply));
+  // bind datasource controller per request to inject service
+  app.get('/datasources', (req, reply) =>
+    new DatasourcesController(deps.datasourceService).index(req, reply),
+  );
+  app.post('/datasources', (req, reply) =>
+    new DatasourcesController(deps.datasourceService).store(req, reply),
+  );
+  app.put('/datasources/:id', (req, reply) =>
+    new DatasourcesController(deps.datasourceService).update(req, reply),
+  );
+  app.delete('/datasources/:id', (req, reply) =>
+    new DatasourcesController(deps.datasourceService).destroy(req, reply),
+  );
+  app.post('/datasources/:id/sync', (req, reply) =>
+    new DatasourcesController(deps.datasourceService).sync(req, reply),
+  );
 
   app.get('/actions', (req, reply) => actionsController.index(req, reply));
   app.get('/actions/:id', (req, reply) => actionsController.show(req, reply));

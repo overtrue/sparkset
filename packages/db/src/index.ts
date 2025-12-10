@@ -30,3 +30,6 @@ export class InMemoryDBClient implements DBClient {
     return { rows: [] };
   }
 }
+
+export * from './repository';
+export * from './datasourceRepo';
