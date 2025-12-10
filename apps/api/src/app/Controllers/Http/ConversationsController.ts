@@ -7,19 +7,21 @@ export class ConversationsController {
   constructor(private service: ConversationService) {}
 
   async index(_req: TypedRequest, reply: FastifyReply) {
-    return reply.send({ items: this.service.list() });
+    const items = await this.service.list();
+    return reply.send({ items });
   }
 
   async show(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    const conv = this.service.get(id);
+    const conv = await this.service.get(id);
     if (!conv) return reply.code(404).send({ message: 'Conversation not found' });
-    return reply.send({ conversation: conv, messages: this.service.messagesByConversation(id) });
+    const messages = await this.service.messagesByConversation(id);
+    return reply.send({ conversation: conv, messages });
   }
 
   async store(req: TypedRequest, reply: FastifyReply) {
     const parsed = conversationCreateSchema.parse(req.body);
-    const conv = this.service.create(parsed);
+    const conv = await this.service.create(parsed);
     return reply.code(201).send(conv);
   }
 
@@ -28,7 +30,7 @@ export class ConversationsController {
       ...req.body,
       conversationId: (req.params as { id: string }).id,
     });
-    const msg = this.service.appendMessage({
+    const msg = await this.service.appendMessage({
       conversationId: parsed.conversationId,
       role: parsed.role,
       content: parsed.content,

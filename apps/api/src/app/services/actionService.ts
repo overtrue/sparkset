@@ -1,42 +1,59 @@
 import { Action } from '@sparkline/models';
+import { ActionRepository, PrismaActionRepository } from '@sparkline/db';
+import { PrismaClient } from '@prisma/client';
 
 export type CreateActionInput = Omit<Action, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateActionInput = Partial<CreateActionInput> & { id: number };
 
 export class ActionService {
-  private store = new Map<number, Action>();
+  private memoryStore = new Map<number, Action>();
   private currentId = 1;
+  private repo?: ActionRepository;
 
-  list() {
-    return Array.from(this.store.values());
+  constructor(repo?: ActionRepository) {
+    this.repo = repo;
   }
 
-  get(id: number) {
-    return this.store.get(id);
+  static fromPrismaClient(prisma: PrismaClient) {
+    return new ActionService(new PrismaActionRepository(prisma));
   }
 
-  create(input: CreateActionInput): Action {
+  async list() {
+    if (this.repo) return this.repo.list();
+    return Array.from(this.memoryStore.values());
+  }
+
+  async get(id: number) {
+    if (this.repo) return this.repo.get(id);
+    return this.memoryStore.get(id) ?? null;
+  }
+
+  async create(input: CreateActionInput) {
+    if (this.repo) return this.repo.create(input);
     const record: Action = {
       id: this.currentId++,
       createdAt: new Date(),
       updatedAt: new Date(),
       ...input,
     };
-    this.store.set(record.id, record);
+    this.memoryStore.set(record.id, record);
     return record;
   }
 
-  update(input: UpdateActionInput): Action {
-    const existing = this.store.get(input.id);
+  async update(input: UpdateActionInput) {
+    if (this.repo) return this.repo.update(input);
+    const existing = this.memoryStore.get(input.id);
     if (!existing) throw new Error('Action not found');
-    const record: Action = { ...existing, ...input, id: existing.id, updatedAt: new Date() };
-    this.store.set(record.id, record);
+    const record: Action = { ...existing, ...input, updatedAt: new Date() };
+    this.memoryStore.set(record.id, record);
     return record;
   }
 
-  remove(id: number) {
-    if (!this.store.delete(id)) {
-      throw new Error('Action not found');
+  async remove(id: number) {
+    if (this.repo) {
+      await this.repo.remove(id);
+      return;
     }
+    if (!this.memoryStore.delete(id)) throw new Error('Action not found');
   }
 }

@@ -12,7 +12,7 @@ export class ActionsController {
 
   async show(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    const item = this.service.get(id);
+    const item = await this.service.get(id);
     if (!item) return reply.code(404).send({ message: 'Action not found' });
     return reply.send(item);
   }
@@ -31,13 +31,13 @@ export class ActionsController {
 
   async destroy(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    this.service.remove(id);
+    await this.service.remove(id);
     return reply.code(204).send();
   }
 
   async execute(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    const item = this.service.get(id);
+    const item = await this.service.get(id);
     if (!item) return reply.code(404).send({ message: 'Action not found' });
     // TODO: integrate real executor; stub returns payload
     return reply.send({ message: 'Action executed', action: item });

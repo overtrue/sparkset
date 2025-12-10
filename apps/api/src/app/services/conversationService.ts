@@ -1,4 +1,6 @@
 import { Conversation, Message, Role } from '@sparkline/models';
+import { ConversationRepository, PrismaConversationRepository } from '@sparkline/db';
+import { PrismaClient } from '@prisma/client';
 
 export interface CreateConversationInput {
   title?: string;
@@ -18,19 +20,29 @@ export class ConversationService {
   private conversationId = 1;
   private messageId = 1;
 
-  list(): Conversation[] {
+  constructor(private repo?: ConversationRepository) {}
+
+  static fromPrismaClient(prisma: PrismaClient) {
+    return new ConversationService(new PrismaConversationRepository(prisma));
+  }
+
+  async list(): Promise<Conversation[]> {
+    if (this.repo) return this.repo.list();
     return Array.from(this.conversations.values());
   }
 
-  get(id: number) {
+  async get(id: number) {
+    if (this.repo) return this.repo.get(id);
     return this.conversations.get(id);
   }
 
-  messagesByConversation(id: number) {
+  async messagesByConversation(id: number) {
+    if (this.repo) return this.repo.messages(id);
     return this.messages.get(id) ?? [];
   }
 
-  create(input: CreateConversationInput): Conversation {
+  async create(input: CreateConversationInput): Promise<Conversation> {
+    if (this.repo) return this.repo.create(input);
     const now = new Date();
     const conv: Conversation = {
       id: this.conversationId++,
@@ -44,7 +56,8 @@ export class ConversationService {
     return conv;
   }
 
-  appendMessage(input: AppendMessageInput): Message {
+  async appendMessage(input: AppendMessageInput): Promise<Message> {
+    if (this.repo) return this.repo.appendMessage(input);
     const conv = this.conversations.get(input.conversationId);
     if (!conv) throw new Error('Conversation not found');
     const msg: Message = {
