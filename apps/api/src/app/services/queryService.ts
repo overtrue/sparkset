@@ -44,10 +44,13 @@ export class QueryService {
           const list = await this.deps.datasourceService.list();
           return list[0]?.id ?? null;
         },
-        buildSql: async (q, ds) => ({ sql: `-- TODO: SQL for ${q}`, datasourceId: ds }),
+        buildSql: async (q, ds) => ({
+          sql: `SELECT * FROM orders${input.limit ? ` LIMIT ${input.limit}` : ''}; -- TODO: replace with AI generated SQL for ${q}`,
+          datasourceId: ds,
+        }),
       });
 
-    const plan = await planner.plan(input.question, input.datasource);
+    const plan = await planner.plan(input.question, input.datasource, input.limit);
 
     // If executor wired, run real queries
     if (this.deps.executor) {
