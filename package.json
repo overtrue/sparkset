@@ -11,6 +11,9 @@
     "format": "turbo run format",
     "prepare": "husky"
   },
+  "prisma": {
+    "schema": "packages/db/prisma/schema.prisma"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.2",
