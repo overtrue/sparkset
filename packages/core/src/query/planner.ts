@@ -17,17 +17,21 @@ export interface PlannerDeps {
 export class QueryPlanner {
   constructor(private deps: PlannerDeps = {}) {}
 
-  async plan(question: string, datasourceId?: number): Promise<PlannedQuery> {
+  async plan(question: string, datasourceId?: number, limit?: number): Promise<PlannedQuery> {
     const ds =
       datasourceId ??
       (this.deps.chooseDatasource ? await this.deps.chooseDatasource(question) : null);
     if (!ds) throw new Error('No datasource available');
     const sqlSnippet =
       this.deps.buildSql?.(question, ds) ??
-      Promise.resolve({ sql: `-- TODO: SQL for ${question}`, datasourceId: ds });
+      Promise.resolve({
+        sql: `SELECT * FROM orders${limit ? ` LIMIT ${limit}` : ''}; -- TODO: replace with AI generated SQL for ${question}`,
+        datasourceId: ds,
+      });
     return {
       question,
       sql: [await sqlSnippet],
+      limit,
     };
   }
 }
