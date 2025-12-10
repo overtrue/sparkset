@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type React from 'react';
 import './globals.css';
-import { AppSidebar } from '../components/app-sidebar/sidebar';
+import { AppSidebar } from '../components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../components/ui/sidebar';
 import { Separator } from '../components/ui/separator';
 
