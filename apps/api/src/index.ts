@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { DatasourceService } from './app/services/datasourceService';
 import { ActionService } from './app/services/actionService';
 import { ConversationService } from './app/services/conversationService';
+import { SchemaService } from './app/services/schemaService';
 import { loadEnv } from './env';
 import { registerRoutes } from './start/routes';
 import { buildDatasourceConfig } from './config/database';
@@ -13,6 +14,10 @@ import {
   PrismaConversationRepository,
   getPrisma,
   createDBClient,
+  PrismaSchemaCacheRepository,
+  MySQLSchemaCacheRepository,
+  InMemorySchemaCacheRepository,
+  InMemoryDBClient,
 } from '@sparkline/db';
 import { QueryExecutor } from '@sparkline/core';
 
@@ -22,6 +27,7 @@ const app = Fastify({ logger: env.LOG_LEVEL });
 let datasourceService: DatasourceService;
 let actionService: ActionService;
 let conversationService: ConversationService;
+let schemaService: SchemaService;
 let prismaClient;
 let queryExecutor: QueryExecutor | undefined;
 const dsConfig = buildDatasourceConfig(env);
@@ -30,6 +36,23 @@ if (process.env.DATABASE_URL) {
   datasourceService = new DatasourceService(new PrismaDatasourceRepository(prismaClient));
   actionService = new ActionService(new PrismaActionRepository(prismaClient));
   conversationService = new ConversationService(new PrismaConversationRepository(prismaClient));
+  schemaService = new SchemaService({
+    schemaRepo: new PrismaSchemaCacheRepository(prismaClient),
+    getDBClient: async (ds) =>
+      createDBClient(
+        {
+          id: ds.id,
+          name: ds.name,
+          type: ds.type,
+          host: ds.host,
+          port: ds.port,
+          username: ds.username,
+          password: ds.password,
+          database: ds.database,
+        },
+        prismaClient,
+      ),
+  });
   queryExecutor = new QueryExecutor({
     getDBClient: async (dsId) => {
       const ds = (await datasourceService.list()).find((d) => d.id === dsId);
@@ -67,6 +90,20 @@ if (process.env.DATABASE_URL) {
   datasourceService = new DatasourceService(repo);
   actionService = new ActionService();
   conversationService = new ConversationService();
+  schemaService = new SchemaService({
+    schemaRepo: new MySQLSchemaCacheRepository(new MySQLRepo(dsConfig)),
+    getDBClient: async (ds) =>
+      createDBClient({
+        id: ds.id,
+        name: ds.name,
+        type: ds.type,
+        host: ds.host,
+        port: ds.port,
+        username: ds.username,
+        password: ds.password,
+        database: ds.database,
+      }),
+  });
   queryExecutor = new QueryExecutor({
     getDBClient: async (dsId) => {
       const ds = (await datasourceService.list()).find((d) => d.id === dsId);
@@ -100,6 +137,10 @@ if (process.env.DATABASE_URL) {
   datasourceService = new DatasourceService();
   actionService = new ActionService();
   conversationService = new ConversationService();
+  schemaService = new SchemaService({
+    schemaRepo: new InMemorySchemaCacheRepository(),
+    getDBClient: async () => new InMemoryDBClient(),
+  });
   app.log.warn('DB env not set; using in-memory datasource store');
 }
 
@@ -125,6 +166,7 @@ registerRoutes(app, {
   datasourceService,
   actionService,
   conversationService,
+  schemaService,
   queryExecutor,
   getDBClient,
   getDatasourceConfig: async (id: number) => {

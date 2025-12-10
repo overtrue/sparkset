@@ -38,3 +38,4 @@ export * from './prismaActionRepository';
 export * from './prismaConversationRepository';
 export * from './prismaClient';
 export * from './dbClientFactory';
+export * from './schemaRepo';

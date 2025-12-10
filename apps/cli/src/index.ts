@@ -90,6 +90,24 @@ program
   });
 
 program
+  .command('datasource:schema')
+  .description('Show cached schema of a datasource')
+  .requiredOption('--id <id>', 'Datasource id')
+  .action(async (options) => {
+    const res = await apiFetch<{ id: number; tables: { tableName: string; columns: any[] }[] }>(
+      `/datasources/${options.id}/schema`,
+    );
+    if (!res.tables?.length) {
+      console.log('No cached schema found.');
+      return;
+    }
+    res.tables.forEach((table) => {
+      console.log(`\nTable: ${table.tableName}`);
+      console.table(table.columns);
+    });
+  });
+
+program
   .command('query:run')
   .description('Run a natural language query via API')
   .argument('<question>', 'Question to ask')

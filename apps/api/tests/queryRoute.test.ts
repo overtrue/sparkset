@@ -5,6 +5,8 @@ import { DatasourceService } from '../src/app/services/datasourceService';
 import { ActionService } from '../src/app/services/actionService';
 import { ConversationService } from '../src/app/services/conversationService';
 import { QueryService } from '../src/app/services/queryService';
+import { SchemaService } from '../src/app/services/schemaService';
+import { InMemorySchemaCacheRepository, InMemoryDBClient } from '@sparkline/db';
 
 const makeDatasourceService = () => {
   const svc = new DatasourceService();
@@ -31,6 +33,11 @@ const makeDatasourceService = () => {
 
 const makeActionService = () => new ActionService();
 const makeConversationService = () => new ConversationService();
+const makeSchemaService = () =>
+  new SchemaService({
+    schemaRepo: new InMemorySchemaCacheRepository(),
+    getDBClient: async () => new InMemoryDBClient(),
+  });
 
 // QueryService with no executor -> stub rows
 const makeQueryService = (datasourceService: DatasourceService, actionService: ActionService) =>
@@ -42,10 +49,12 @@ describe('POST /query', () => {
     const datasourceService = makeDatasourceService();
     const actionService = makeActionService();
     const conversationService = makeConversationService();
+    const schemaService = makeSchemaService();
     const queryService = makeQueryService(datasourceService, actionService);
 
     registerRoutes(app, {
       datasourceService,
+      schemaService,
       actionService,
       conversationService,
       queryService,

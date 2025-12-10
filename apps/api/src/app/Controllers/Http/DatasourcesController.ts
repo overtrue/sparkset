@@ -1,10 +1,14 @@
 import { FastifyReply } from 'fastify';
 import { DatasourceService } from '../../services/datasourceService';
+import { SchemaService } from '../../services/schemaService';
 import { datasourceCreateSchema, datasourceUpdateSchema } from '../../validators/datasource';
 import { TypedRequest } from '../types';
 
 export class DatasourcesController {
-  constructor(private service: DatasourceService) {}
+  constructor(
+    private service: DatasourceService,
+    private schemaService: SchemaService,
+  ) {}
 
   async index(_req: TypedRequest, reply: FastifyReply) {
     const items = await this.service.list();
@@ -31,7 +35,18 @@ export class DatasourcesController {
 
   async sync(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
-    const lastSyncAt = await this.service.sync(id);
+    const datasource = (await this.service.list()).find((item) => item.id === id);
+    if (!datasource) return reply.code(404).send({ message: 'Datasource not found' });
+    const lastSyncAt = await this.schemaService.sync(datasource);
+    await this.service.update({ ...datasource, lastSyncAt });
     return reply.send({ id, lastSyncAt });
+  }
+
+  async schema(req: TypedRequest, reply: FastifyReply) {
+    const id = Number((req.params as { id: string }).id);
+    const datasource = (await this.service.list()).find((item) => item.id === id);
+    if (!datasource) return reply.code(404).send({ message: 'Datasource not found' });
+    const tables = await this.schemaService.list(id);
+    return reply.send({ id, tables });
   }
 }

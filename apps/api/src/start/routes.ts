@@ -4,6 +4,7 @@ import { DatasourcesController } from '../app/Controllers/Http/DatasourcesContro
 import { HealthController } from '../app/Controllers/Http/HealthController';
 import { QueriesController } from '../app/Controllers/Http/QueriesController';
 import { DatasourceService } from '../app/services/datasourceService';
+import { SchemaService } from '../app/services/schemaService';
 import { ActionService } from '../app/services/actionService';
 import { ConversationsController } from '../app/Controllers/Http/ConversationsController';
 import { ConversationService } from '../app/services/conversationService';
@@ -16,6 +17,7 @@ const conversationsController = new ConversationsController(new ConversationServ
 
 interface RouteDeps {
   datasourceService: DatasourceService;
+  schemaService: SchemaService;
   actionService?: ActionService;
   conversationService?: ConversationService;
   queryService?: QueryService;
@@ -29,19 +31,22 @@ export const registerRoutes = (app: FastifyInstance, deps: RouteDeps) => {
 
   // bind datasource controller per request to inject service
   app.get('/datasources', (req, reply) =>
-    new DatasourcesController(deps.datasourceService).index(req, reply),
+    new DatasourcesController(deps.datasourceService, deps.schemaService).index(req, reply),
   );
   app.post('/datasources', (req, reply) =>
-    new DatasourcesController(deps.datasourceService).store(req, reply),
+    new DatasourcesController(deps.datasourceService, deps.schemaService).store(req, reply),
   );
   app.put('/datasources/:id', (req, reply) =>
-    new DatasourcesController(deps.datasourceService).update(req, reply),
+    new DatasourcesController(deps.datasourceService, deps.schemaService).update(req, reply),
   );
   app.delete('/datasources/:id', (req, reply) =>
-    new DatasourcesController(deps.datasourceService).destroy(req, reply),
+    new DatasourcesController(deps.datasourceService, deps.schemaService).destroy(req, reply),
   );
   app.post('/datasources/:id/sync', (req, reply) =>
-    new DatasourcesController(deps.datasourceService).sync(req, reply),
+    new DatasourcesController(deps.datasourceService, deps.schemaService).sync(req, reply),
+  );
+  app.get('/datasources/:id/schema', (req, reply) =>
+    new DatasourcesController(deps.datasourceService, deps.schemaService).schema(req, reply),
   );
 
   const actionSvc = deps.actionService ?? actionsController['service'];
