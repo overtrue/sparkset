@@ -14,16 +14,16 @@
 ## 阶段 2：核心模块
 
 - [x] 数据源管理：API/CLI + Dashboard 表单 + 手动同步入口
-- [ ] Schema 缓存：同步任务、缓存表、API/CLI 查询
+- [x] Schema 缓存：信息\_schema 拉取、缓存表写入、API/CLI 查询
 - [ ] Action 与工具管理：模型/迁移完成，工具注册表与前端管理待补
 - [ ] AI 服务封装：Vercel AI SDK 封装、提示词模板、fallback 配置
-- [ ] 查询执行器：SQL dry-run、跨数据源执行与合并、结果结构化
+- [x] 查询执行器：SQL 只读校验 + 自动 LIMIT 合并（跨源/结构化待补）
 - [ ] 会话与消息：API/CLI 接口已通，Dashboard 展示与模板化待做
 
 ## 阶段 3：API 与交互层
 
 - [x] 完成 REST API 集成（/query、/actions/:id/execute、会话接口等）
-- [ ] Dashboard 页面：数据源管理、查询工作台、对话记录、模板列表
+- [ ] Dashboard 页面：数据源管理、查询工作台（已增强），对话记录、模板列表
 - [x] CLI 功能：query:run、conversation:list/show、action:exec、--api 覆盖
 - [ ] 前后端集成与测试（单测、E2E、错误态与 loading 态）
 
