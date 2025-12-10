@@ -33,3 +33,4 @@ export class InMemoryDBClient implements DBClient {
 
 export * from './repository';
 export * from './datasourceRepo';
+export * from './prismaDatasourceRepository';
