@@ -8,27 +8,30 @@ interface Props {
   datasources: { id: number; name: string }[];
   defaultDs?: number;
   onResult: (res: Awaited<ReturnType<typeof runQuery>>) => void;
+  onSubmit?: (body: Parameters<typeof runQuery>[0]) => void;
+  loading?: boolean;
 }
 
-const QueryForm = ({ datasources, defaultDs, onResult }: Props) => {
+const QueryForm = ({ datasources, defaultDs, onResult, onSubmit, loading }: Props) => {
   const [question, setQuestion] = useState('查询订单列表');
   const [datasource, setDatasource] = useState(defaultDs ?? datasources[0]?.id);
   const [limit, setLimit] = useState(5);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    const body = { question, datasource, limit };
     try {
-      const res = await runQuery({ question, datasource, limit });
-      onResult(res);
+      if (onSubmit) {
+        await onSubmit(body);
+      } else {
+        const res = await runQuery(body);
+        onResult(res);
+      }
     } catch (err) {
       console.error(err);
       setError('查询失败，请检查 API');
-    } finally {
-      setLoading(false);
     }
   };
 
