@@ -8,6 +8,7 @@ import { ActionService } from '../app/services/actionService';
 import { ConversationsController } from '../app/Controllers/Http/ConversationsController';
 import { ConversationService } from '../app/services/conversationService';
 import { QueryService } from '../app/services/queryService';
+import { QueryPlanner, QueryExecutor } from '@sparkline/core';
 
 const healthController = new HealthController();
 const actionsController = new ActionsController(new ActionService());
@@ -18,6 +19,9 @@ interface RouteDeps {
   actionService?: ActionService;
   conversationService?: ConversationService;
   queryService?: QueryService;
+  queryExecutor?: QueryExecutor;
+  getDBClient?: (datasourceId: number) => Promise<unknown>;
+  getDatasourceConfig?: (datasourceId: number) => Promise<unknown>;
 }
 
 export const registerRoutes = (app: FastifyInstance, deps: RouteDeps) => {
@@ -56,9 +60,12 @@ export const registerRoutes = (app: FastifyInstance, deps: RouteDeps) => {
     new QueriesController(
       deps.queryService ??
         new QueryService({
-          getDatasource: (id) =>
-            deps.datasourceService.list().then((items) => items.find((d) => d.id === id) ?? null),
-          getAction: (id) => actionSvc.get(id),
+          datasourceService: deps.datasourceService,
+          actionService: actionSvc,
+          planner: new QueryPlanner(),
+          executor: deps.queryExecutor,
+          getDBClient: deps.getDBClient,
+          getDatasourceConfig: deps.getDatasourceConfig,
         }),
     ).run(req, reply),
   );
