@@ -74,3 +74,27 @@ export async function fetchSchema(datasourceId: number): Promise<TableSchemaDTO[
   });
   return res.tables ?? [];
 }
+
+// Actions
+export interface ActionDTO {
+  id: number;
+  name: string;
+  description?: string | null;
+  type: string;
+  payload: unknown;
+  parameters?: unknown;
+  updatedAt?: string;
+  createdAt?: string;
+}
+
+export async function fetchActions(): Promise<ActionDTO[]> {
+  const res = await request<{ items: ActionDTO[] }>('/actions', { cache: 'no-store' });
+  return res.items ?? [];
+}
+
+export async function executeAction(id: number, parameters?: unknown) {
+  return request(`/actions/${id}/execute`, {
+    method: 'POST',
+    body: parameters ? JSON.stringify({ parameters }) : undefined,
+  });
+}
