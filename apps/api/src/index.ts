@@ -1,5 +1,4 @@
 import Fastify from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { DatasourceService } from './app/services/datasourceService';
 import { ActionService } from './app/services/actionService';
 import { ConversationService } from './app/services/conversationService';
@@ -12,6 +11,7 @@ import {
   PrismaDatasourceRepository,
   PrismaActionRepository,
   PrismaConversationRepository,
+  getPrisma,
 } from '@sparkline/db';
 
 const env = loadEnv();
@@ -22,7 +22,7 @@ let actionService: ActionService;
 let conversationService: ConversationService;
 const dsConfig = buildDatasourceConfig(env);
 if (process.env.DATABASE_URL) {
-  const prisma = new PrismaClient();
+  const prisma = getPrisma();
   datasourceService = new DatasourceService(new PrismaDatasourceRepository(prisma));
   actionService = new ActionService(new PrismaActionRepository(prisma));
   conversationService = new ConversationService(new PrismaConversationRepository(prisma));

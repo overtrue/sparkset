@@ -36,3 +36,4 @@ export * from './datasourceRepo';
 export * from './prismaDatasourceRepository';
 export * from './prismaActionRepository';
 export * from './prismaConversationRepository';
+export * from './prismaClient';
