@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       '@sparkline/core': path.resolve(__dirname, '../../packages/core/src'),
       '@sparkline/models': path.resolve(__dirname, '../../packages/models/src'),
+      '@sparkline/db': path.resolve(__dirname, '../../packages/db/src'),
     },
   },
 });
