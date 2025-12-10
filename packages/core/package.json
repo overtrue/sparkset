@@ -8,8 +8,9 @@
     "build": "tsc -b",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-    "test": "echo 'TODO: add tests'"
+    "test": "vitest run"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "vitest": "^4.0.15"
+  }
 }
