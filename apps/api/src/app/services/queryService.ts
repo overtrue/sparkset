@@ -21,7 +21,7 @@ export interface QueryResponse {
 }
 
 /**
- * QueryService now integrates planner + executor; still returns canned rows when executor not provided.
+ * QueryService integrates planner + executor. If executor is provided, returns real DB rows; otherwise stub.
  */
 export class QueryService {
   constructor(
@@ -49,16 +49,17 @@ export class QueryService {
 
     const plan = await planner.plan(input.question, input.datasource);
 
-    // Execute (fallback to stub if executor not provided)
-    if (this.deps.executor && this.deps.getDBClient && this.deps.getDatasourceConfig) {
-      const result = await this.deps.executor.execute(plan.sql);
+    // If executor wired, run real queries
+    if (this.deps.executor) {
+      const execResult = await this.deps.executor.execute(plan.sql);
       return {
         sql: plan.sql.map((s) => s.sql).join('\n'),
-        rows: result.rows as QueryResultRow[],
-        summary: result.summary,
+        rows: execResult.rows as QueryResultRow[],
+        summary: execResult.summary,
       };
     }
 
+    // Stub fallback
     const rows: QueryResultRow[] = [
       { user: 'Alice', region: '杭州', orders: 34, refundRate: '2.1%' },
       { user: 'Bob', region: '上海', orders: 21, refundRate: '1.5%' },

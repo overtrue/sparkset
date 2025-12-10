@@ -1,16 +1,9 @@
-import { DBClient, QueryResult } from '@sparkline/db';
+import { DBClient, DataSourceConfig, QueryResult } from '@sparkline/db';
 import { SqlSnippet, ExecutionResult } from './types';
 
 export interface ExecutorDeps {
   getDBClient: (datasourceId: number) => Promise<DBClient>;
-  getDatasourceConfig: (datasourceId: number) => Promise<{
-    id: number;
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    database: string;
-  }>;
+  getDatasourceConfig: (datasourceId: number) => Promise<DataSourceConfig>;
 }
 
 export class QueryExecutor {
@@ -26,6 +19,6 @@ export class QueryExecutor {
       allRows.push(...result.rows);
     }
 
-    return { rows: allRows, sql: sqlSnippets, summary: 'Executed stub queries' };
+    return { rows: allRows, sql: sqlSnippets, summary: 'Executed queries' };
   }
 }
