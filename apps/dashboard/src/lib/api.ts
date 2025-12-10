@@ -53,3 +53,21 @@ export async function syncDatasource(id: number): Promise<{ id: number; lastSync
 export async function removeDatasource(id: number): Promise<void> {
   await request(`/datasources/${id}`, { method: 'DELETE' });
 }
+
+export interface TableColumnDTO {
+  name: string;
+  type: string;
+  comment?: string;
+}
+
+export interface TableSchemaDTO {
+  tableName: string;
+  columns: TableColumnDTO[];
+}
+
+export async function fetchSchema(datasourceId: number): Promise<TableSchemaDTO[]> {
+  const res = await request<{ tables: TableSchemaDTO[] }>(`/datasources/${datasourceId}/schema`, {
+    cache: 'no-store',
+  });
+  return res.tables ?? [];
+}

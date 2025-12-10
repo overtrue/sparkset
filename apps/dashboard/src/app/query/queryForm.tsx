@@ -10,9 +10,17 @@ interface Props {
   onResult: (res: Awaited<ReturnType<typeof runQuery>>) => void;
   onSubmit?: (body: Parameters<typeof runQuery>[0]) => void;
   loading?: boolean;
+  onDatasourceChange?: (id: number) => void;
 }
 
-const QueryForm = ({ datasources, defaultDs, onResult, onSubmit, loading }: Props) => {
+const QueryForm = ({
+  datasources,
+  defaultDs,
+  onResult,
+  onSubmit,
+  loading,
+  onDatasourceChange,
+}: Props) => {
   const [question, setQuestion] = useState('查询订单列表');
   const [datasource, setDatasource] = useState(defaultDs ?? datasources[0]?.id);
   const [limit, setLimit] = useState(5);
@@ -52,7 +60,11 @@ const QueryForm = ({ datasources, defaultDs, onResult, onSubmit, loading }: Prop
           <select
             className="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-sm"
             value={datasource}
-            onChange={(e) => setDatasource(Number(e.target.value))}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setDatasource(next);
+              onDatasourceChange?.(next);
+            }}
           >
             {datasources.map((ds) => (
               <option key={ds.id} value={ds.id}>
