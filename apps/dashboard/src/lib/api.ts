@@ -1,11 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333';
 
-async function request<T = unknown>(path: string, init?: RequestInit): Promise<T> {
+async function request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const hasBody = init.body !== undefined;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers: hasBody
+      ? {
+          'Content-Type': 'application/json',
+          ...(init.headers ?? {}),
+        }
+      : init.headers,
     ...init,
   });
 
