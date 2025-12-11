@@ -1,5 +1,5 @@
 import { DBClient, DataSourceConfig, QueryResult } from '@sparkline/db';
-import { SqlSnippet, ExecutionResult } from './types';
+import { ExecutionResult, SqlSnippet } from './types';
 
 export interface ExecutorDeps {
   getDBClient: (datasourceId: number) => Promise<DBClient>;
@@ -19,8 +19,23 @@ const READONLY_PREFIX = [
 ];
 
 const ensureReadOnly = (sql: string) => {
-  const trimmed = sql.trim().replace(/;+$/, '');
-  if (trimmed.includes(';')) throw new Error('Multi-statement queries are not allowed');
+  // 移除末尾的分号
+  let trimmed = sql.trim().replace(/;+$/, '');
+
+  // 检查是否包含多个语句（通过分号分隔，但排除注释中的分号）
+  // 先移除单行注释（-- 到行尾）
+  const withoutSingleLineComments = trimmed.replace(/--[^\n]*/g, '');
+  // 移除多行注释（/* ... */）
+  const withoutComments = withoutSingleLineComments.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // 检查是否还有分号（表示多语句）
+  if (withoutComments.includes(';')) {
+    throw new Error('Multi-statement queries are not allowed');
+  }
+
+  // 使用清理后的 SQL 进行其他检查
+  trimmed = withoutComments.trim();
+
   if (!READONLY_PREFIX.some((re) => re.test(trimmed))) {
     throw new Error('Only read-only queries are allowed (SELECT/SHOW/DESCRIBE/EXPLAIN)');
   }
