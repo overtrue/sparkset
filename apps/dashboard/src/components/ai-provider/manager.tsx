@@ -1,8 +1,10 @@
 'use client';
 
+import { ColumnDef } from '@tanstack/react-table';
 import { Check, ChevronDown, Edit, Plus, Star, Trash2 } from 'lucide-react';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
 import { AI_PROVIDER_TYPES, getProviderLabel } from '../../lib/aiProviderTypes';
 import {
   type AIProviderDTO,
@@ -22,6 +24,9 @@ import {
   CommandItem,
   CommandList,
 } from '../ui/command';
+import { DataTable } from '../ui/data-table';
+import { DataTableColumnHeader } from '../ui/data-table-column-header';
+import { DataTableRowActions, type RowAction } from '../ui/data-table-row-actions';
 import {
   Dialog,
   DialogContent,
@@ -49,7 +54,11 @@ function formatDate(value: string) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-export default function AIProviderManager({ initial }: { initial: AIProviderDTO[] }) {
+interface AIProviderManagerProps {
+  initial: AIProviderDTO[];
+}
+
+export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [providers, setProviders] = useState(initial);
   const [form, setForm] = useState<CreateAIProviderInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -59,7 +68,6 @@ export default function AIProviderManager({ initial }: { initial: AIProviderDTO[
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
 
   const canSubmit = useMemo(() => {
-    // 创建时需要 API Key，编辑时不需要（如果不修改则保留原值）
     if (editingId) {
       return form.name && form.type;
     }
@@ -81,7 +89,7 @@ export default function AIProviderManager({ initial }: { initial: AIProviderDTO[
       setForm({
         name: provider.name,
         type: provider.type,
-        apiKey: '', // 编辑时不显示原有 API Key，需要重新输入
+        apiKey: '',
         baseURL: provider.baseURL ?? '',
         defaultModel: provider.defaultModel ?? '',
         isDefault: provider.isDefault,
@@ -105,7 +113,6 @@ export default function AIProviderManager({ initial }: { initial: AIProviderDTO[
     setSubmitting(true);
     try {
       if (editingId) {
-        // 编辑时，如果 API Key 为空，则不包含在更新数据中
         const updateData = { ...form };
         if (!updateData.apiKey) {
           delete updateData.apiKey;
@@ -145,7 +152,6 @@ export default function AIProviderManager({ initial }: { initial: AIProviderDTO[
   };
 
   const handleRemove = async (id: number) => {
-    if (!globalThis.confirm('确定要删除该 Provider 吗？')) return;
     setActionId(id);
     try {
       await removeAIProvider(id);
@@ -158,107 +164,136 @@ export default function AIProviderManager({ initial }: { initial: AIProviderDTO[
     }
   };
 
+  const handleDeleteSelected = async (rows: AIProviderDTO[]) => {
+    for (const row of rows) {
+      try {
+        await removeAIProvider(row.id);
+      } catch (err) {
+        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+      }
+    }
+    setProviders((prev) => prev.filter((p) => !rows.some((r) => r.id === p.id)));
+    toast.success(`成功删除 ${rows.length} 个 Provider`);
+  };
+
+  const columns: ColumnDef<AIProviderDTO>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+        size: 160,
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {getProviderLabel(row.getValue('type'))}
+          </span>
+        ),
+        size: 140,
+      },
+      {
+        accessorKey: 'defaultModel',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="默认模型" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {row.getValue('defaultModel') || '-'}
+          </span>
+        ),
+        size: 140,
+      },
+      {
+        accessorKey: 'isDefault',
+        header: '状态',
+        cell: ({ row }) =>
+          row.getValue('isDefault') ? (
+            <Badge variant="default" className="gap-1">
+              <Star className="h-3 w-3 fill-current" />
+              默认
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1">
+              <Check className="h-3 w-3" />
+              已配置
+            </Badge>
+          ),
+        size: 100,
+      },
+      {
+        accessorKey: 'updatedAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="更新时间" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {formatDate(row.getValue('updatedAt'))}
+          </span>
+        ),
+        size: 160,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">操作</span>,
+        cell: ({ row }) => {
+          const provider = row.original;
+          const isLoading = actionId === provider.id;
+
+          const actions: RowAction[] = [];
+
+          if (!provider.isDefault) {
+            actions.push({
+              label: '设为默认',
+              icon: <Star className="h-4 w-4" />,
+              onClick: () => handleSetDefault(provider.id),
+              disabled: isLoading,
+            });
+          }
+
+          actions.push(
+            {
+              label: '编辑',
+              icon: <Edit className="h-4 w-4" />,
+              onClick: () => handleOpenDialog(provider),
+              disabled: isLoading,
+            },
+            {
+              label: '删除',
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleRemove(provider.id),
+              variant: 'destructive',
+              disabled: isLoading,
+            },
+          );
+
+          return <DataTableRowActions actions={actions} />;
+        },
+        size: 60,
+      },
+    ],
+    [actionId],
+  );
+
   return (
     <>
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              共 <span className="font-medium text-foreground">{providers.length}</span> 个 Provider
-            </span>
-          </div>
+      <DataTable
+        columns={columns}
+        data={providers}
+        searchKey="name"
+        searchPlaceholder="搜索 Provider..."
+        enableRowSelection
+        onDeleteSelected={handleDeleteSelected}
+        deleteConfirmTitle="删除 Provider"
+        deleteConfirmDescription={(count) =>
+          `确定要删除选中的 ${count} 个 Provider 吗？此操作不可撤销。`
+        }
+        emptyMessage="暂无 Provider，点击右上角添加"
+        toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
             添加 Provider
           </Button>
-        </div>
-        <div className="overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-4 py-3 text-muted-foreground font-medium">名称</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">类型</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">默认模型</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">状态</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">更新时间</th>
-                <th className="px-4 py-3 text-right text-muted-foreground font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {providers.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
-                    暂无 Provider，请点击右上角"添加 Provider"按钮创建。
-                  </td>
-                </tr>
-              ) : (
-                providers.map((provider) => (
-                  <tr key={provider.id} className="border-t border-border hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{provider.name}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs text-muted-foreground">
-                        {getProviderLabel(provider.type)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {provider.defaultModel || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {provider.isDefault ? (
-                        <Badge variant="default" className="gap-1">
-                          <Star className="h-3 w-3 fill-current" />
-                          默认
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1">
-                          <Check className="h-3 w-3" />
-                          已配置
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {formatDate(provider.updatedAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {!provider.isDefault && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={actionId === provider.id}
-                            onClick={() => handleSetDefault(provider.id)}
-                          >
-                            <Star className="mr-2 h-4 w-4" />
-                            设为默认
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === provider.id}
-                          onClick={() => handleOpenDialog(provider)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          编辑
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === provider.id}
-                          onClick={() => handleRemove(provider.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        }
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">

@@ -1,9 +1,11 @@
 import { DBClient, DataSourceConfig, SchemaCacheRepository } from '@sparkline/db';
-import { ColumnDefinition, DataSource, TableSchema } from '@sparkline/models';
+import { AIProvider, ColumnDefinition, DataSource, TableSchema } from '@sparkline/models';
+import { AIProviderService } from './aiProviderService';
 
 export interface SchemaServiceDeps {
   schemaRepo: SchemaCacheRepository;
   getDBClient: (datasource: DataSource) => Promise<DBClient>;
+  aiProviderService: AIProviderService;
   logger?: {
     info: (msg: string, ...args: unknown[]) => void;
     error: (msg: string | Error, ...args: unknown[]) => void;
@@ -16,6 +18,279 @@ export class SchemaService {
 
   async list(datasourceId: number): Promise<TableSchema[]> {
     return this.deps.schemaRepo.listTables(datasourceId);
+  }
+
+  /**
+   * 构建表级语义描述的提示词
+   */
+  private buildTablePrompt(table: TableSchema): string {
+    const columnsText =
+      table.columns
+        ?.map((col) => {
+          const parts = [`- ${col.name}`, `(${col.type})`];
+          if (col.comment) parts.push(`: ${col.comment}`);
+          return parts.join(' ');
+        })
+        .join('\n') || '- 无列信息';
+
+    return [
+      '请为以下数据库表生成语义描述。',
+      '',
+      `表名：${table.tableName}`,
+      `表注释：${table.tableComment || '无'}`,
+      '列信息：',
+      columnsText,
+      '',
+      '格式要求：',
+      '- 直接描述业务含义，例如："用户账户信息"、"订单交易记录"',
+      '- 禁止使用"存储"、"用于"、"表示"、"记录"、"保存"等冗余动词',
+      '- 禁止使用句号等标点符号',
+      '- 1-2句话，简洁明了',
+      '',
+      '只返回描述文本，不要其他内容。',
+    ].join('\n');
+  }
+
+  /**
+   * 构建列级语义描述的提示词
+   */
+  private buildColumnPrompt(table: TableSchema, column: ColumnDefinition): string {
+    const otherColumns =
+      table.columns
+        ?.filter((col) => col.name !== column.name)
+        .map((col) => `${col.name} (${col.type})${col.comment ? `: ${col.comment}` : ''}`)
+        .join(', ') || '无';
+
+    return [
+      '请为以下数据库列生成语义描述。',
+      '',
+      `表名：${table.tableName}`,
+      `表注释：${table.tableComment || '无'}`,
+      `列名：${column.name}`,
+      `列类型：${column.type}`,
+      `列注释：${column.comment || '无'}`,
+      `其他列：${otherColumns}`,
+      '',
+      '格式要求：',
+      '- 直接描述业务含义，例如："用户邮箱地址"、"订单创建时间"',
+      '- 禁止使用"存储"、"用于"、"表示"、"记录"、"保存"等冗余动词',
+      '- 禁止使用句号等标点符号',
+      '- 一句话，简洁明了',
+      '',
+      '只返回描述文本，不要其他内容。',
+    ].join('\n');
+  }
+
+  /**
+   * 使用指定的 AI Provider 生成文本
+   */
+  private async generateTextWithProvider(prompt: string, provider: AIProvider): Promise<string> {
+    const apiKey = provider.apiKey || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('No API key available for AI provider');
+    }
+
+    // 优先使用 provider 配置；如果没有 baseURL，则使用默认 OpenAI 兼容路径
+    const baseURL = provider.baseURL || 'https://api.openai.com/v1';
+    const model = provider.defaultModel || 'gpt-4o-mini';
+
+    const url = `${baseURL.replace(/\/$/, '')}/chat/completions`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 256,
+      }),
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`AI request failed (${response.status}): ${text}`);
+    }
+
+    let parsed: { choices?: Array<{ message?: { content?: string } }> };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error(`Failed to parse AI response: ${text}`);
+    }
+
+    const content = parsed.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      throw new Error(`Empty AI response: ${text}`);
+    }
+    return content;
+  }
+
+  /**
+   * 为缺失的表/列生成语义描述
+   */
+  async generateSemanticDescriptions(datasourceId: number): Promise<void> {
+    // 获取可用的 provider
+    const providers = await this.deps.aiProviderService.list();
+    const provider = providers.find((p) => p.isDefault) ?? providers[0];
+    if (!provider) {
+      this.deps.logger?.warn('No AI provider available, skip semantic description generation');
+      return;
+    }
+
+    const tables = await this.deps.schemaRepo.listTables(datasourceId);
+    if (!tables || tables.length === 0) {
+      this.deps.logger?.info('No tables to generate semantic description for');
+      return;
+    }
+
+    // 收集所有需要生成描述的任务
+    const tasks: Array<() => Promise<void>> = [];
+
+    for (const table of tables) {
+      // 表级描述任务
+      if (!table.semanticDescription) {
+        tasks.push(async () => {
+          const prompt = this.buildTablePrompt(table);
+          const description = await this.generateTextWithProvider(prompt, provider);
+          // 尝试更新，如果记录不存在则重新查找
+          try {
+            await this.updateTableMetadata(table.id, { semanticDescription: description });
+          } catch (err: unknown) {
+            // 如果更新失败（可能是记录不存在），尝试重新查找表
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const errorCode = (err as { code?: string })?.code;
+            const errorString = String(err);
+            // 检查是否是 Prisma P2025 错误（记录未找到）或包含相关错误消息
+            const isRecordNotFound =
+              errorCode === 'P2025' ||
+              errorMessage.toLowerCase().includes('not found') ||
+              errorMessage.includes('Record to update not found') ||
+              errorMessage.includes('required but not found') ||
+              errorString.toLowerCase().includes('not found') ||
+              errorString.includes('Record to update not found') ||
+              errorString.includes('required but not found');
+
+            if (isRecordNotFound) {
+              try {
+                const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
+                const currentTable = currentTables.find((t) => t.tableName === table.tableName);
+                if (currentTable) {
+                  await this.updateTableMetadata(currentTable.id, {
+                    semanticDescription: description,
+                  });
+                } else {
+                  // 表已不存在，跳过
+                  this.deps.logger?.warn(
+                    `Table ${table.tableName} not found when updating semantic description`,
+                  );
+                }
+              } catch (retryErr) {
+                // 重试也失败，记录错误但不再抛出
+                this.deps.logger?.error(
+                  retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
+                  `Failed to retry updating table ${table.tableName} semantic description`,
+                );
+              }
+            } else {
+              throw err;
+            }
+          }
+        });
+      }
+
+      // 列级描述任务
+      for (const col of table.columns) {
+        if (col.semanticDescription || col.id == null) continue;
+        tasks.push(async () => {
+          const prompt = this.buildColumnPrompt(table, col);
+          const description = await this.generateTextWithProvider(prompt, provider);
+          // 尝试更新，如果记录不存在则重新查找
+          try {
+            await this.updateColumnMetadata(col.id, { semanticDescription: description });
+          } catch (err: unknown) {
+            // 如果更新失败（可能是记录不存在），尝试重新查找列
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const errorCode = (err as { code?: string })?.code;
+            const errorString = String(err);
+            // 检查是否是 Prisma P2025 错误（记录未找到）或包含相关错误消息
+            const isRecordNotFound =
+              errorCode === 'P2025' ||
+              errorMessage.toLowerCase().includes('not found') ||
+              errorMessage.includes('Record to update not found') ||
+              errorMessage.includes('required but not found') ||
+              errorString.toLowerCase().includes('not found') ||
+              errorString.includes('Record to update not found') ||
+              errorString.includes('required but not found');
+
+            if (isRecordNotFound) {
+              try {
+                const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
+                const currentTable = currentTables.find((t) => t.tableName === table.tableName);
+                if (currentTable) {
+                  const currentCol = currentTable.columns.find((c) => c.name === col.name);
+                  if (currentCol && currentCol.id != null) {
+                    await this.updateColumnMetadata(currentCol.id, {
+                      semanticDescription: description,
+                    });
+                  } else {
+                    // 列已不存在，跳过
+                    this.deps.logger?.warn(
+                      `Column ${table.tableName}.${col.name} not found when updating semantic description`,
+                    );
+                  }
+                } else {
+                  // 表已不存在，跳过
+                  this.deps.logger?.warn(
+                    `Table ${table.tableName} not found when updating column semantic description`,
+                  );
+                }
+              } catch (retryErr) {
+                // 重试也失败，记录错误但不再抛出
+                this.deps.logger?.error(
+                  retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
+                  `Failed to retry updating column ${table.tableName}.${col.name} semantic description`,
+                );
+              }
+            } else {
+              throw err;
+            }
+          }
+        });
+      }
+    }
+
+    if (tasks.length === 0) {
+      this.deps.logger?.info('No semantic descriptions to generate');
+      return;
+    }
+
+    // 分批并行处理，每批处理 10 个任务
+    const batchSize = 10;
+    let generatedCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      const results = await Promise.allSettled(batch.map((task) => task()));
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          generatedCount += 1;
+        } else {
+          failedCount += 1;
+          this.deps.logger?.error(
+            result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
+            'Failed to generate semantic description',
+          );
+        }
+      }
+    }
+
+    this.deps.logger?.info(
+      `Semantic description generation completed. Generated ${generatedCount} item(s), failed ${failedCount} item(s).`,
+    );
   }
 
   async updateTableMetadata(
@@ -170,6 +445,16 @@ export class SchemaService {
         'Failed to save schemas',
       );
       throw err;
+    }
+
+    // 同步完成后尝试生成语义描述（仅填充缺失项）
+    try {
+      await this.generateSemanticDescriptions(datasource.id);
+    } catch (err) {
+      this.deps.logger?.warn(
+        err instanceof Error ? err.message : String(err),
+        'Semantic description generation failed',
+      );
     }
 
     const now = new Date();

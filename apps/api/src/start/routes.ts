@@ -49,6 +49,12 @@ export const registerRoutes = (app: FastifyInstance, deps: RouteDeps) => {
   app.post('/datasources/:id/sync', (req, reply) =>
     new DatasourcesController(deps.datasourceService, deps.schemaService).sync(req, reply),
   );
+  app.post('/datasources/:id/semantic-descriptions', (req, reply) =>
+    new DatasourcesController(
+      deps.datasourceService,
+      deps.schemaService,
+    ).generateSemanticDescriptions(req, reply),
+  );
   app.get('/datasources/:id/schema', (req, reply) =>
     new DatasourcesController(deps.datasourceService, deps.schemaService).schema(req, reply),
   );

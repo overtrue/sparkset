@@ -1,10 +1,31 @@
 'use client';
 
+import { ColumnDef } from '@tanstack/react-table';
+import { useMemo } from 'react';
+
+import { DataTable } from '@/components/ui/data-table';
+import { DataTableColumnHeader } from '@/components/ui/data-table-column-header';
+
 interface ResultTableProps {
   rows: Record<string, unknown>[];
 }
 
 export function ResultTable({ rows }: ResultTableProps) {
+  // Generate columns dynamically from data
+  const columns: ColumnDef<Record<string, unknown>>[] = useMemo(() => {
+    if (rows.length === 0) return [];
+
+    const columnKeys = Object.keys(rows[0] ?? {});
+    return columnKeys.map((key) => ({
+      accessorKey: key,
+      header: ({ column }) => <DataTableColumnHeader column={column} title={key} />,
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return <span className="whitespace-nowrap">{String(value ?? '')}</span>;
+      },
+    }));
+  }, [rows]);
+
   if (rows.length === 0) {
     return (
       <div className="py-12 text-center px-6">
@@ -13,40 +34,16 @@ export function ResultTable({ rows }: ResultTableProps) {
     );
   }
 
-  const columns = Object.keys(rows[0] ?? {});
-
   return (
-    <div className="border-t overflow-x-auto">
-      <table className="text-sm table-auto">
-        <thead className="bg-muted/50 border-b">
-          <tr>
-            {columns.map((col) => (
-              <th
-                key={col}
-                className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap"
-              >
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => (
-            <tr
-              key={idx}
-              className={`border-b border-border transition-colors ${
-                idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
-              } hover:bg-muted/50`}
-            >
-              {columns.map((col) => (
-                <td key={col} className="px-4 py-3 text-foreground whitespace-nowrap">
-                  {String(row[col] ?? '')}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="p-4">
+      <DataTable
+        columns={columns}
+        data={rows}
+        enableGlobalFilter
+        showRecordCount
+        searchPlaceholder="搜索结果..."
+        emptyMessage="无匹配结果"
+      />
     </div>
   );
 }

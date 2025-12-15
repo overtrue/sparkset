@@ -21,6 +21,8 @@ interface Props {
   onSubmit?: (body: Parameters<typeof runQuery>[0]) => void;
   loading?: boolean;
   onDatasourceChange?: (id: number) => void;
+  externalQuestion?: string;
+  onQuestionChange?: (question: string) => void;
 }
 
 const QueryForm = ({
@@ -32,8 +34,15 @@ const QueryForm = ({
   onSubmit,
   loading,
   onDatasourceChange,
+  externalQuestion,
+  onQuestionChange,
 }: Props) => {
-  const [question, setQuestion] = useState('');
+  const [internalQuestion, setInternalQuestion] = useState('');
+  const question = externalQuestion ?? internalQuestion;
+  const setQuestion = (q: string) => {
+    setInternalQuestion(q);
+    onQuestionChange?.(q);
+  };
   const defaultDatasourceId =
     defaultDs ?? datasources.find((d) => d.isDefault)?.id ?? datasources[0]?.id;
   const [datasource, setDatasource] = useState(defaultDatasourceId);

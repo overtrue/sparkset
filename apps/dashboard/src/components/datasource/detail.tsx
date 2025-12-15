@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Edit, Edit2, RefreshCw, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Edit, Edit2, RefreshCw, Save, Sparkles, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ChangeEvent, useMemo, useState } from 'react';
@@ -11,6 +11,7 @@ import {
   type TableColumnDTO,
   type TableSchemaDTO,
   fetchDatasourceDetail,
+  generateSemanticDescriptions,
   removeDatasource,
   syncDatasource,
   updateColumnMetadata,
@@ -30,7 +31,15 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Separator } from '../ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSpacer,
+} from '../ui/table';
 import { Textarea } from '../ui/textarea';
 
 function formatDate(value?: string) {
@@ -70,6 +79,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   const [editingColumn, setEditingColumn] = useState<EditingColumnState | null>(null);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   // 编辑数据源相关状态
@@ -189,6 +199,21 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
     }
   };
 
+  const handleGenerateSemantic = async () => {
+    setGenerating(true);
+    setMessage(null);
+    try {
+      await generateSemanticDescriptions(datasource.id);
+      const updated = await fetchDatasourceDetail(datasource.id);
+      setDatasource(updated);
+      toast.success('语义描述生成完成');
+    } catch (err) {
+      toast.error((err as Error)?.message ?? '生成失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const onEditFormChange =
     (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) =>
       setEditForm((prev: CreateDatasourceInput) => ({
@@ -237,7 +262,6 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   };
 
   const handleDelete = async () => {
-    // eslint-disable-next-line no-alert
     if (!globalThis.confirm('确定要删除该数据源吗？删除后无法恢复。')) return;
     setDeleting(true);
     try {
@@ -273,16 +297,16 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 variant="outline"
                 size="sm"
                 onClick={handleOpenEditDialog}
-                disabled={syncing || deleting}
+                disabled={syncing || deleting || generating}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 编辑
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={handleSync}
-                disabled={syncing || deleting}
+                disabled={syncing || deleting || generating}
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? '同步中...' : '同步'}
@@ -291,7 +315,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 variant="outline"
                 size="sm"
                 onClick={handleDelete}
-                disabled={syncing || deleting}
+                disabled={syncing || deleting || generating}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {deleting ? '删除中...' : '删除'}
@@ -333,10 +357,24 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
 
       <Card>
         <CardHeader>
-          <CardTitle>结构信息</CardTitle>
-          <CardDescription>
-            共 {datasource.tables.length} 个表，可编辑表注释和语义描述以帮助 AI 更好地理解数据结构
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>结构信息</CardTitle>
+              <CardDescription>
+                共 {datasource.tables.length} 个表，可编辑表注释和语义描述以帮助 AI
+                更好地理解数据结构
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateSemantic}
+              disabled={syncing || deleting || generating}
+            >
+              <Sparkles className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
+              {generating ? '生成中...' : '补充语义描述'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {message && (
@@ -369,16 +407,19 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                           </span>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTable(table);
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{table.columns.length} 列</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTable(table);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -451,108 +492,100 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                         </div>
                       )}
 
-                      <Separator />
-
                       <div>
-                        <div className="mb-2 flex items-center justify-between">
-                          <Label className="text-sm font-medium">列信息</Label>
-                          <span className="text-xs text-muted-foreground">
-                            {table.columns.length} 列
-                          </span>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-muted-foreground">列名</th>
-                                <th className="px-3 py-2 text-left text-muted-foreground">类型</th>
-                                <th className="px-3 py-2 text-left text-muted-foreground">注释</th>
-                                <th className="px-3 py-2 text-left text-muted-foreground">
-                                  语义描述
-                                </th>
-                                <th className="px-3 py-2 text-right text-muted-foreground">操作</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {table.columns.map((column) => (
-                                <tr key={column.name} className="border-t">
-                                  <td className="px-3 py-2 font-medium">{column.name}</td>
-                                  <td className="px-3 py-2 text-muted-foreground">{column.type}</td>
-                                  <td className="px-3 py-2">
-                                    {editingColumn?.columnId === column.id ? (
-                                      <Input
-                                        value={editingColumn.columnComment}
-                                        onChange={(e) =>
-                                          setEditingColumn({
-                                            ...editingColumn,
-                                            columnComment: e.target.value,
-                                          })
-                                        }
-                                        placeholder="列注释"
-                                        className="h-8"
-                                      />
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        {column.comment || '-'}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    {editingColumn?.columnId === column.id ? (
-                                      <Textarea
-                                        value={editingColumn.semanticDescription}
-                                        onChange={(e) =>
-                                          setEditingColumn({
-                                            ...editingColumn,
-                                            semanticDescription: e.target.value,
-                                          })
-                                        }
-                                        placeholder="语义描述"
-                                        rows={2}
-                                        className="min-w-[200px]"
-                                      />
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        {column.semanticDescription || '-'}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2 text-right">
-                                    {editingColumn?.columnId === column.id ? (
-                                      <div className="flex justify-end gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={handleSaveColumn}
-                                          disabled={saving}
-                                        >
-                                          <Save className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={handleCancelColumn}
-                                          disabled={saving}
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead>列名</TableHead>
+                              <TableHead>类型</TableHead>
+                              <TableHead>注释</TableHead>
+                              <TableHead>语义描述</TableHead>
+                              <TableHead className="text-right">操作</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableSpacer />
+                          <TableBody>
+                            {table.columns.map((column) => (
+                              <TableRow key={column.name}>
+                                <TableCell className="font-medium">{column.name}</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {column.type}
+                                </TableCell>
+                                <TableCell>
+                                  {editingColumn?.columnId === column.id ? (
+                                    <Input
+                                      value={editingColumn.columnComment}
+                                      onChange={(e) =>
+                                        setEditingColumn({
+                                          ...editingColumn,
+                                          columnComment: e.target.value,
+                                        })
+                                      }
+                                      placeholder="列注释"
+                                      className="h-8"
+                                    />
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      {column.comment || '-'}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingColumn?.columnId === column.id ? (
+                                    <Textarea
+                                      value={editingColumn.semanticDescription}
+                                      onChange={(e) =>
+                                        setEditingColumn({
+                                          ...editingColumn,
+                                          semanticDescription: e.target.value,
+                                        })
+                                      }
+                                      placeholder="语义描述"
+                                      rows={2}
+                                      className="min-w-[200px]"
+                                    />
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      {column.semanticDescription || '-'}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {editingColumn?.columnId === column.id ? (
+                                    <div className="flex justify-end gap-2">
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => handleEditColumn(table.id, column)}
-                                        disabled={!column.id || editingColumn !== null}
+                                        onClick={handleSaveColumn}
+                                        disabled={saving}
                                       >
-                                        <Edit2 className="h-4 w-4" />
+                                        <Save className="h-4 w-4" />
                                       </Button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={handleCancelColumn}
+                                        disabled={saving}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleEditColumn(table.id, column)}
+                                      disabled={!column.id || editingColumn !== null}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                          <TableSpacer />
+                        </Table>
                       </div>
                     </div>
                   </AccordionContent>

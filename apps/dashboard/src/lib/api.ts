@@ -125,6 +125,12 @@ export async function updateColumnMetadata(
   });
 }
 
+export async function generateSemanticDescriptions(
+  datasourceId: number,
+): Promise<{ success: boolean }> {
+  return request(`/datasources/${datasourceId}/semantic-descriptions`, { method: 'POST' });
+}
+
 // Actions
 export interface ParameterDefinition {
   name: string;

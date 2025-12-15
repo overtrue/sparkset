@@ -9,11 +9,13 @@ const QueryPage = async () => {
   const datasources = await fetchDatasources().catch(() => []);
   const aiProviders = await fetchAIProviders().catch(() => []);
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="查询工作台" description="使用自然语言查询数据库，AI 自动生成 SQL 并执行" />
-
-      {datasources.length === 0 ? (
+  if (datasources.length === 0) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="查询工作台"
+          description="使用自然语言查询数据库，AI 自动生成 SQL 并执行"
+        />
         <Card>
           <CardContent className="pt-6">
             <Alert>
@@ -26,11 +28,11 @@ const QueryPage = async () => {
             </Alert>
           </CardContent>
         </Card>
-      ) : (
-        <QueryRunner datasources={datasources} aiProviders={aiProviders} initialResult={null} />
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return <QueryRunner datasources={datasources} aiProviders={aiProviders} initialResult={null} />;
 };
 
 export default QueryPage;

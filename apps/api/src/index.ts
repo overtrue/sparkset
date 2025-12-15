@@ -72,6 +72,7 @@ if (process.env.DATABASE_URL) {
         },
         prismaClient,
       ),
+    aiProviderService,
     logger: app.log,
   });
   queryExecutor = new QueryExecutor({
@@ -126,6 +127,7 @@ if (process.env.DATABASE_URL) {
         password: ds.password,
         database: ds.database,
       }),
+    aiProviderService,
     logger: app.log,
   });
   queryExecutor = new QueryExecutor({
@@ -168,6 +170,7 @@ if (process.env.DATABASE_URL) {
   schemaService = new SchemaService({
     schemaRepo: new InMemorySchemaCacheRepository(),
     getDBClient: async () => new InMemoryDBClient(),
+    aiProviderService,
     logger: app.log,
   });
   app.log.warn('DB env not set; using in-memory datasource store');

@@ -46,6 +46,15 @@ export class DatasourcesController {
     return reply.send({ id, lastSyncAt });
   }
 
+  async generateSemanticDescriptions(req: TypedRequest, reply: FastifyReply) {
+    const id = Number((req.params as { id: string }).id);
+    const datasource = (await this.service.list()).find((item) => item.id === id);
+    if (!datasource) return reply.code(404).send({ message: 'Datasource not found' });
+
+    await this.schemaService.generateSemanticDescriptions(id);
+    return reply.send({ success: true });
+  }
+
   async schema(req: TypedRequest, reply: FastifyReply) {
     const id = Number((req.params as { id: string }).id);
     const datasource = (await this.service.list()).find((item) => item.id === id);

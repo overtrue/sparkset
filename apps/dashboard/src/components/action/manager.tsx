@@ -1,8 +1,10 @@
 'use client';
 
+import { ColumnDef } from '@tanstack/react-table';
 import { Edit, Play, Plus, Trash2, X } from 'lucide-react';
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
 import {
   type ActionDTO,
   type CreateActionInput,
@@ -26,6 +28,9 @@ import {
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { DataTable } from '../ui/data-table';
+import { DataTableColumnHeader } from '../ui/data-table-column-header';
+import { DataTableRowActions, type RowAction } from '../ui/data-table-row-actions';
 import {
   Dialog,
   DialogContent,
@@ -59,7 +64,11 @@ function formatDate(value?: string) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
+interface ActionManagerProps {
+  initial: ActionDTO[];
+}
+
+export default function ActionManager({ initial }: ActionManagerProps) {
   const [actions, setActions] = useState(initial);
   const [form, setForm] = useState<CreateActionInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -75,7 +84,6 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
   const [executeDialogOpen, setExecuteDialogOpen] = useState(false);
   const [pendingExecuteId, setPendingExecuteId] = useState<number | null>(null);
 
-  // 当类型改变时，更新 payloadText
   useEffect(() => {
     if (dialogOpen) {
       setPayloadText(getPayloadForEdit(form.payload, form.type));
@@ -121,8 +129,8 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
         name: action.name,
         description: action.description || '',
         type: action.type,
-        payload: action.payload as CreateActionInput['payload'],
-        parameters: action.parameters as CreateActionInput['parameters'],
+        payload: action.payload,
+        parameters: action.parameters,
         inputSchema: action.inputSchema || undefined,
       });
       setPayloadText(getPayloadForEdit(action.payload, action.type));
@@ -145,7 +153,6 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
     event.preventDefault();
     if (!canSubmit || submitting) return;
 
-    // 验证 payload JSON
     try {
       JSON.parse(payloadText);
     } catch {
@@ -197,14 +204,24 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
     }
   };
 
+  const handleDeleteSelected = async (rows: ActionDTO[]) => {
+    for (const row of rows) {
+      try {
+        await deleteAction(row.id);
+      } catch (err) {
+        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+      }
+    }
+    setActions((prev) => prev.filter((a) => !rows.some((r) => r.id === a.id)));
+    toast.success(`成功删除 ${rows.length} 个 Action`);
+  };
+
   const handleExecuteClick = (id: number) => {
     const action = actions.find((a) => a.id === id);
     if (action?.inputSchema && action.inputSchema.parameters.length > 0) {
-      // 如果有参数定义，显示参数输入对话框
       setPendingExecuteId(id);
       setExecuteDialogOpen(true);
     } else {
-      // 没有参数，直接执行
       void handleExecute(id);
     }
   };
@@ -225,14 +242,6 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
     }
   };
 
-  const getPayloadDisplay = (payload: unknown, type: string): string => {
-    if (type === 'sql') {
-      const sqlPayload = payload as { sql?: string };
-      return sqlPayload?.sql || '';
-    }
-    return JSON.stringify(payload, null, 2);
-  };
-
   const getPayloadForEdit = (payload: unknown, type: string): string => {
     if (type === 'sql') {
       const sqlPayload = payload as { sql?: string };
@@ -241,94 +250,105 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
     return JSON.stringify(payload, null, 2);
   };
 
+  const columns: ColumnDef<ActionDTO>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+        size: 180,
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="uppercase text-xs">
+            {row.getValue('type')}
+          </Badge>
+        ),
+        size: 100,
+      },
+      {
+        accessorKey: 'description',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="描述" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
+        ),
+        size: 200,
+      },
+      {
+        id: 'updatedAt',
+        accessorFn: (row) => row.updatedAt || row.createdAt,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="最近更新" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {formatDate(row.getValue('updatedAt'))}
+          </span>
+        ),
+        size: 160,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">操作</span>,
+        cell: ({ row }) => {
+          const action = row.original;
+          const isExecuting = executingId === action.id;
+          const isDeleting = actionId === action.id;
+
+          const rowActions: RowAction[] = [
+            {
+              label: isExecuting ? '执行中...' : '执行',
+              icon: <Play className={`h-4 w-4 ${isExecuting ? 'animate-spin' : ''}`} />,
+              onClick: () => handleExecuteClick(action.id),
+              disabled: isExecuting,
+            },
+            {
+              label: '编辑',
+              icon: <Edit className="h-4 w-4" />,
+              onClick: () => handleOpenDialog(action),
+              disabled: isDeleting,
+            },
+            {
+              label: '删除',
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => {
+                setDeletingId(action.id);
+                setDeleteDialogOpen(true);
+              },
+              variant: 'destructive',
+              disabled: isDeleting,
+            },
+          ];
+
+          return <DataTableRowActions actions={rowActions} />;
+        },
+        size: 60,
+      },
+    ],
+    [executingId, actionId],
+  );
+
   return (
     <>
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              共 <span className="font-medium text-foreground">{actions.length}</span> 个 Action
-            </span>
-          </div>
+      <DataTable
+        columns={columns}
+        data={actions}
+        searchKey="name"
+        searchPlaceholder="搜索 Action..."
+        enableRowSelection
+        onDeleteSelected={handleDeleteSelected}
+        deleteConfirmTitle="删除 Action"
+        deleteConfirmDescription={(count) =>
+          `确定要删除选中的 ${count} 个 Action 吗？此操作不可撤销。`
+        }
+        emptyMessage="暂无 Action，点击右上角新建"
+        toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
             新建 Action
           </Button>
-        </div>
-        <div className="overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-4 py-3 text-muted-foreground font-medium">名称</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">类型</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">描述</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">最近更新</th>
-                <th className="px-4 py-3 text-right text-muted-foreground font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {actions.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={5}>
-                    暂无 Action，请点击右上角"新建 Action"按钮创建。
-                  </td>
-                </tr>
-              ) : (
-                actions.map((action) => (
-                  <tr key={action.id} className="border-t border-border hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{action.name}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="uppercase text-xs">
-                        {action.type}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{action.description || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {formatDate(action.updatedAt || action.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={executingId === action.id}
-                          onClick={() => handleExecuteClick(action.id)}
-                        >
-                          <Play
-                            className={`mr-2 h-4 w-4 ${executingId === action.id ? 'animate-spin' : ''}`}
-                          />
-                          {executingId === action.id ? '执行中...' : '执行'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === action.id}
-                          onClick={() => handleOpenDialog(action)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          编辑
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === action.id}
-                          onClick={() => {
-                            setDeletingId(action.id);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        }
+      />
 
       {/* 创建/编辑对话框 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -465,7 +485,7 @@ export default function ActionManager({ initial }: { initial: ActionDTO[] }) {
 
       {/* 执行结果 */}
       {(executionResult || executionError) && (
-        <Card>
+        <Card className="mt-4">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>执行结果</CardTitle>

@@ -1,9 +1,11 @@
 'use client';
 
+import { ColumnDef } from '@tanstack/react-table';
 import { Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
 import {
   type CreateDatasourceInput,
   type DatasourceDTO,
@@ -12,7 +14,11 @@ import {
   syncDatasource,
   updateDatasource,
 } from '../../lib/api';
+import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { DataTable } from '../ui/data-table';
+import { DataTableColumnHeader } from '../ui/data-table-column-header';
+import { DataTableRowActions, type RowAction } from '../ui/data-table-row-actions';
 import {
   Dialog,
   DialogContent,
@@ -42,7 +48,11 @@ function formatDate(value?: string) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-export default function DatasourceManager({ initial }: { initial: DatasourceDTO[] }) {
+interface DatasourceManagerProps {
+  initial: DatasourceDTO[];
+}
+
+export default function DatasourceManager({ initial }: DatasourceManagerProps) {
   const [datasources, setDatasources] = useState(initial);
   const [form, setForm] = useState<CreateDatasourceInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -51,7 +61,6 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const canSubmit = useMemo(() => {
-    // 编辑时密码可以为空（表示不修改）
     if (editingId) {
       return form.name && form.host && form.username && form.database;
     }
@@ -70,7 +79,6 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
     setSubmitting(true);
     try {
       if (editingId) {
-        // 编辑模式：如果密码为空，则不包含在更新数据中
         const updateData = { ...form };
         if (!updateData.password) {
           delete (updateData as Partial<CreateDatasourceInput>).password;
@@ -100,7 +108,7 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
         host: datasource.host,
         port: datasource.port,
         username: datasource.username,
-        password: '', // 编辑时不显示原有密码，需要重新输入
+        password: '',
         database: datasource.database,
         isDefault: datasource.isDefault,
       });
@@ -135,8 +143,6 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
   };
 
   const handleRemove = async (id: number) => {
-    // eslint-disable-next-line no-alert
-    if (!globalThis.confirm('确定要删除该数据源吗？')) return;
     setActionId(id);
     try {
       await removeDatasource(id);
@@ -149,102 +155,133 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
     }
   };
 
+  const handleDeleteSelected = async (rows: DatasourceDTO[]) => {
+    for (const row of rows) {
+      try {
+        await removeDatasource(row.id);
+      } catch (err) {
+        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+      }
+    }
+    setDatasources((prev) => prev.filter((ds) => !rows.some((r) => r.id === ds.id)));
+    toast.success(`成功删除 ${rows.length} 个数据源`);
+  };
+
+  const columns: ColumnDef<DatasourceDTO>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        cell: ({ row }) => (
+          <Link
+            href={`/datasources/${row.original.id}`}
+            className="font-medium text-primary hover:underline"
+          >
+            {row.getValue('name')}
+          </Link>
+        ),
+        size: 180,
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="uppercase text-xs">
+            {row.getValue('type')}
+          </Badge>
+        ),
+        size: 100,
+      },
+      {
+        id: 'host',
+        accessorFn: (row) => `${row.host}:${row.port}`,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Host" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{`${row.original.host}:${row.original.port}`}</span>
+        ),
+        size: 160,
+      },
+      {
+        accessorKey: 'database',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="数据库" />,
+        cell: ({ row }) => <span>{row.getValue('database')}</span>,
+        size: 140,
+      },
+      {
+        accessorKey: 'lastSyncAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="最近同步" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">
+            {formatDate(row.getValue('lastSyncAt'))}
+          </span>
+        ),
+        size: 160,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">操作</span>,
+        cell: ({ row }) => {
+          const ds = row.original;
+          const isLoading = actionId === ds.id;
+
+          const actions: RowAction[] = [
+            {
+              label: '查看详情',
+              icon: <Eye className="h-4 w-4" />,
+              onClick: () => {
+                window.location.href = `/datasources/${ds.id}`;
+              },
+            },
+            {
+              label: '编辑',
+              icon: <Edit className="h-4 w-4" />,
+              onClick: () => handleOpenDialog(ds),
+              disabled: isLoading,
+            },
+            {
+              label: isLoading ? '同步中...' : '同步',
+              icon: <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />,
+              onClick: () => handleSync(ds.id),
+              disabled: isLoading,
+            },
+            {
+              label: '删除',
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleRemove(ds.id),
+              variant: 'destructive',
+              disabled: isLoading,
+            },
+          ];
+
+          return <DataTableRowActions actions={actions} />;
+        },
+        size: 60,
+      },
+    ],
+    [actionId],
+  );
+
   return (
     <>
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              共 <span className="font-medium text-foreground">{datasources.length}</span> 个数据源
-            </span>
-          </div>
+      <DataTable
+        columns={columns}
+        data={datasources}
+        searchKey="name"
+        searchPlaceholder="搜索数据源..."
+        enableRowSelection
+        onDeleteSelected={handleDeleteSelected}
+        deleteConfirmTitle="删除数据源"
+        deleteConfirmDescription={(count) =>
+          `确定要删除选中的 ${count} 个数据源吗？此操作不可撤销。`
+        }
+        emptyMessage="暂无数据源，点击右上角添加"
+        toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
             添加数据源
           </Button>
-        </div>
-        <div className="overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left">
-              <tr>
-                <th className="px-4 py-3 text-muted-foreground font-medium">名称</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">类型</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">Host</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">数据库</th>
-                <th className="px-4 py-3 text-muted-foreground font-medium">最近同步</th>
-                <th className="px-4 py-3 text-right text-muted-foreground font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {datasources.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
-                    暂无数据源，请点击右上角"添加数据源"按钮创建。
-                  </td>
-                </tr>
-              ) : (
-                datasources.map((ds: DatasourceDTO) => (
-                  <tr key={ds.id} className="border-t border-border hover:bg-muted/50">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/datasources/${ds.id}`}
-                        className="font-medium text-primary hover:underline cursor-pointer"
-                      >
-                        {ds.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 uppercase text-xs text-muted-foreground">{ds.type}</td>
-                    <td className="px-4 py-3">{`${ds.host}:${ds.port}`}</td>
-                    <td className="px-4 py-3">{ds.database}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {formatDate(ds.lastSyncAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/datasources/${ds.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            详情
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === ds.id}
-                          onClick={() => handleOpenDialog(ds)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          编辑
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === ds.id}
-                          onClick={() => handleSync(ds.id)}
-                        >
-                          <RefreshCw
-                            className={`mr-2 h-4 w-4 ${actionId === ds.id ? 'animate-spin' : ''}`}
-                          />
-                          {actionId === ds.id ? '同步中...' : '同步'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={actionId === ds.id}
-                          onClick={() => handleRemove(ds.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        }
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
