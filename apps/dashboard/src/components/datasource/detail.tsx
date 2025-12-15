@@ -1,21 +1,33 @@
 'use client';
 
-import { ArrowLeft, Edit2, RefreshCw, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit, Edit2, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  type CreateDatasourceInput,
   type DatasourceDetailDTO,
   type TableColumnDTO,
   type TableSchemaDTO,
   fetchDatasourceDetail,
+  removeDatasource,
   syncDatasource,
   updateColumnMetadata,
+  updateDatasource,
   updateTableMetadata,
 } from '../../lib/api';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
@@ -40,13 +52,36 @@ interface EditingColumnState {
   semanticDescription: string;
 }
 
+const defaultForm: CreateDatasourceInput = {
+  name: '',
+  type: 'mysql',
+  host: '127.0.0.1',
+  port: 3306,
+  username: 'root',
+  password: '',
+  database: '',
+  isDefault: false,
+};
+
 export default function DatasourceDetail({ initial }: { initial: DatasourceDetailDTO }) {
+  const router = useRouter();
   const [datasource, setDatasource] = useState(initial);
   const [editingTable, setEditingTable] = useState<EditingTableState | null>(null);
   const [editingColumn, setEditingColumn] = useState<EditingColumnState | null>(null);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // 编辑数据源相关状态
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState<CreateDatasourceInput>(defaultForm);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const canSubmitEdit = useMemo(() => {
+    // 编辑时密码可以为空（表示不修改）
+    return editForm.name && editForm.host && editForm.username && editForm.database;
+  }, [editForm]);
 
   const handleEditTable = (table: TableSchemaDTO) => {
     setEditingTable({
@@ -142,7 +177,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
     setSyncing(true);
     setMessage(null);
     try {
-      const result = await syncDatasource(datasource.id);
+      await syncDatasource(datasource.id);
       // 重新获取详情数据以更新表结构
       const updated = await fetchDatasourceDetail(datasource.id);
       setDatasource(updated);
@@ -151,6 +186,67 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       toast.error((err as Error)?.message ?? '同步失败');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const onEditFormChange =
+    (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) =>
+      setEditForm((prev: CreateDatasourceInput) => ({
+        ...prev,
+        [key]: key === 'port' ? Number(e.target.value) : e.target.value,
+      }));
+
+  const handleOpenEditDialog = () => {
+    setEditForm({
+      name: datasource.name,
+      type: datasource.type,
+      host: datasource.host,
+      port: datasource.port,
+      username: datasource.username,
+      password: '', // 编辑时不显示原有密码
+      database: datasource.database,
+      isDefault: datasource.isDefault,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditForm(defaultForm);
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canSubmitEdit || editSubmitting) return;
+    setEditSubmitting(true);
+    try {
+      // 编辑模式：如果密码为空，则不包含在更新数据中
+      const updateData = { ...editForm };
+      if (!updateData.password) {
+        delete (updateData as Partial<CreateDatasourceInput>).password;
+      }
+      const updated = await updateDatasource(datasource.id, updateData);
+      setDatasource((prev) => ({ ...prev, ...updated }));
+      toast.success('数据源更新成功');
+      handleCloseEditDialog();
+    } catch (err) {
+      toast.error((err as Error)?.message ?? '更新失败');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    // eslint-disable-next-line no-alert
+    if (!globalThis.confirm('确定要删除该数据源吗？删除后无法恢复。')) return;
+    setDeleting(true);
+    try {
+      await removeDatasource(datasource.id);
+      toast.success('数据源已删除');
+      router.push('/');
+    } catch (err) {
+      toast.error((err as Error)?.message ?? '删除失败');
+      setDeleting(false);
     }
   };
 
@@ -172,10 +268,35 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               <CardTitle>数据源信息</CardTitle>
               <CardDescription>数据源的基础连接信息</CardDescription>
             </div>
-            <Button variant="secondary" size="sm" onClick={handleSync} disabled={syncing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? '同步中...' : '同步'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenEditDialog}
+                disabled={syncing || deleting}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                编辑
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSync}
+                disabled={syncing || deleting}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? '同步中...' : '同步'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                disabled={syncing || deleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {deleting ? '删除中...' : '删除'}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -441,6 +562,99 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>编辑数据源</DialogTitle>
+            <DialogDescription>修改数据源配置信息</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">名称</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.name}
+                  onChange={onEditFormChange('name')}
+                  placeholder="如 production-mysql"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-type">类型</Label>
+                  <Input id="edit-type" value={editForm.type} readOnly />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-port">端口</Label>
+                  <Input
+                    id="edit-port"
+                    type="number"
+                    value={editForm.port}
+                    onChange={onEditFormChange('port')}
+                    min={1}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-host">Host</Label>
+                  <Input
+                    id="edit-host"
+                    value={editForm.host}
+                    onChange={onEditFormChange('host')}
+                    placeholder="127.0.0.1"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-database">数据库名</Label>
+                  <Input
+                    id="edit-database"
+                    value={editForm.database}
+                    onChange={onEditFormChange('database')}
+                    placeholder="sparkline_demo"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-username">用户名</Label>
+                  <Input
+                    id="edit-username"
+                    value={editForm.username}
+                    onChange={onEditFormChange('username')}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-password">
+                    密码 <span className="text-muted-foreground">(留空则不修改)</span>
+                  </Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editForm.password}
+                    onChange={onEditFormChange('password')}
+                    placeholder="留空则不修改"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseEditDialog}>
+                取消
+              </Button>
+              <Button type="submit" disabled={!canSubmitEdit || editSubmitting}>
+                {editSubmitting ? '更新中...' : '更新'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

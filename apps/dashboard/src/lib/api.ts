@@ -58,6 +58,16 @@ export async function removeDatasource(id: number): Promise<void> {
   await request(`/datasources/${id}`, { method: 'DELETE' });
 }
 
+export async function updateDatasource(
+  id: number,
+  payload: Partial<CreateDatasourceInput>,
+): Promise<DatasourceDTO> {
+  return request<DatasourceDTO>(`/datasources/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function setDefaultDatasource(id: number): Promise<{ success: boolean }> {
   return request(`/datasources/${id}/set-default`, { method: 'POST' });
 }

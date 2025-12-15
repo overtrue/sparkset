@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import {
   createDatasource,
   removeDatasource,
   syncDatasource,
+  updateDatasource,
 } from '../../lib/api';
 import { Button } from '../ui/button';
 import {
@@ -31,6 +32,7 @@ const defaultForm: CreateDatasourceInput = {
   username: 'root',
   password: '',
   database: '',
+  isDefault: false,
 };
 
 function formatDate(value?: string) {
@@ -43,15 +45,18 @@ function formatDate(value?: string) {
 export default function DatasourceManager({ initial }: { initial: DatasourceDTO[] }) {
   const [datasources, setDatasources] = useState(initial);
   const [form, setForm] = useState<CreateDatasourceInput>(defaultForm);
-  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const canSubmit = useMemo(
-    () => form.name && form.host && form.username && form.database && form.password,
-    [form],
-  );
+  const canSubmit = useMemo(() => {
+    // 编辑时密码可以为空（表示不修改）
+    if (editingId) {
+      return form.name && form.host && form.username && form.database;
+    }
+    return form.name && form.host && form.username && form.database && form.password;
+  }, [form, editingId]);
 
   const onChange = (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm((prev: CreateDatasourceInput) => ({
@@ -59,50 +64,61 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
       [key]: key === 'port' ? Number(e.target.value) : e.target.value,
     }));
 
-  const handleCreate = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || creating) return;
-    setCreating(true);
-    setMessage(null);
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
     try {
-      const created = await createDatasource(form);
-      setDatasources((prev: DatasourceDTO[]) => [...prev, created]);
-      setForm((prev: CreateDatasourceInput) => ({
-        ...defaultForm,
-        host: prev.host,
-        port: prev.port,
-        username: prev.username,
-      }));
-      setDialogOpen(false);
-      setMessage('数据源创建成功');
-      // 清除成功消息
-      setTimeout(() => setMessage(null), 3000);
+      if (editingId) {
+        // 编辑模式：如果密码为空，则不包含在更新数据中
+        const updateData = { ...form };
+        if (!updateData.password) {
+          delete (updateData as Partial<CreateDatasourceInput>).password;
+        }
+        const updated = await updateDatasource(editingId, updateData);
+        setDatasources((prev) => prev.map((ds) => (ds.id === editingId ? updated : ds)));
+        toast.success('数据源更新成功');
+      } else {
+        const created = await createDatasource(form);
+        setDatasources((prev: DatasourceDTO[]) => [...prev, created]);
+        toast.success('数据源创建成功');
+      }
+      handleCloseDialog();
     } catch (err) {
-      setMessage((err as Error)?.message ?? '创建失败');
+      toast.error((err as Error)?.message ?? '操作失败');
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (datasource?: DatasourceDTO) => {
+    if (datasource) {
+      setEditingId(datasource.id);
+      setForm({
+        name: datasource.name,
+        type: datasource.type,
+        host: datasource.host,
+        port: datasource.port,
+        username: datasource.username,
+        password: '', // 编辑时不显示原有密码，需要重新输入
+        database: datasource.database,
+        isDefault: datasource.isDefault,
+      });
+    } else {
+      setEditingId(null);
+      setForm(defaultForm);
+    }
     setDialogOpen(true);
-    setMessage(null);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setForm((prev: CreateDatasourceInput) => ({
-      ...defaultForm,
-      host: prev.host,
-      port: prev.port,
-      username: prev.username,
-    }));
-    setMessage(null);
+    setEditingId(null);
+    setForm(defaultForm);
   };
 
   const handleSync = async (id: number) => {
     setActionId(id);
-    setMessage(null);
     try {
       const res = await syncDatasource(id);
       setDatasources((prev: DatasourceDTO[]) =>
@@ -122,13 +138,12 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
     // eslint-disable-next-line no-alert
     if (!globalThis.confirm('确定要删除该数据源吗？')) return;
     setActionId(id);
-    setMessage(null);
     try {
       await removeDatasource(id);
       setDatasources((prev: DatasourceDTO[]) => prev.filter((ds: DatasourceDTO) => ds.id !== id));
-      setMessage('已删除');
+      toast.success('数据源已删除');
     } catch (err) {
-      setMessage((err as Error)?.message ?? '删除失败');
+      toast.error((err as Error)?.message ?? '删除失败');
     } finally {
       setActionId(null);
     }
@@ -143,7 +158,7 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
               共 <span className="font-medium text-foreground">{datasources.length}</span> 个数据源
             </span>
           </div>
-          <Button onClick={handleOpenDialog}>
+          <Button onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
             添加数据源
           </Button>
@@ -196,6 +211,15 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
                           variant="outline"
                           size="sm"
                           disabled={actionId === ds.id}
+                          onClick={() => handleOpenDialog(ds)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={actionId === ds.id}
                           onClick={() => handleSync(ds.id)}
                         >
                           <RefreshCw
@@ -225,12 +249,14 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>添加数据源</DialogTitle>
+            <DialogTitle>{editingId ? '编辑数据源' : '添加数据源'}</DialogTitle>
             <DialogDescription>
-              填写以下信息以连接新的数据源。创建成功后，系统将自动验证连接。
+              {editingId
+                ? '修改数据源配置信息'
+                : '填写以下信息以连接新的数据源。创建成功后，系统将自动验证连接。'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreate}>
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">名称</Label>
@@ -292,34 +318,27 @@ export default function DatasourceManager({ initial }: { initial: DatasourceDTO[
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">密码</Label>
+                  <Label htmlFor="password">
+                    密码{' '}
+                    {editingId && <span className="text-muted-foreground">(留空则不修改)</span>}
+                  </Label>
                   <Input
                     id="password"
                     type="password"
                     value={form.password}
                     onChange={onChange('password')}
-                    required
+                    placeholder={editingId ? '留空则不修改' : ''}
+                    required={!editingId}
                   />
                 </div>
               </div>
-              {message && (
-                <div
-                  className={`text-sm ${
-                    message.includes('成功')
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-destructive'
-                  }`}
-                >
-                  {message}
-                </div>
-              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 取消
               </Button>
-              <Button type="submit" disabled={!canSubmit || creating}>
-                {creating ? '创建中...' : '创建'}
+              <Button type="submit" disabled={!canSubmit || submitting}>
+                {submitting ? '提交中...' : editingId ? '更新' : '创建'}
               </Button>
             </DialogFooter>
           </form>
