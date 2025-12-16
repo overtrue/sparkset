@@ -597,7 +597,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
 
       {/* 执行结果 */}
       {(executionResult || executionError) && (
-        <Card className="mt-4">
+        <Card className="shadow-none mt-4">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>执行结果</CardTitle>

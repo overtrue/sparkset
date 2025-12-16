@@ -71,7 +71,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
 
   if (conversations.length === 0) {
     return (
-      <Card>
+      <Card className="shadow-none">
         <CardContent className="py-12 text-center">
           <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
           <p className="text-sm text-muted-foreground">暂无会话记录</p>
@@ -93,7 +93,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
             open={isExpanded}
             onOpenChange={() => handleToggle(conversation.id)}
           >
-            <Card>
+            <Card className="shadow-none">
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                   <div className="flex items-start justify-between">

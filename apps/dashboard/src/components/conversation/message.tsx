@@ -63,7 +63,7 @@ export function MessageItem({ message }: MessageItemProps) {
   const isAssistant = message.role === 'assistant';
 
   return (
-    <Card className={isUser ? 'bg-muted/30' : ''}>
+    <Card className={isUser ? 'shadow-none bg-muted/30' : 'shadow-none'}>
       <CardContent className="pt-4">
         <div className="flex items-start gap-3">
           <div

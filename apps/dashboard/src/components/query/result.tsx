@@ -23,7 +23,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
 
   return (
     <>
-      <Card className="overflow-hidden w-full max-w-full">
+      <Card className="shadow-none overflow-hidden w-full max-w-full">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">

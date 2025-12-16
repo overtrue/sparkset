@@ -34,8 +34,29 @@
 
 - Use shadcn components via CLI (list at https://ui.shadcn.com/llms.txt). Layouts should reference blocks (https://ui.shadcn.com/blocks); sidebar-02 is the baseline for dashboard shell.
 - Keep `components.json` in sync; new components must be added through shadcn CLI so tailwind tokens stay consistent.
+- For customization guidelines, see Component Development Guidelines > shadcn Component Customization Guidelines.
 
 ## Component Development Guidelines
+
+### shadcn Component Customization Guidelines
+
+- **Do NOT modify shadcn atomic components**: Components in `src/components/ui/` are shadcn atomic components and should NOT be modified directly.
+  - These components are maintained via shadcn CLI and may be updated/replaced automatically
+  - Modifying them directly will cause conflicts when updating shadcn components via CLI
+  - Modifications will be lost when regenerating components
+- **Customization approaches**:
+  - **Page-level customization**: Apply custom styles or behavior at the business page/component level using className, style props, or wrapper components
+    - Example: `<Button className="custom-class">` in your page component
+  - **Higher-order components**: Create wrapper components in `src/components/` (not in `src/components/ui/`) that extend or compose shadcn components
+    - Example: Create `src/components/custom-button.tsx` that wraps and extends `src/components/ui/button.tsx`
+    - This preserves the original shadcn component while providing custom functionality
+  - **Module-specific variants**: Create module-specific wrapper components in `src/components/{module}/` when customization is specific to a feature
+    - Example: `src/components/query/query-button.tsx` for query-specific button variants
+- **Why this matters**:
+  - Maintains compatibility with shadcn CLI updates
+  - Keeps atomic components clean and reusable
+  - Enables easy maintenance and version upgrades
+  - Separates concerns: atomic components vs. business logic
 
 ### File Naming Convention
 

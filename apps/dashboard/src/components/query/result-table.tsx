@@ -21,7 +21,11 @@ export function ResultTable({ rows }: ResultTableProps) {
       header: ({ column }) => <DataTableColumnHeader column={column} title={key} />,
       cell: ({ getValue }) => {
         const value = getValue();
-        return <span className="whitespace-nowrap">{String(value ?? '')}</span>;
+        return (
+          <div className="max-w-full truncate" title={String(value ?? '')}>
+            {String(value ?? '')}
+          </div>
+        );
       },
     }));
   }, [rows]);

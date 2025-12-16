@@ -70,11 +70,11 @@ const QueryForm = ({
   };
 
   return (
-    <Card className="shadow-sm border-border/50 overflow-hidden">
+    <Card className="shadow-none border-border/50 overflow-hidden py-0">
       <CardContent className="p-0">
         <form onSubmit={handleSubmit} className="flex flex-col">
           {/* 主要输入区域 */}
-          <div className="px-4 pt-4 pb-2">
+          <div className="p-4">
             <Textarea
               id="question"
               rows={4}

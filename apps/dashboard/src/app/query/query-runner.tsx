@@ -78,7 +78,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
       )}
 
       {loading && !result && (
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <Skeleton className="h-8 w-full" />
