@@ -46,11 +46,16 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         title: '代码仓库',
-        url: 'https://github.com/nicepkg/sparkline',
+        url: 'https://github.com/overtrue/sparkline',
         icon: Github,
         external: true,
       },
-      { title: '使用文档', url: '#', icon: BookOpen, external: true },
+      {
+        title: '使用文档',
+        url: 'https://github.com/overtrue/sparkline',
+        icon: BookOpen,
+        external: true,
+      },
     ],
   },
 ];
