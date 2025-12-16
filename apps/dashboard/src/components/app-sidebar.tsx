@@ -68,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Database className="h-4 w-4" />
+            <SparklesIcon className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-semibold">Sparkset</span>
