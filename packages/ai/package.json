@@ -1,5 +1,5 @@
 {
-  "name": "@sparkline/ai",
+  "name": "@sparkset/ai",
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
@@ -15,7 +15,7 @@
     "@ai-sdk/anthropic": "beta",
     "@ai-sdk/deepseek": "2.0.0-beta.49",
     "@ai-sdk/openai": "beta",
-    "@sparkline/models": "workspace:*",
+    "@sparkset/models": "workspace:*",
     "ai": "beta"
   }
 }

@@ -339,7 +339,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                     id="database"
                     value={form.database}
                     onChange={onChange('database')}
-                    placeholder="sparkline_demo"
+                    placeholder="sparkset_demo"
                     required
                   />
                 </div>

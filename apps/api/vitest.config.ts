@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -8,9 +8,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@sparkline/core': path.resolve(__dirname, '../../packages/core/src'),
-      '@sparkline/models': path.resolve(__dirname, '../../packages/models/src'),
-      '@sparkline/db': path.resolve(__dirname, '../../packages/db/src'),
+      '@sparkset/core': path.resolve(__dirname, '../../packages/core/src'),
+      '@sparkset/models': path.resolve(__dirname, '../../packages/models/src'),
+      '@sparkset/db': path.resolve(__dirname, '../../packages/db/src'),
     },
   },
 });

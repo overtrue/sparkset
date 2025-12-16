@@ -6,7 +6,7 @@ import {
   SqlActionExecutor,
   createEchoHandler,
   createSqlActionHandler,
-} from '@sparkline/core';
+} from '@sparkset/core';
 import {
   InMemoryDBClient,
   InMemorySchemaCacheRepository,
@@ -20,7 +20,7 @@ import {
   PrismaSchemaCacheRepository,
   createDBClient,
   getPrisma,
-} from '@sparkline/db';
+} from '@sparkset/db';
 import Fastify from 'fastify';
 import { ActionService } from './app/services/actionService';
 import { AIProviderService } from './app/services/aiProviderService';
@@ -256,9 +256,9 @@ registerRoutes(app, {
 void app
   .listen({ host: env.HOST, port: Number(env.PORT) })
   .then((address) => {
-    app.log.info(`Sparkline API listening on ${address}`);
+    app.log.info(`Sparkset API listening on ${address}`);
   })
   .catch((err) => {
-    app.log.error(err, 'Failed to start Sparkline API');
+    app.log.error(err, 'Failed to start Sparkset API');
     process.exit(1);
   });

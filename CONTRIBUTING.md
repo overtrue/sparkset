@@ -1,8 +1,8 @@
-# Contributing to Sparkline
+# Contributing to Sparkset
 
-Thank you for your interest in contributing to Sparkline! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Sparkset! This document provides guidelines and instructions for contributing to the project.
 
-We welcome contributions of all kinds - bug fixes, new features, documentation improvements, and more. Your help makes Sparkline better for everyone.
+We welcome contributions of all kinds - bug fixes, new features, documentation improvements, and more. Your help makes Sparkset better for everyone.
 
 ## Table of Contents
 
@@ -26,12 +26,12 @@ By participating in this project, you agree to maintain a respectful and inclusi
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/overtrue/sparkline.git
-   cd sparkline
+   git clone https://github.com/overtrue/sparkset.git
+   cd sparkset
    ```
 3. **Add the upstream repository**:
    ```bash
-   git remote add upstream https://github.com/overtrue/sparkline.git
+   git remote add upstream https://github.com/overtrue/sparkset.git
    ```
 4. **Create a branch** for your changes:
    ```bash
@@ -64,7 +64,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
    Create a `.env` file in the root directory:
 
    ```bash
-   DATABASE_URL="mysql://user:password@localhost:3306/sparkline"
+   DATABASE_URL="mysql://user:password@localhost:3306/sparkset"
    OPENAI_API_KEY=sk-your-key
    # ... other variables
    ```
@@ -79,10 +79,10 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
    ```bash
    # Terminal 1: API server
-   pnpm dev --filter @sparkline/api
+   pnpm dev --filter @sparkset/api
 
    # Terminal 2: Dashboard
-   pnpm dev --filter @sparkline/dashboard
+   pnpm dev --filter @sparkset/dashboard
    ```
 
 ### Running Tests
@@ -92,11 +92,11 @@ By participating in this project, you agree to maintain a respectful and inclusi
 pnpm test
 
 # Run tests for a specific package
-pnpm --filter @sparkline/core test
-pnpm --filter @sparkline/api test
+pnpm --filter @sparkset/core test
+pnpm --filter @sparkset/api test
 
 # Run tests in watch mode
-pnpm --filter @sparkline/core test --watch
+pnpm --filter @sparkset/core test --watch
 ```
 
 ## Development Workflow
@@ -388,7 +388,7 @@ When adding new features:
 
 ### Monorepo Structure
 
-Sparkline uses Turborepo for monorepo management:
+Sparkset uses Turborepo for monorepo management:
 
 - **Keep packages independent**: Minimize cross-package dependencies
 - **Use workspace protocols**: Reference local packages using workspace protocol (`workspace:*`)
@@ -467,4 +467,4 @@ Contributors will be recognized in:
 - Release notes
 - GitHub contributors page
 
-Thank you for contributing to Sparkline! Your efforts help make this project better for everyone. 🎉
+Thank you for contributing to Sparkset! Your efforts help make this project better for everyone. 🎉

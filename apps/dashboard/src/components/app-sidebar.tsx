@@ -46,13 +46,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       {
         title: '代码仓库',
-        url: 'https://github.com/overtrue/sparkline',
+        url: 'https://github.com/overtrue/sparkset',
         icon: Github,
         external: true,
       },
       {
         title: '使用文档',
-        url: 'https://github.com/overtrue/sparkline',
+        url: 'https://github.com/overtrue/sparkset',
         icon: BookOpen,
         external: true,
       },
@@ -71,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <Database className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-semibold">Sparkline</span>
+            <span className="text-lg font-semibold">Sparkset</span>
           </div>
         </div>
         <hr className="border-t border-border mx-2 -mt-px" />

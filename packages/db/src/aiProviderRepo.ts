@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { AIProvider } from '@sparkline/models';
+import { AIProvider } from '@sparkset/models';
 
 export interface AIProviderRepository {
   list(): Promise<AIProvider[]>;

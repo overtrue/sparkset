@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Conversation, Message, Role } from '@sparkline/models';
+import { Conversation, Message, Role } from '@sparkset/models';
 
 export interface ConversationRepository {
   list(): Promise<Conversation[]>;

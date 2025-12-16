@@ -1,4 +1,4 @@
-// Prisma schema for Sparkline
+// Prisma schema for Sparkset
 // Supports MySQL/PostgreSQL by switching provider/DATABASE_URL.
 
 // Default to mysql; change to postgresql/sqlite if needed.

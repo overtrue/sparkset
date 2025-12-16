@@ -1,9 +1,9 @@
 {
-  "name": "@sparkline/cli",
+  "name": "@sparkset/cli",
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "sparkline": "dist/index.js"
+    "sparkset": "dist/index.js"
   },
   "scripts": {
     "dev": "tsc -b --watch",

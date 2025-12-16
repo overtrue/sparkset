@@ -11,7 +11,7 @@ import { Toaster } from '../components/ui/sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Sparkline Dashboard',
+  title: 'Sparkset Dashboard',
   description: 'AI 运营助手',
 };
 
@@ -26,7 +26,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => (
               <div className="flex flex-1 items-center gap-2 px-3">
                 <SidebarTrigger className="-ml-4" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                <div className="text-sm text-muted-foreground">Sparkline Dashboard</div>
+                <div className="text-sm text-muted-foreground">Sparkset Dashboard</div>
               </div>
               <div className="flex gap-3 ml-auto">
                 <ThemeToggle />

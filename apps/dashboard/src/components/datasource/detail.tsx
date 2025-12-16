@@ -651,7 +651,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                     id="edit-database"
                     value={editForm.database}
                     onChange={onEditFormChange('database')}
-                    placeholder="sparkline_demo"
+                    placeholder="sparkset_demo"
                     required
                   />
                 </div>

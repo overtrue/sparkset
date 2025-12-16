@@ -13,12 +13,12 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@sparkline/core/*": ["packages/core/src/*"],
-      "@sparkline/ai/*": ["packages/ai/src/*"],
-      "@sparkline/db/*": ["packages/db/src/*"],
-      "@sparkline/models/*": ["packages/models/src/*"],
-      "@sparkline/utils/*": ["packages/utils/src/*"],
-      "@sparkline/config/*": ["packages/config/src/*"]
+      "@sparkset/core/*": ["packages/core/src/*"],
+      "@sparkset/ai/*": ["packages/ai/src/*"],
+      "@sparkset/db/*": ["packages/db/src/*"],
+      "@sparkset/models/*": ["packages/models/src/*"],
+      "@sparkset/utils/*": ["packages/utils/src/*"],
+      "@sparkset/config/*": ["packages/config/src/*"]
     }
   },
   "include": ["packages", "apps"],

@@ -1,6 +1,6 @@
 <div align="center">
 
-# Sparkline
+# Sparkset
 
 > Transform natural language into SQL queries with AI-powered intelligence
 
@@ -10,7 +10,7 @@
 
 </div>
 
-Sparkline is an AI-powered operational assistant that helps teams interact with databases using natural language. Ask questions like "How many orders were cancelled this week?" or "Show me users from Beijing" and get instant insights without writing SQL.
+Sparkset is an AI-powered operational assistant that helps teams interact with databases using natural language. Ask questions like "How many orders were cancelled this week?" or "Show me users from Beijing" and get instant insights without writing SQL.
 
 > **Note**: Screenshots and demo GIFs coming soon! 🎨
 
@@ -41,8 +41,8 @@ Before you begin, ensure you have the following installed:
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/overtrue/sparkline.git
-cd sparkline
+git clone https://github.com/overtrue/sparkset.git
+cd sparkset
 ```
 
 2. **Install dependencies**
@@ -64,7 +64,7 @@ Create a MySQL database and configure the connection. You can use either approac
 **Option 1: Use DATABASE_URL (recommended)**
 
 ```bash
-export DATABASE_URL="mysql://user:password@localhost:3306/sparkline"
+export DATABASE_URL="mysql://user:password@localhost:3306/sparkset"
 ```
 
 **Option 2: Use individual environment variables**
@@ -74,7 +74,7 @@ export DB_HOST=localhost
 export DB_PORT=3306
 export DB_USER=root
 export DB_PASSWORD=yourpassword
-export DB_NAME=sparkline
+export DB_NAME=sparkset
 ```
 
 5. **Run database migrations**
@@ -84,7 +84,7 @@ export DB_NAME=sparkline
 pnpm prisma:migrate:deploy
 
 # Or manually run SQL migrations
-mysql -u root -p sparkline < packages/db/prisma/migrations/0001_init.sql
+mysql -u root -p sparkset < packages/db/prisma/migrations/0001_init.sql
 ```
 
 6. **Configure AI provider**
@@ -114,7 +114,7 @@ Open two terminal windows:
 **Terminal 1 - API Server:**
 
 ```bash
-pnpm dev --filter @sparkline/api
+pnpm dev --filter @sparkset/api
 ```
 
 The API will be available at `http://localhost:3333`
@@ -122,7 +122,7 @@ The API will be available at `http://localhost:3333`
 **Terminal 2 - Dashboard:**
 
 ```bash
-pnpm dev --filter @sparkline/dashboard
+pnpm dev --filter @sparkset/dashboard
 ```
 
 The Dashboard will be available at `http://localhost:3000`
@@ -132,10 +132,10 @@ The Dashboard will be available at `http://localhost:3000`
 To load sample data for testing:
 
 ```bash
-mysql -uroot -p123456 sparkline_demo < scripts/demo-seed.sql
+mysql -uroot -p123456 sparkset_demo < scripts/demo-seed.sql
 ```
 
-Visit `http://localhost:3000` to start using Sparkline!
+Visit `http://localhost:3000` to start using Sparkset!
 
 ## 📖 Usage
 
@@ -155,13 +155,13 @@ The CLI is perfect for automation and technical users:
 
 ```bash
 # Run a natural language query
-pnpm dev --filter @sparkline/cli -- query:run "Show me the top 10 users"
+pnpm dev --filter @sparkset/cli -- query:run "Show me the top 10 users"
 
 # List all conversations
-pnpm dev --filter @sparkline/cli -- conversation:list
+pnpm dev --filter @sparkset/cli -- conversation:list
 
 # Execute a saved action template
-pnpm dev --filter @sparkline/cli -- action:exec 1
+pnpm dev --filter @sparkset/cli -- action:exec 1
 ```
 
 ### API
@@ -190,10 +190,10 @@ curl http://localhost:3333/conversations
 
 ## 🏗️ Project Structure
 
-Sparkline is built as a monorepo using [Turborepo](https://turbo.build/) for efficient builds and task orchestration:
+Sparkset is built as a monorepo using [Turborepo](https://turbo.build/) for efficient builds and task orchestration:
 
 ```
-sparkline/
+sparkset/
 ├── apps/
 │   ├── api/              # Fastify REST API server
 │   │   ├── src/app/      # Controllers, services, validators
@@ -243,7 +243,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=yourpassword
-DB_NAME=sparkline
+DB_NAME=sparkset
 ```
 
 #### AI Provider Configuration
@@ -283,7 +283,7 @@ AI_FALLBACK_MODELS='[{"model":"gpt-3.5-turbo","provider":"openai"}]'
 ```bash
 PORT=3333                    # API server port
 HOST=0.0.0.0                 # API server host
-SPARKLINE_ENV=dev            # Environment: dev, test, prod
+SPARKSET_ENV=dev            # Environment: dev, test, prod
 LOG_LEVEL=info               # Log level: debug, info, warn, error
 API_KEY=your-api-key         # Optional API key for authentication
 ```
@@ -351,7 +351,7 @@ Ensure all required environment variables are set:
 - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` - AI provider credentials
 - `NEXT_PUBLIC_API_URL` - API server URL (for Dashboard)
 - `PORT` - API server port (default: 3333)
-- `SPARKLINE_ENV=prod` - Environment identifier
+- `SPARKSET_ENV=prod` - Environment identifier
 
 ## 🧪 Development
 
@@ -362,11 +362,11 @@ Ensure all required environment variables are set:
 pnpm test
 
 # Run tests for a specific package
-pnpm --filter @sparkline/core test
-pnpm --filter @sparkline/api test
+pnpm --filter @sparkset/core test
+pnpm --filter @sparkset/api test
 
 # Run tests in watch mode
-pnpm --filter @sparkline/core test --watch
+pnpm --filter @sparkset/core test --watch
 
 # Run tests with coverage
 pnpm test --coverage
@@ -394,8 +394,8 @@ pnpm prettier --write path/to/file.ts
 pnpm dev
 
 # Run specific app
-pnpm dev --filter @sparkline/api
-pnpm dev --filter @sparkline/dashboard
+pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/dashboard
 
 # Generate Prisma Client (after schema changes)
 pnpm prisma:generate
@@ -418,7 +418,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Whether it's bug fixes, new features, or documentation improvements, your help makes Sparkline better.
+We welcome contributions from the community! Whether it's bug fixes, new features, or documentation improvements, your help makes Sparkset better.
 
 Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
@@ -445,14 +445,14 @@ Thank you for contributing! 🎉
 
 ## 📚 Documentation
 
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to Sparkline
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to Sparkset
 - **[Development Guide](README.dev.md)** - Detailed development instructions
 - **[Architecture Spec](spec.md)** - Technical architecture and design decisions
 - **[中文文档](README.zh-CN.md)** - Chinese documentation
 
 ## 🔒 Security
 
-Sparkline includes several security features to protect your data:
+Sparkset includes several security features to protect your data:
 
 - **SQL Safety**: All generated SQL is validated to ensure read-only operations
 - **Dry-run Validation**: Queries are tested before execution to prevent data modification
@@ -465,7 +465,7 @@ Sparkline includes several security features to protect your data:
 If you discover a security vulnerability, please **do not** open a public issue. Instead:
 
 - Email security concerns to: `anzhengchao@gmail.com`
-- Or open a [private security advisory](https://github.com/overtrue/sparkline/security/advisories/new)
+- Or open a [private security advisory](https://github.com/overtrue/sparkset/security/advisories/new)
 
 We take security seriously and will respond promptly to all security reports.
 
@@ -482,16 +482,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📮 Support & Community
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/overtrue/sparkline/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/overtrue/sparkline/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/overtrue/sparkset/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/overtrue/sparkset/discussions)
 - **📧 Email**: anzhengchao@gmail.com
 - **📖 Documentation**: Check our [docs](README.dev.md) and [contributing guide](CONTRIBUTING.md)
 
 ### Getting Help
 
-- Check existing [Issues](https://github.com/overtrue/sparkline/issues) and [Discussions](https://github.com/overtrue/sparkline/discussions)
+- Check existing [Issues](https://github.com/overtrue/sparkset/issues) and [Discussions](https://github.com/overtrue/sparkset/discussions)
 - Read the [documentation](README.dev.md)
-- Ask questions in [GitHub Discussions](https://github.com/overtrue/sparkline/discussions)
+- Ask questions in [GitHub Discussions](https://github.com/overtrue/sparkset/discussions)
 
 ---
 
@@ -499,6 +499,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Made with ❤️ by overtrue and all contributors
 
-[⭐ Star us on GitHub](https://github.com/overtrue/sparkline) • [📖 Read the Docs](README.dev.md) • [🤝 Contribute](CONTRIBUTING.md)
+[⭐ Star us on GitHub](https://github.com/overtrue/sparkset) • [📖 Read the Docs](README.dev.md) • [🤝 Contribute](CONTRIBUTING.md)
 
 </div>

@@ -1,5 +1,5 @@
+import { DataSourceConfig } from '@sparkset/db';
 import { Env } from '../env';
-import { DataSourceConfig } from '@sparkline/db';
 
 export const buildDatasourceConfig = (env: Env): DataSourceConfig | null => {
   if (!env.DB_HOST || !env.DB_USER || !env.DB_NAME) return null;

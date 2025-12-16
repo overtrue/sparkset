@@ -10,10 +10,10 @@
 ## Build, Test, and Development Commands
 
 - `pnpm dev` (root): run all dev targets via Turborepo.
-- `pnpm --filter @sparkline/api dev` / `...dashboard dev`: run API or dashboard only.
-- `pnpm --filter @sparkline/api test` / `...core test`: Vitest unit/integration.
+- `pnpm --filter @sparkset/api dev` / `...dashboard dev`: run API or dashboard only.
+- `pnpm --filter @sparkset/api test` / `...core test`: Vitest unit/integration.
 - `pnpm prisma:migrate:deploy` (root) applies Prisma migrations; `pnpm prisma:generate` regenerates client.
-- Seed/demo DB: `mysql -uroot -p'123456' sparkline_demo < scripts/demo-seed.sql`.
+- Seed/demo DB: `mysql -uroot -p'123456' sparkset_demo < scripts/demo-seed.sql`.
 
 ## Coding Style & Naming Conventions
 
@@ -27,6 +27,7 @@
 
 ## Commit & Pull Request Guidelines
 
+- **Commit messages MUST be in English**: All commit messages must be written in English, regardless of the language used in code comments or documentation.
 - Commit messages in imperative, scoped style seen in history (e.g., `feat: ...`, `fix(api): ...`, `chore(dashboard): ...`). One logical change per commit; avoid mixing formatting and features.
 - PRs should include: summary of changes, testing evidence (commands run), screenshots for UI changes, and linked issue/requirement when applicable.
 

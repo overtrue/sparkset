@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { DataSource } from '@sparkline/models';
+import { DataSource } from '@sparkset/models';
 import { DatasourceRepository } from './datasourceRepo';
 
 export class PrismaDatasourceRepository implements DatasourceRepository {

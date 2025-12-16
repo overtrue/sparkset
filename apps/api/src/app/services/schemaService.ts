@@ -1,5 +1,5 @@
-import { DBClient, DataSourceConfig, SchemaCacheRepository } from '@sparkline/db';
-import { AIProvider, ColumnDefinition, DataSource, TableSchema } from '@sparkline/models';
+import { DBClient, DataSourceConfig, SchemaCacheRepository } from '@sparkset/db';
+import { AIProvider, ColumnDefinition, DataSource, TableSchema } from '@sparkset/models';
 import { AIProviderService } from './aiProviderService';
 
 export interface SchemaServiceDeps {

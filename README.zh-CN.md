@@ -1,6 +1,6 @@
 <div align="center">
 
-# Sparkline
+# Sparkset
 
 > 使用 AI 驱动的智能助手，将自然语言转换为 SQL 查询
 
@@ -10,7 +10,7 @@
 
 </div>
 
-Sparkline 是一个 AI 驱动的运营助手，帮助团队使用自然语言与数据库交互。你可以问"本周有多少订单被取消了？"或"显示来自北京的用户"，无需编写 SQL 即可获得即时洞察。
+Sparkset 是一个 AI 驱动的运营助手，帮助团队使用自然语言与数据库交互。你可以问"本周有多少订单被取消了？"或"显示来自北京的用户"，无需编写 SQL 即可获得即时洞察。
 
 > **注意**：截图和演示 GIF 即将推出！🎨
 
@@ -41,8 +41,8 @@ Sparkline 是一个 AI 驱动的运营助手，帮助团队使用自然语言与
 1. **克隆仓库**
 
 ```bash
-git clone https://github.com/overtrue/sparkline.git
-cd sparkline
+git clone https://github.com/overtrue/sparkset.git
+cd sparkset
 ```
 
 2. **安装依赖**
@@ -64,7 +64,7 @@ pnpm prisma:generate
 **方式 1：使用 DATABASE_URL（推荐）**
 
 ```bash
-export DATABASE_URL="mysql://user:password@localhost:3306/sparkline"
+export DATABASE_URL="mysql://user:password@localhost:3306/sparkset"
 ```
 
 **方式 2：使用独立的环境变量**
@@ -74,7 +74,7 @@ export DB_HOST=localhost
 export DB_PORT=3306
 export DB_USER=root
 export DB_PASSWORD=yourpassword
-export DB_NAME=sparkline
+export DB_NAME=sparkset
 ```
 
 5. **运行数据库迁移**
@@ -84,7 +84,7 @@ export DB_NAME=sparkline
 pnpm prisma:migrate:deploy
 
 # 或手动运行 SQL 迁移
-mysql -u root -p sparkline < packages/db/prisma/migrations/0001_init.sql
+mysql -u root -p sparkset < packages/db/prisma/migrations/0001_init.sql
 ```
 
 6. **配置 AI 提供商**
@@ -114,7 +114,7 @@ export AI_PROVIDER=anthropic
 **终端 1 - API 服务器：**
 
 ```bash
-pnpm dev --filter @sparkline/api
+pnpm dev --filter @sparkset/api
 ```
 
 API 将在 `http://localhost:3333` 可用
@@ -122,7 +122,7 @@ API 将在 `http://localhost:3333` 可用
 **终端 2 - 仪表板：**
 
 ```bash
-pnpm dev --filter @sparkline/dashboard
+pnpm dev --filter @sparkset/dashboard
 ```
 
 仪表板将在 `http://localhost:3000` 可用
@@ -132,10 +132,10 @@ pnpm dev --filter @sparkline/dashboard
 加载示例数据进行测试：
 
 ```bash
-mysql -uroot -p123456 sparkline_demo < scripts/demo-seed.sql
+mysql -uroot -p123456 sparkset_demo < scripts/demo-seed.sql
 ```
 
-访问 `http://localhost:3000` 开始使用 Sparkline！
+访问 `http://localhost:3000` 开始使用 Sparkset！
 
 ## 📖 使用指南
 
@@ -155,13 +155,13 @@ CLI 非常适合自动化和技术用户：
 
 ```bash
 # 运行自然语言查询
-pnpm dev --filter @sparkline/cli -- query:run "显示前 10 个用户"
+pnpm dev --filter @sparkset/cli -- query:run "显示前 10 个用户"
 
 # 列出所有对话
-pnpm dev --filter @sparkline/cli -- conversation:list
+pnpm dev --filter @sparkset/cli -- conversation:list
 
 # 执行保存的动作模板
-pnpm dev --filter @sparkline/cli -- action:exec 1
+pnpm dev --filter @sparkset/cli -- action:exec 1
 ```
 
 ### API
@@ -190,10 +190,10 @@ curl http://localhost:3333/conversations
 
 ## 🏗️ 项目结构
 
-Sparkline 使用 [Turborepo](https://turbo.build/) 构建为 monorepo，以实现高效的构建和任务编排：
+Sparkset 使用 [Turborepo](https://turbo.build/) 构建为 monorepo，以实现高效的构建和任务编排：
 
 ```
-sparkline/
+sparkset/
 ├── apps/
 │   ├── api/              # Fastify REST API 服务器
 │   │   ├── src/app/      # 控制器、服务、验证器
@@ -243,7 +243,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=yourpassword
-DB_NAME=sparkline
+DB_NAME=sparkset
 ```
 
 #### AI 提供商配置
@@ -283,7 +283,7 @@ AI_FALLBACK_MODELS='[{"model":"gpt-3.5-turbo","provider":"openai"}]'
 ```bash
 PORT=3333                    # API 服务器端口
 HOST=0.0.0.0                 # API 服务器主机
-SPARKLINE_ENV=dev            # 环境：dev, test, prod
+SPARKSET_ENV=dev            # 环境：dev, test, prod
 LOG_LEVEL=info               # 日志级别：debug, info, warn, error
 API_KEY=your-api-key         # 可选的 API 密钥用于身份验证
 ```
@@ -351,7 +351,7 @@ Docker 支持计划在未来的版本中推出。这将包括：
 - `OPENAI_API_KEY` 或 `ANTHROPIC_API_KEY` - AI 提供商凭证
 - `NEXT_PUBLIC_API_URL` - API 服务器 URL（用于仪表板）
 - `PORT` - API 服务器端口（默认：3333）
-- `SPARKLINE_ENV=prod` - 环境标识符
+- `SPARKSET_ENV=prod` - 环境标识符
 
 ## 🧪 开发
 
@@ -362,11 +362,11 @@ Docker 支持计划在未来的版本中推出。这将包括：
 pnpm test
 
 # 运行特定包的测试
-pnpm --filter @sparkline/core test
-pnpm --filter @sparkline/api test
+pnpm --filter @sparkset/core test
+pnpm --filter @sparkset/api test
 
 # 以监视模式运行测试
-pnpm --filter @sparkline/core test --watch
+pnpm --filter @sparkset/core test --watch
 
 # 运行测试并生成覆盖率报告
 pnpm test --coverage
@@ -394,8 +394,8 @@ pnpm prettier --write path/to/file.ts
 pnpm dev
 
 # 运行特定应用
-pnpm dev --filter @sparkline/api
-pnpm dev --filter @sparkline/dashboard
+pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/dashboard
 
 # 生成 Prisma Client（在 schema 更改后）
 pnpm prisma:generate
@@ -418,7 +418,7 @@ pnpm prisma:migrate:deploy
 
 ## 🤝 贡献
 
-我们欢迎社区贡献！无论是错误修复、新功能还是文档改进，你的帮助都会让 Sparkline 变得更好。
+我们欢迎社区贡献！无论是错误修复、新功能还是文档改进，你的帮助都会让 Sparkset 变得更好。
 
 请阅读我们的[贡献指南](CONTRIBUTING.md)了解详情：
 
@@ -445,14 +445,14 @@ pnpm prisma:migrate:deploy
 
 ## 📚 文档
 
-- **[贡献指南](CONTRIBUTING.md)** - 如何为 Sparkline 做贡献
+- **[贡献指南](CONTRIBUTING.md)** - 如何为 Sparkset 做贡献
 - **[开发指南](README.dev.md)** - 详细的开发说明
 - **[架构规范](spec.md)** - 技术架构和设计决策
 - **[English Documentation](README.md)** - English documentation
 
 ## 🔒 安全
 
-Sparkline 包含多项安全特性来保护你的数据：
+Sparkset 包含多项安全特性来保护你的数据：
 
 - **SQL 安全**：所有生成的 SQL 都经过验证，确保只读操作
 - **Dry-run 验证**：查询在执行前进行测试，防止数据修改
@@ -465,7 +465,7 @@ Sparkline 包含多项安全特性来保护你的数据：
 如果你发现了安全漏洞，请**不要**公开问题。相反：
 
 - 将安全问题发送至：`anzhengchao@gmail.com`
-- 或创建[私有安全咨询](https://github.com/overtrue/sparkline/security/advisories/new)
+- 或创建[私有安全咨询](https://github.com/overtrue/sparkset/security/advisories/new)
 
 我们非常重视安全，并将及时响应所有安全报告。
 
@@ -482,16 +482,16 @@ Sparkline 包含多项安全特性来保护你的数据：
 
 ## 📮 支持与社区
 
-- **🐛 错误报告**：[GitHub Issues](https://github.com/overtrue/sparkline/issues)
-- **💬 讨论区**：[GitHub Discussions](https://github.com/overtrue/sparkline/discussions)
+- **🐛 错误报告**：[GitHub Issues](https://github.com/overtrue/sparkset/issues)
+- **💬 讨论区**：[GitHub Discussions](https://github.com/overtrue/sparkset/discussions)
 - **📧 邮箱**：anzhengchao@gmail.com
 - **📖 文档**：查看我们的[文档](README.dev.md)和[贡献指南](CONTRIBUTING.md)
 
 ### 获取帮助
 
-- 查看现有的[问题](https://github.com/overtrue/sparkline/issues)和[讨论](https://github.com/overtrue/sparkline/discussions)
+- 查看现有的[问题](https://github.com/overtrue/sparkset/issues)和[讨论](https://github.com/overtrue/sparkset/discussions)
 - 阅读[文档](README.dev.md)
-- 在[GitHub Discussions](https://github.com/overtrue/sparkline/discussions)中提问
+- 在[GitHub Discussions](https://github.com/overtrue/sparkset/discussions)中提问
 
 ---
 
@@ -499,6 +499,6 @@ Sparkline 包含多项安全特性来保护你的数据：
 
 由 overtrue 用 ❤️ 制作
 
-[⭐ 在 GitHub 上给我们 Star](https://github.com/overtrue/sparkline) • [📖 阅读文档](README.dev.md) • [🤝 参与贡献](CONTRIBUTING.md)
+[⭐ 在 GitHub 上给我们 Star](https://github.com/overtrue/sparkset) • [📖 阅读文档](README.dev.md) • [🤝 参与贡献](CONTRIBUTING.md)
 
 </div>

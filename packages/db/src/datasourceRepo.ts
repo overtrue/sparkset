@@ -1,4 +1,4 @@
-import { DataSource } from '@sparkline/models';
+import { DataSource } from '@sparkset/models';
 import { MySQLRepo } from './repository';
 
 export interface DatasourceRepository {

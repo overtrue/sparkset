@@ -39,7 +39,7 @@ class PrismaDBClient implements DBClient {
 
   async query<T = unknown>(config: DataSourceConfig, sql: string): Promise<QueryResult<T>> {
     // 使用 MySQL 客户端连接到目标数据源执行查询
-    // 不能使用 Prisma 默认连接，因为它指向 sparkline 应用数据库，而不是用户配置的数据源
+    // 不能使用 Prisma 默认连接，因为它指向 sparkset 应用数据库，而不是用户配置的数据源
     return this.mysqlClient.query<T>(config, sql);
   }
 }

@@ -1,6 +1,6 @@
-import { Conversation, Message, Role } from '@sparkline/models';
-import { ConversationRepository, PrismaConversationRepository } from '@sparkline/db';
 import { PrismaClient } from '@prisma/client';
+import { ConversationRepository, PrismaConversationRepository } from '@sparkset/db';
+import { Conversation, Message, Role } from '@sparkset/models';
 
 export interface CreateConversationInput {
   title?: string;

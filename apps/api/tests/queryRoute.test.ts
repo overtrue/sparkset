@@ -1,4 +1,4 @@
-import { InMemoryDBClient, InMemorySchemaCacheRepository } from '@sparkline/db';
+import { InMemoryDBClient, InMemorySchemaCacheRepository } from '@sparkset/db';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 import { ActionService } from '../src/app/services/actionService';

@@ -1,4 +1,4 @@
-import type { SqlSnippet } from '@sparkline/core/query/types';
+import type { SqlSnippet } from '@sparkset/core/query/types';
 
 // SQL Action 执行结果
 export interface SqlActionResult {

@@ -1,4 +1,4 @@
-import { QueryExecutor, QueryPlanner } from '@sparkline/core';
+import { QueryExecutor, QueryPlanner } from '@sparkset/core';
 import { describe, expect, it, vi } from 'vitest';
 import { QueryService } from '../src/app/services/queryService';
 

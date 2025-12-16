@@ -1,5 +1,5 @@
-import { DatasourceRepository } from '@sparkline/db';
-import { DataSource } from '@sparkline/models';
+import { DatasourceRepository } from '@sparkset/db';
+import { DataSource } from '@sparkset/models';
 
 export type CreateDataSourceInput = Omit<DataSource, 'id' | 'lastSyncAt'>;
 export type UpdateDataSourceInput = Partial<CreateDataSourceInput> & { id: number };

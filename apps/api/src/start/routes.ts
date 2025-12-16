@@ -1,4 +1,4 @@
-import { ActionExecutor, QueryExecutor } from '@sparkline/core';
+import { ActionExecutor, QueryExecutor } from '@sparkset/core';
 import { FastifyInstance } from 'fastify';
 import { AIProvidersController } from '../app/Controllers/Http/AIProvidersController';
 import { ActionsController } from '../app/Controllers/Http/ActionsController';

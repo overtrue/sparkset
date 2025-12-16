@@ -4,7 +4,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.string().default('3333'),
   HOST: z.string().default('0.0.0.0'),
-  SPARKLINE_ENV: z.enum(['dev', 'test', 'prod']).default('dev'),
+  SPARKSET_ENV: z.enum(['dev', 'test', 'prod']).default('dev'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   API_KEY: z.string().optional(),
   DATABASE_URL: z.string().optional(),

@@ -1,4 +1,4 @@
-import { TableSchema } from '@sparkline/models';
+import { TableSchema } from '@sparkset/models';
 
 export interface PromptOptions {
   question: string;

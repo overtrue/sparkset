@@ -1,4 +1,4 @@
-# Sparkline 开发待办
+# Sparkset 开发待办
 
 > 基于 `spec.md` 拆分的执行清单，完成一项即提交一次。
 

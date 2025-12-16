@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { buildActionPrompt, VercelAIClient } from '@sparkline/ai';
-import { ActionRepository, PrismaActionRepository } from '@sparkline/db';
-import { Action, AIProvider, TableSchema } from '@sparkline/models';
+import { buildActionPrompt, VercelAIClient } from '@sparkset/ai';
+import { ActionRepository, PrismaActionRepository } from '@sparkset/db';
+import { Action, AIProvider, TableSchema } from '@sparkset/models';
 
 export type CreateActionInput = Omit<Action, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateActionInput = Partial<CreateActionInput> & { id: number };

@@ -9,7 +9,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       attribute="class"
       defaultTheme="system"
       enableSystem
-      storageKey="sparkline-theme"
+      storageKey="sparkset-theme"
       {...props}
     >
       {children}

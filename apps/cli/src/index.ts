@@ -4,8 +4,8 @@ import { apiFetch, setBaseUrl } from './http';
 
 const program = new Command();
 program
-  .name('sparkline')
-  .description('Sparkline AI operations CLI')
+  .name('sparkset')
+  .description('Sparkset AI operations CLI')
   .version('0.1.0')
   .showHelpAfterError();
 
@@ -158,6 +158,6 @@ program
   });
 
 void program.parseAsync(process.argv).catch((err) => {
-  console.error('[sparkline] Error:', err?.message ?? err);
+  console.error('[sparkset] Error:', err?.message ?? err);
   process.exit(1);
 });

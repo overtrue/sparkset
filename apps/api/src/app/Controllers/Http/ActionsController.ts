@@ -1,4 +1,4 @@
-import { ActionExecutor } from '@sparkline/core';
+import { ActionExecutor } from '@sparkset/core';
 import { FastifyReply } from 'fastify';
 import { ActionService } from '../../services/actionService';
 import { AIProviderService } from '../../services/aiProviderService';

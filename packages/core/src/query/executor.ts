@@ -1,4 +1,4 @@
-import { DBClient, DataSourceConfig, QueryResult } from '@sparkline/db';
+import { DBClient, DataSourceConfig, QueryResult } from '@sparkset/db';
 import { ExecutionResult, SqlSnippet } from './types';
 
 export interface ExecutorDeps {

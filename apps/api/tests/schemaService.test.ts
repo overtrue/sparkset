@@ -1,7 +1,7 @@
+import { DBClient, DataSourceConfig, InMemorySchemaCacheRepository } from '@sparkset/db';
+import { DataSource } from '@sparkset/models';
 import { describe, expect, it } from 'vitest';
 import { SchemaService } from '../src/app/services/schemaService';
-import { InMemorySchemaCacheRepository, DBClient, DataSourceConfig } from '@sparkline/db';
-import { DataSource } from '@sparkline/models';
 
 class MockDBClient implements DBClient {
   constructor(private rows: any[]) {}

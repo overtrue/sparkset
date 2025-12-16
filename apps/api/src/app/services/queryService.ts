@@ -1,7 +1,7 @@
-import { AIClient, VercelAIClient } from '@sparkline/ai';
-import { QueryExecutor, QueryPlanner } from '@sparkline/core';
-import { DBClient, DataSourceConfig } from '@sparkline/db';
-import { DataSource } from '@sparkline/models';
+import { AIClient, VercelAIClient } from '@sparkset/ai';
+import { QueryExecutor, QueryPlanner } from '@sparkset/core';
+import { DBClient, DataSourceConfig } from '@sparkset/db';
+import { DataSource } from '@sparkset/models';
 import { ActionService } from '../services/actionService';
 import { AIProviderService } from '../services/aiProviderService';
 import { DatasourceService } from '../services/datasourceService';

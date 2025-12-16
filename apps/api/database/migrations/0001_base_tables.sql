@@ -1,4 +1,4 @@
--- Base schema for Sparkline AI 运营助手
+-- Base schema for Sparkset AI 运营助手
 -- MySQL 8.x syntax; adjust types for other engines as needed.
 
 CREATE TABLE IF NOT EXISTS datasources (

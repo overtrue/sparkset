@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Action } from '@sparkline/models';
+import { Action } from '@sparkset/models';
 
 export interface ActionRepository {
   list(): Promise<Action[]>;

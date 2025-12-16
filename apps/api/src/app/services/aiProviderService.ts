@@ -1,5 +1,5 @@
-import { AIProviderRepository } from '@sparkline/db';
-import { AIProvider } from '@sparkline/models';
+import { AIProviderRepository } from '@sparkset/db';
+import { AIProvider } from '@sparkset/models';
 
 export interface CreateAIProviderInput {
   name: string;

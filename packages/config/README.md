@@ -1,4 +1,4 @@
-# @sparkline/config
+# @sparkset/config
 
 配置管理模块，提供统一的配置加载和管理功能。
 
@@ -20,7 +20,7 @@
 #### 基本用法
 
 ```typescript
-import { loadAIConfig, getDefaultProviderConfig } from '@sparkline/config';
+import { loadAIConfig, getDefaultProviderConfig } from '@sparkset/config';
 
 // 加载 AI 配置
 const aiConfig = loadAIConfig();
@@ -124,8 +124,8 @@ interface AIConfig {
 ### 示例：在 API 中使用
 
 ```typescript
-import { loadAIConfig, getDefaultProviderConfig } from '@sparkline/config';
-import { VercelAIClient } from '@sparkline/ai';
+import { loadAIConfig, getDefaultProviderConfig } from '@sparkset/config';
+import { VercelAIClient } from '@sparkset/ai';
 
 const aiConfig = loadAIConfig();
 

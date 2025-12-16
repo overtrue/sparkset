@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ColumnDefinition, TableSchema } from '@sparkline/models';
+import { ColumnDefinition, TableSchema } from '@sparkset/models';
 import { MySQLRepo } from './repository';
 
 export interface SchemaCacheRepository {
