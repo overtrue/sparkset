@@ -52,7 +52,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="查询工作台" description="使用自然语言查询数据库，AI 自动生成 SQL 并执行">
+      <PageHeader title="查询" description="使用自然语言查询数据库，AI 自动生成 SQL 并执行">
         <HistoryDrawer onRerun={handleRerun} />
       </PageHeader>
 

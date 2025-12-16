@@ -36,7 +36,7 @@ const menuGroups: MenuGroup[] = [
     label: '功能模块',
     items: [
       { title: '数据源', url: '/', icon: Database },
-      { title: '查询工作台', url: '/query', icon: Play },
+      { title: '查询', url: '/query', icon: Play },
       { title: 'Actions', url: '/actions', icon: Zap },
       { title: 'AI 配置', url: '/ai-providers', icon: Sparkles },
     ],
