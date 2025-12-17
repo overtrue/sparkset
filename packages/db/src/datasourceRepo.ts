@@ -76,6 +76,18 @@ export class MySQLDatasourceRepository implements DatasourceRepository {
   }
 
   async remove(id: number): Promise<void> {
+    // 按顺序删除相关记录：先删除 column_definitions，再删除 table_schemas，最后删除数据源
+    // 注意：由于 MySQLRepo 使用连接池，无法保证事务，但按顺序删除可以避免外键约束错误
+    // 1. 删除所有相关的 column_definitions（通过 table_schemas）
+    await this.repo.query(
+      'DELETE cd FROM column_definitions cd INNER JOIN table_schemas ts ON cd.table_schema_id = ts.id WHERE ts.datasource_id = ?',
+      [id],
+    );
+
+    // 2. 删除所有相关的 table_schemas
+    await this.repo.query('DELETE FROM table_schemas WHERE datasource_id = ?', [id]);
+
+    // 3. 最后删除数据源
     await this.repo.query('DELETE FROM datasources WHERE id = ?', [id]);
   }
 

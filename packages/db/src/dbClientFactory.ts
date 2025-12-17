@@ -32,6 +32,10 @@ class MySQLDBClient implements DBClient {
 class PrismaDBClient implements DBClient {
   private mysqlClient = new MySQLDBClient();
 
+  constructor(_prisma?: PrismaClient) {
+    // Prisma 参数保留用于未来可能的扩展，但目前不使用
+  }
+
   async testConnection(config: DataSourceConfig): Promise<boolean> {
     // 使用 MySQL 客户端测试目标数据源的连接
     return this.mysqlClient.testConnection(config);

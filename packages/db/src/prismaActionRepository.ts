@@ -72,7 +72,10 @@ export class PrismaActionRepository implements ActionRepository {
     type: row.type,
     payload: row.payload,
     parameters: row.parameters ?? undefined,
-    inputSchema: row.inputSchema ?? undefined,
+    inputSchema:
+      row.inputSchema && typeof row.inputSchema === 'object' && 'parameters' in row.inputSchema
+        ? (row.inputSchema as Action['inputSchema'])
+        : undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

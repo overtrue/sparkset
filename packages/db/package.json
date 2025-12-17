@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
+    "@sparkset/models": "workspace:*",
     "mysql2": "^3.11.4"
   },
   "devDependencies": {

@@ -14,6 +14,7 @@ import {
   setDefaultAIProvider,
   updateAIProvider,
 } from '../../lib/api';
+import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
 import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
@@ -66,6 +67,9 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [actionId, setActionId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const canSubmit = useMemo(() => {
     if (editingId) {
@@ -151,16 +155,24 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     }
   };
 
-  const handleRemove = async (id: number) => {
-    setActionId(id);
+  const handleRemoveClick = (id: number) => {
+    setDeletingId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
+    setDeleting(true);
     try {
-      await removeAIProvider(id);
-      setProviders((prev) => prev.filter((p) => p.id !== id));
+      await removeAIProvider(deletingId);
+      setProviders((prev) => prev.filter((p) => p.id !== deletingId));
       toast.success('已删除');
+      setConfirmOpen(false);
+      setDeletingId(null);
     } catch (err) {
       toast.error((err as Error)?.message ?? '删除失败');
     } finally {
-      setActionId(null);
+      setDeleting(false);
     }
   };
 
@@ -259,7 +271,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
             {
               label: '删除',
               icon: <Trash2 className="h-4 w-4" />,
-              onClick: () => handleRemove(provider.id),
+              onClick: () => handleRemoveClick(provider.id),
               variant: 'destructive',
               disabled: isLoading,
             },
@@ -424,6 +436,17 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="删除 Provider"
+        description="确定要删除该 Provider 吗？此操作不可撤销。"
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+      />
     </>
   );
 }

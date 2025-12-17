@@ -80,7 +80,7 @@ export class PrismaSchemaCacheRepository implements SchemaCacheRepository {
 
   async replaceSchemas(
     datasourceId: number,
-    tables: { tableName: string; columns: ColumnDefinition[] }[],
+    tables: { tableName: string; tableComment?: string; columns: ColumnDefinition[] }[],
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // 先获取现有的表，保留 semanticDescription
@@ -317,7 +317,7 @@ export class MySQLSchemaCacheRepository implements SchemaCacheRepository {
     data: { tableComment?: string | null; semanticDescription?: string | null },
   ): Promise<void> {
     const updates: string[] = [];
-    const values: (string | null)[] = [];
+    const values: (string | number | null)[] = [];
     if (data.tableComment !== undefined) {
       updates.push('table_comment = ?');
       values.push(data.tableComment);
@@ -337,7 +337,7 @@ export class MySQLSchemaCacheRepository implements SchemaCacheRepository {
     data: { columnComment?: string | null; semanticDescription?: string | null },
   ): Promise<void> {
     const updates: string[] = [];
-    const values: (string | null)[] = [];
+    const values: (string | number | null)[] = [];
     if (data.columnComment !== undefined) {
       updates.push('column_comment = ?');
       values.push(data.columnComment);

@@ -63,7 +63,24 @@ export class PrismaDatasourceRepository implements DatasourceRepository {
   }
 
   async remove(id: number): Promise<void> {
-    await this.prisma.dataSource.delete({ where: { id } });
+    // 使用事务和原始 SQL 确保原子性：先删除相关的 column_definitions 和 table_schemas，再删除数据源
+    // 使用原始 SQL 可以绕过 Prisma 的外键约束检查，直接操作数据库
+    await this.prisma.$transaction(async (tx) => {
+      // 1. 删除所有相关的 column_definitions（通过 JOIN 查询）
+      await tx.$executeRaw`
+        DELETE cd FROM column_definitions cd
+        INNER JOIN table_schemas ts ON cd.table_schema_id = ts.id
+        WHERE ts.datasource_id = ${id}
+      `;
+
+      // 2. 删除所有相关的 table_schemas
+      await tx.$executeRaw`
+        DELETE FROM table_schemas WHERE datasource_id = ${id}
+      `;
+
+      // 3. 最后删除数据源
+      await tx.dataSource.delete({ where: { id } });
+    });
   }
 
   async setDefault(id: number): Promise<void> {

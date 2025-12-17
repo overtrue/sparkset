@@ -17,21 +17,12 @@ import {
   generateActionSQL,
   updateAction,
 } from '../../lib/api';
+import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
 import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
 import { DatasourceSelector } from '../datasource-selector';
 import { Alert, AlertDescription } from '../ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -81,6 +72,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [executingId, setExecutingId] = useState<number | null>(null);
   const [executionResult, setExecutionResult] = useState<unknown>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
@@ -207,9 +199,9 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (!deletingId) return;
-    setActionId(deletingId);
+    setDeleting(true);
     try {
       await deleteAction(deletingId);
       setActions((prev) => prev.filter((a) => a.id !== deletingId));
@@ -219,7 +211,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     } catch (err) {
       toast.error((err as Error)?.message ?? '删除失败');
     } finally {
-      setActionId(null);
+      setDeleting(false);
     }
   };
 
@@ -556,25 +548,16 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       </Dialog>
 
       {/* 删除确认对话框 */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要删除该 Action 吗？此操作不可撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="确认删除"
+        description="确定要删除该 Action 吗？此操作不可撤销。"
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+      />
 
       {/* 执行参数输入对话框 */}
       {pendingExecuteId !== null && (

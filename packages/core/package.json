@@ -10,6 +10,11 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@sparkset/ai": "workspace:*",
+    "@sparkset/db": "workspace:*",
+    "@sparkset/models": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^4.0.15"
   }

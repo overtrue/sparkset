@@ -74,14 +74,14 @@ export class PrismaConversationRepository implements ConversationRepository {
   private mapMessage = (row: {
     id: number;
     conversationId: number;
-    role: Role;
+    role: string;
     content: string;
     metadata: unknown;
     createdAt: Date;
   }): Message => ({
     id: row.id,
     conversationId: row.conversationId,
-    role: row.role,
+    role: row.role as Role,
     content: row.content,
     metadata: row.metadata ?? undefined,
     createdAt: row.createdAt,

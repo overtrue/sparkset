@@ -14,6 +14,7 @@ import {
   syncDatasource,
   updateDatasource,
 } from '../../lib/api';
+import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
 import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
@@ -59,6 +60,9 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const canSubmit = useMemo(() => {
     if (editingId) {
@@ -142,16 +146,26 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
     }
   };
 
-  const handleRemove = async (id: number) => {
-    setActionId(id);
+  const handleRemoveClick = (id: number) => {
+    setDeletingId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
+    setDeleting(true);
     try {
-      await removeDatasource(id);
-      setDatasources((prev: DatasourceDTO[]) => prev.filter((ds: DatasourceDTO) => ds.id !== id));
+      await removeDatasource(deletingId);
+      setDatasources((prev: DatasourceDTO[]) =>
+        prev.filter((ds: DatasourceDTO) => ds.id !== deletingId),
+      );
       toast.success('数据源已删除');
+      setConfirmOpen(false);
+      setDeletingId(null);
     } catch (err) {
       toast.error((err as Error)?.message ?? '删除失败');
     } finally {
-      setActionId(null);
+      setDeleting(false);
     }
   };
 
@@ -247,7 +261,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
             {
               label: '删除',
               icon: <Trash2 className="h-4 w-4" />,
-              onClick: () => handleRemove(ds.id),
+              onClick: () => handleRemoveClick(ds.id),
               variant: 'destructive',
               disabled: isLoading,
             },
@@ -381,6 +395,17 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="删除数据源"
+        description="确定要删除该数据源吗？此操作不可撤销。"
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+      />
     </>
   );
 }
