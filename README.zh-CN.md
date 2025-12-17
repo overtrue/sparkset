@@ -12,7 +12,7 @@
 
 Sparkset 是一个 AI 驱动的运营助手，帮助团队使用自然语言与数据库交互。你可以问"本周有多少订单被取消了？"或"显示来自北京的用户"，无需编写 SQL 即可获得即时洞察。
 
-> **注意**：截图和演示 GIF 即将推出！🎨
+<img width="2032" height="1161" alt="Clipboard_Screenshot_1765940903" src="https://github.com/user-attachments/assets/3fdbe7b3-38dd-4b78-a5a0-03faa16349f4" />
 
 ## ✨ 核心特性
 
