@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor\\(ai\\): remove local environment variable AI configuration\n\nBREAKING CHANGES:\n- 不再支持从环境变量读取 AI 配置 \\(OPENAI_API_KEY, AI_PROVIDER 等\\)\n- AI 配置完全由数据库 ai_providers 表管理\n- 移除所有 AI 相关环境变量定义和代码\n\nChanges:\n- packages/config/src/ai.ts: 简化 loadAIConfig 为仅使用数据库配置\n- packages/ai/src/index.ts: 移除 env var fallback，严格 API Key 检查\n- apps/server/start/env.ts: 移除 AI_* 环境变量定义\n- apps/server/services/schema_service.ts: 修复 API Key 读取\n- docker-compose.yml & helm: 移除 AI 环境变量配置\n- 文档: 更新部署指南和配置说明\n\n迁移说明:\n用户需要在启动后通过 Dashboard \\(http://<host>/ai-providers\\) 配置 AI Provider\n\n🤖 Generated with Claude Code\nEOF\n\\)\")",
+      "Bash(npx prettier:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

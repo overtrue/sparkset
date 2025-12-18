@@ -81,23 +81,16 @@ node ace migration:run
 
 6. **配置 AI 提供商**
 
-选择以下选项之一：
-
-**使用 OpenAI：**
+AI 提供商现在通过数据库（仪表盘 → AI Providers）进行配置，不再使用环境变量。
 
 ```bash
-export OPENAI_API_KEY=sk-your-api-key-here
-export AI_PROVIDER=openai
+# 启动服务器后，通过以下方式配置 AI Provider：
+# 1. 访问 http://localhost:3333/ai-providers （仪表盘）
+# 2. 添加 AI Provider 并设置 API Key 和配置
+# 3. 设置默认 Provider
 ```
 
-**使用 Anthropic：**
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-your-api-key-here
-export AI_PROVIDER=anthropic
-```
-
-更多配置详情请参见 [配置说明](#-配置说明) 章节。
+更多配置详情请参见 [AI Provider 配置说明](#-ai-provider-配置说明) 章节。
 
 7. **启动开发服务器**
 
@@ -224,37 +217,29 @@ DB_PASSWORD=yourpassword
 DB_NAME=sparkset
 ```
 
-#### AI 提供商配置
+#### AI Provider 配置说明
 
-**OpenAI:**
+AI 提供商现在**通过数据库配置**，不再使用环境变量：
 
-```bash
-OPENAI_API_KEY=sk-your-key
-OPENAI_BASE_URL=https://api.openai.com/v1  # 可选
-OPENAI_MODEL=gpt-4o-mini                     # 可选
-```
+1. **访问仪表盘**: 打开 `http://localhost:3000/ai-providers`（或你的仪表盘 URL）
+2. **添加提供商**: 点击"添加 AI Provider"并填写：
+   - 提供商名称（例如："OpenAI Production"）
+   - 提供商类型（openai, anthropic, deepseek, groq, moonshot, 等）
+   - API Key（必填）
+   - Base URL（可选，用于自定义端点）
+   - 默认模型（可选）
+3. **设置默认**: 选择一个 Provider 作为默认配置
 
-**Anthropic:**
+**支持的 Provider 类型:**
 
-```bash
-ANTHROPIC_API_KEY=sk-ant-your-key
-ANTHROPIC_BASE_URL=https://api.anthropic.com  # 可选
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022     # 可选
-```
-
-**通用配置（单一提供商）:**
-
-```bash
-AI_API_KEY=sk-your-key
-AI_PROVIDER=openai  # 或 anthropic
-AI_MODEL=gpt-4o-mini
-```
-
-**回退模型:**
-
-```bash
-AI_FALLBACK_MODELS='[{"model":"gpt-3.5-turbo","provider":"openai"}]'
-```
+- `openai` - OpenAI API
+- `anthropic` - Anthropic API
+- `deepseek` - DeepSeek API
+- `groq` - Groq API
+- `moonshot` - Moonshot/Kimi API
+- `zhipu` - Zhipu AI API
+- `qwen` - 阿里云通义千问 API
+- `openai-compatible` - 任何 OpenAI 兼容 API
 
 #### API 服务器配置
 

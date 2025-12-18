@@ -65,13 +65,6 @@ api:
     DB_PASSWORD: 'sparkset_password'
     DB_NAME: 'sparkset'
 
-    # AI configuration
-    AI_MODEL: 'gpt-4o-mini'
-    AI_PROVIDER: 'openai'
-    AI_API_KEY: ''
-    AI_BASE_URL: ''
-    AI_FALLBACK_MODELS: ''
-
   resources:
     requests:
       memory: '256Mi'

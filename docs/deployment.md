@@ -1,33 +1,18 @@
-# Sparkset 部署指南
+## 基础部署
 
-本文档介绍如何使用 Docker、docker-compose 和 Helm 部署 Sparkset。
+SparkSet 支持多种部署方式：Docker、Docker Compose、Kubernetes、Helm 等。
 
-## 目录
+### Docker 部署
 
-- [Docker 部署](#docker-部署)
-- [Docker Compose 部署](#docker-compose-部署)
-- [Helm Chart 部署](#helm-chart-部署)
-- [环境变量参考](#环境变量参考)
-
-## Docker 部署
-
-### 构建镜像
-
-#### 构建 API 镜像
+#### 拉取镜像
 
 ```bash
-docker build -f apps/server/Dockerfile -t sparkset/server:latest .
+# API 服务器
+docker pull ghcr.io/sparkset/api:latest
+
+# Dashboard
+docker pull ghcr.io/sparkset/dashboard:latest
 ```
-
-#### 构建 Dashboard 镜像
-
-```bash
-docker build -f apps/dashboard/Dockerfile \
-  --build-arg NEXT_PUBLIC_API_URL=http://localhost:3333 \
-  -t sparkset/dashboard:latest .
-```
-
-### 运行容器
 
 #### 运行 API 容器
 
@@ -36,9 +21,9 @@ docker run -d \
   --name sparkset-api \
   -p 3333:3333 \
   -e DATABASE_URL="mysql://user:password@host:3306/sparkset" \
-  -e AI_API_KEY="your-api-key" \
-  -e AI_PROVIDER="openai" \
   sparkset/api:latest
+# Note: AI providers are configured through the database after startup
+# Use the dashboard at http://localhost:3333/ai-providers to configure providers
 ```
 
 #### 运行 Dashboard 容器
@@ -53,29 +38,26 @@ docker run -d \
 
 ## Docker Compose 部署
 
-Docker Compose 是最简单的部署方式，它会自动编排所有服务（MySQL、API、Dashboard）。
-
-### 前置要求
-
-- Docker 20.10+
-- Docker Compose 2.0+
-
 ### 快速开始
 
-1. **复制环境变量文件**
+1. **克隆仓库**
 
 ```bash
-cp .env.example .env
+git clone https://github.com/sparkset/sparkset.git
+cd sparkset
 ```
 
 2. **编辑 `.env` 文件**
 
-根据你的需求修改环境变量，特别是：
+根据你的需求修改环境 variables，特别是：
 
 - `MYSQL_ROOT_PASSWORD`: MySQL root 密码
 - `MYSQL_PASSWORD`: MySQL 用户密码
-- `AI_API_KEY`: AI 提供商的 API 密钥
-- `AI_PROVIDER`: AI 提供商（openai 或 anthropic）
+
+注意：AI 提供商现在通过数据库配置，不再需要这些环境变量：
+
+- ~~`AI_API_KEY`~~ - 已废弃
+- ~~`AI_PROVIDER`~~ - 已废弃
 
 3. **启动所有服务**
 
@@ -83,88 +65,125 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-4. **查看服务状态**
+4. **运行数据库迁移**
 
 ```bash
-docker-compose ps
+docker-compose exec api node ace migration:run
 ```
 
-5. **查看日志**
-
-```bash
-# 查看所有服务日志
-docker-compose logs -f
-
-# 查看特定服务日志
-docker-compose logs -f api
-docker-compose logs -f dashboard
-docker-compose logs -f mysql
-```
-
-6. **运行数据库迁移**
-
-```bash
-# 进入 API 容器
-docker-compose exec api sh
-
-# 在容器内运行迁移
-node ace migration:run
-```
-
-7. **访问应用**
+5. **访问应用**
 
 - Dashboard: http://localhost:3000
 - API: http://localhost:3333
-- API Health Check: http://localhost:3333/health
+- MySQL: localhost:3306
 
-### 停止服务
+6. **配置 AI Providers**
+
+访问 Dashboard → AI Providers 页面，添加你的 AI Provider（OpenAI、Anthropic 等）并设置 API Key。
+
+### 环境变量说明
+
+#### API 服务器
+
+| 变量名         | 说明              | 默认值        | 必需 |
+| -------------- | ----------------- | ------------- | ---- |
+| `NODE_ENV`     | Node 环境         | `development` | 是   |
+| `PORT`         | API 端口          | `3333`        | 否   |
+| `HOST`         | API 主机          | `0.0.0.0`     | 否   |
+| `APP_KEY`      | AdonisJS 应用密钥 | -             | 是   |
+| `LOG_LEVEL`    | 日志级别          | `info`        | 否   |
+| `SPARKSET_ENV` | 环境类型          | `dev`         | 否   |
+| `DATABASE_URL` | 数据库连接 URL    | -             | 是\* |
+| `DB_HOST`      | 数据库主机        | -             | 是\* |
+| `DB_PORT`      | 数据库端口        | `3306`        | 是\* |
+| `DB_USER`      | 数据库用户        | -             | 是\* |
+| `DB_PASSWORD`  | 数据库密码        | -             | 是\* |
+| `DB_NAME`      | 数据库名称        | -             | 是\* |
+| `API_KEY`      | API 认证密钥      | -             | 否   |
+
+_可以使用 `DATABASE_URL` 或分别使用 `DB\_\_` 变量_
+
+**注意：** 以下AI相关环境变量已废弃，现在通过数据库管理AI配置：
+
+- ~~`AI_PROVIDER`~~
+- ~~`AI_API_KEY`~~
+- ~~`AI模型`~~
+- ~~`AI_BASE_URL`~~
+- ~~`AI_FALLBACK_MODELS`~~
+
+通过 Dashboard 的 AI Providers 页面配置 AI 能力。
+
+#### Dashboard 环境变量
+
+| 变量名                | 说明           | 默认值                  | 必需 |
+| --------------------- | -------------- | ----------------------- | ---- |
+| `NEXT_PUBLIC_API_URL` | API 服务器 URL | `http://localhost:3333` | 是   |
+| `NODE_ENV`            | Node 环境      | `production`            | 否   |
+
+#### MySQL 环境变量（Docker Compose）
+
+| 变量名                | 说明      | 默认值     | 必需 |
+| --------------------- | --------- | ---------- | ---- |
+| `MYSQL_ROOT_PASSWORD` | Root 密码 | -          | 是   |
+| `MYSQL_DATABASE`      | 数据库名  | `sparkset` | 否   |
+| `MYSQL_USER`          | 用户名    | `sparkset` | 否   |
+| `MYSQL_PASSWORD`      | 用户密码  | -          | 是   |
+
+## Kubernetes 部署
+
+### 使用原生 Kubernetes YAML
+
+1. **创建 Namespace**
 
 ```bash
-# 停止所有服务
-docker-compose down
-
-# 停止并删除数据卷（注意：这会删除数据库数据）
-docker-compose down -v
+kubectl create namespace sparkset
 ```
 
-### 重新构建镜像
+2. **创建 ConfigMap 和 Secret**
 
 ```bash
-# 重新构建所有镜像
-docker-compose build
-
-# 重新构建特定服务
-docker-compose build api
-docker-compose build dashboard
-
-# 重新构建并启动
-docker-compose up -d --build
+kubectl apply -f kubernetes/configmap.yaml
+kubectl apply -f kubernetes/secret.yaml
 ```
 
-### 数据持久化
-
-MySQL 数据存储在 Docker volume `mysql_data` 中，即使容器停止，数据也会保留。
-
-查看 volumes：
+3. **创建 PersistentVolumeClaim (如果需要)**
 
 ```bash
-docker volume ls
-docker volume inspect sparkset_mysql_data
+kubectl apply -f kubernetes/pvc.yaml
 ```
 
-## Helm Chart 部署
+4. **创建 Deployment 和 Service**
 
-Helm Chart 用于在 Kubernetes 集群中部署 Sparkset。
+```bash
+kubectl apply -f kubernetes/deployment-api.yaml
+kubectl apply -f kubernetes/deployment-dashboard.yaml
+kubectl apply -f kubernetes/deployment-mysql.yaml
+kubectl apply -f kubernetes/service.yaml
+```
 
-### 前置要求
+5. **验证部署**
 
-- Kubernetes 1.19+
-- Helm 3.0+
-- kubectl 配置正确
+```bash
+kubectl get pods -n sparkset
+kubectl get services -n sparkset
+```
 
-### 快速开始
+### Helm Chart 部署
 
-1. **添加自定义 values 文件（可选）**
+#### 前置条件
+
+- Kubernetes 集群 (v1.19+)
+- Helm 3+
+- kubectl
+
+#### 1. 添加仓库
+
+```bash
+helm repo add sparkset https://charts.sparkset.io
+helm repo update
+```
+
+#### 2. 配置部署
 
 创建 `my-values.yaml`：
 
@@ -176,261 +195,213 @@ mysql:
 
 api:
   env:
-    AI_API_KEY: 'your-ai-api-key'
-    AI_PROVIDER: 'openai'
+    # Note: AI providers are configured through the database
+    # Configure via dashboard at http://<your-api-url>/ai-providers
 
 dashboard:
   env:
     NEXT_PUBLIC_API_URL: 'http://sparkset-api:3333'
 ```
 
-2. **安装 Chart**
+#### 3. 安装 Chart
 
 ```bash
-# 使用默认配置
-helm install sparkset ./helm/sparkset
-
-# 使用自定义 values
-helm install sparkset ./helm/sparkset -f my-values.yaml
-
-# 指定命名空间
-helm install sparkset ./helm/sparkset -n sparkset --create-namespace
+helm install sparkset sparkset/sparkset -f my-values.yaml -n sparkset
 ```
 
-3. **查看部署状态**
+#### 4. 访问服务
+
+**Port Forward (开发环境):**
 
 ```bash
-# 查看所有资源
-kubectl get all -l app.kubernetes.io/name=sparkset
+# Dashboard
+kubectl port-forward -n sparkset svc/sparkset-dashboard 3000:80
 
-# 查看 Pod 状态
-kubectl get pods -l app.kubernetes.io/name=sparkset
-
-# 查看服务
-kubectl get svc -l app.kubernetes.io/name=sparkset
+# API
+kubectl port-forward -n sparkset svc/sparkset-api 3333:3333
 ```
 
-4. **查看日志**
+访问 http://localhost:3000 即可使用。
 
-```bash
-# API 日志
-kubectl logs -l app.kubernetes.io/component=api
+**Ingress (生产环境):**
 
-# Dashboard 日志
-kubectl logs -l app.kubernetes.io/component=dashboard
+创建 `ingress.yaml`：
 
-# MySQL 日志
-kubectl logs -l app.kubernetes.io/component=mysql
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sparkset-ingress
+  namespace: sparkset
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: dashboard.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sparkset-dashboard
+                port:
+                  number: 80
+    - host: api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sparkset-api
+                port:
+                  number: 3333
 ```
 
-5. **运行数据库迁移**
+应用配置:
 
 ```bash
-# 进入 API Pod
-kubectl exec -it deployment/sparkset-api -- sh
-
-# 运行迁移
-cd apps/server && node ace migration:run
+kubectl apply -f ingress.yaml -n sparkset
 ```
 
-### 更新部署
+#### 5. 升级和回滚
+
+**升级:**
 
 ```bash
-# 更新配置
-helm upgrade sparkset ./helm/sparkset -f my-values.yaml
-
-# 回滚到上一个版本
-helm rollback sparkset
+helm upgrade sparkset sparkset/sparkset -f my-values.yaml -n sparkset
 ```
 
-### 卸载
+**回滚:**
 
 ```bash
-helm uninstall sparkset
+helm rollback sparkset -n sparkset
+```
 
-# 如果使用了命名空间
+**删除:**
+
+```bash
 helm uninstall sparkset -n sparkset
 ```
 
-### 配置说明
+## 环境特定配置
 
-#### 使用外部数据库
+### 开发环境
 
-如果使用外部 MySQL 数据库，可以禁用内置 MySQL：
-
-```yaml
-mysql:
-  enabled: false
-
-api:
-  env:
-    DB_HOST: 'your-external-mysql-host'
-    DB_PORT: '3306'
-    DB_USER: 'your-user'
-    DB_PASSWORD: 'your-password'
-    DB_NAME: 'sparkset'
-```
-
-#### 配置 Ingress
-
-启用 Ingress 以通过域名访问：
-
-```yaml
-ingress:
-  enabled: true
-  className: 'nginx'
-  hosts:
-    - host: sparkset.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: sparkset-tls
-      hosts:
-        - sparkset.example.com
-```
-
-#### 配置资源限制
-
-```yaml
-api:
-  resources:
-    requests:
-      memory: '512Mi'
-      cpu: '250m'
-    limits:
-      memory: '1Gi'
-      cpu: '500m'
-```
-
-#### 配置 Secret
-
-敏感信息（如 API 密钥）应通过 Secret 管理：
+使用 Docker Compose 快速启动：
 
 ```bash
-# 创建 Secret
-kubectl create secret generic sparkset-api-secrets \
-  --from-literal=ai-api-key=your-key \
-  --from-literal=api-key=your-api-key
-
-# 在 values.yaml 中引用
-api:
-  env:
-    AI_API_KEY: ""  # 留空，从 Secret 读取
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-然后修改 `helm/sparkset/templates/api/deployment.yaml` 以从 Secret 读取。
+### 生产环境
 
-### 生产环境建议
+推荐使用：
 
-1. **使用外部数据库**: 生产环境建议使用托管的 MySQL 服务（如 AWS RDS、Google Cloud SQL）
+1. **优化配置**
+   - 设置 `LOG_LEVEL=warn`
+   - 使用外部数据库（RDS 等）
+   - 启用 HTTPS
+   - 配置 CDN 加速静态资源
 
-2. **配置持久化存储**: 确保 MySQL PVC 使用可靠的存储类
+2. **监控和日志**
+   - 集成监控系统（Prometheus + Grafana）
+   - 配置日志聚合（ELK/EFK Stack）
+   - 设置告警规则
 
-3. **设置资源限制**: 根据实际负载调整 requests 和 limits
+3. **负载均衡和高可用**
+   - API 服务多实例部署
+   - 使用 Kubernetes HPA（水平自动扩缩容）
+   - MySQL 主从复制
 
-4. **启用监控**: 配置 ServiceMonitor 用于 Prometheus 监控
+## 域名和 HTTPS 配置
 
-5. **配置备份**: 定期备份 MySQL 数据
+### 建议域名结构
 
-6. **使用 TLS**: 配置 Ingress TLS 证书
+- `api.yourdomain.com` - API 服务器
+- `app.yourdomain.com` - Dashboard
+- `db.yourdomain.com` - 数据库（如果需要外网访问）
 
-7. **配置 HPA**: 根据负载自动扩缩容
+### SSL/TLS 证书
 
-## 环境变量参考
+**使用 Let's Encrypt:**
 
-### API 环境变量
+```bash
+# 使用 certbot
+certbot certonly --dns-cloudflare -d yourdomain.com -d *.yourdomain.com
 
-| 变量名               | 说明             | 默认值        | 必需 |
-| -------------------- | ---------------- | ------------- | ---- |
-| `PORT`               | API 服务端口     | `3333`        | 否   |
-| `HOST`               | API 服务监听地址 | `0.0.0.0`     | 否   |
-| `SPARKSET_ENV`       | 环境类型         | `dev`         | 否   |
-| `LOG_LEVEL`          | 日志级别         | `info`        | 否   |
-| `DATABASE_URL`       | 数据库连接 URL   | -             | 是\* |
-| `DB_HOST`            | 数据库主机       | -             | 是\* |
-| `DB_PORT`            | 数据库端口       | `3306`        | 是\* |
-| `DB_USER`            | 数据库用户       | -             | 是\* |
-| `DB_PASSWORD`        | 数据库密码       | -             | 是\* |
-| `DB_NAME`            | 数据库名称       | -             | 是\* |
-| `AI_PROVIDER`        | AI 提供商        | `openai`      | 否   |
-| `AI_API_KEY`         | AI API 密钥      | -             | 是   |
-| `AI_MODEL`           | AI 模型          | `gpt-4o-mini` | 否   |
-| `AI_BASE_URL`        | AI API 基础 URL  | -             | 否   |
-| `AI_FALLBACK_MODELS` | 回退模型（JSON） | -             | 否   |
-| `API_KEY`            | API 认证密钥     | -             | 否   |
+# 在 Nginx 中配置
+```
 
-\_可以使用 `DATABASE_URL` 或分别使用 `DB\__` 变量
+**在 Kubernetes 中使用 cert-manager:**
 
-### Dashboard 环境变量
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+```
 
-| 变量名                | 说明           | 默认值                  | 必需 |
-| --------------------- | -------------- | ----------------------- | ---- |
-| `NEXT_PUBLIC_API_URL` | API 服务器 URL | `http://localhost:3333` | 是   |
-| `NODE_ENV`            | Node 环境      | `production`            | 否   |
+## 常见问题
 
-### MySQL 环境变量（Docker Compose）
+### Q: 数据库连接失败怎么办？
 
-| 变量名                | 说明      | 默认值     | 必需 |
-| --------------------- | --------- | ---------- | ---- |
-| `MYSQL_ROOT_PASSWORD` | Root 密码 | -          | 是   |
-| `MYSQL_DATABASE`      | 数据库名  | `sparkset` | 否   |
-| `MYSQL_USER`          | 用户名    | `sparkset` | 否   |
-| `MYSQL_PASSWORD`      | 用户密码  | -          | 是   |
-| `MYSQL_PORT`          | 端口映射  | `3306`     | 否   |
+检查：
+
+1. 数据库服务是否正常运行
+2. 网络连接和端口是否开放
+3. 数据库配置是否正确
+4. 用户权限是否足够
+
+### Q: AI Provider 配置后不生效？
+
+1. 重启 API 服务
+2. 检查 AI Provider 的 API Key 是否有效
+3. 查看日志确认是否有错误信息
+
+### Q: Dashboard 无法连接 API？
+
+1. 确认 `NEXT_PUBLIC_API_URL` 环境变量正确
+2. 检查 API 服务是否正常运行
+3. 验证跨域配置（CORS）
 
 ## 故障排查
 
-### Docker Compose
-
-**问题：服务无法启动**
+### API 服务启动失败
 
 ```bash
-# 查看详细日志
-docker-compose logs
-
-# 检查服务健康状态
-docker-compose ps
+# 查看日志
+docker-compose logs api
+kubectl logs -n sparkset -l app=sparkset-api
 ```
 
-**问题：数据库连接失败**
-
-- 确保 MySQL 服务已启动并健康
-- 检查 `DATABASE_URL` 或 `DB_*` 环境变量是否正确
-- 在 docker-compose 中，使用服务名 `mysql` 作为主机名
-
-**问题：Dashboard 无法连接 API**
-
-- 检查 `NEXT_PUBLIC_API_URL` 是否正确
-- 在 docker-compose 中，Dashboard 可以通过服务名 `api` 访问 API
-- 确保 API 服务已启动并健康
-
-### Helm
-
-**问题：Pod 无法启动**
+### 迁移失败
 
 ```bash
-# 查看 Pod 状态
-kubectl describe pod <pod-name>
+# 手动运行迁移
+docker-compose exec api node ace migration:run
 
-# 查看事件
-kubectl get events --sort-by='.lastTimestamp'
+# 查看迁移状态
+docker-compose exec api node ace migration:status
 ```
 
-**问题：数据库连接失败**
+### Dashboard 构建失败
 
-- 检查 ConfigMap 和 Secret 是否正确创建
-- 验证数据库服务是否可达
-- 检查网络策略是否允许连接
+```bash
+# 查看构建日志
+docker-compose logs dashboard
+```
 
-**问题：镜像拉取失败**
+### 性能调优
 
-- 确保镜像已构建并推送到镜像仓库
-- 检查 `imagePullSecrets` 配置
-- 验证镜像标签是否正确
+**API 服务器:**
 
-## 下一步
+- 增加 Node.js 内存限制：`NODE_OPTIONS=--max-old-space-size=4096`
+- 调整数据库连接池大小
+- 启用 Redis 缓存
 
-- 查看 [README.md](../README.md) 了解项目概览
-- 查看 [README.zh-CN.md](../README.zh-CN.md) 了解中文文档
-- 查看 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解如何贡献代码
+**Dashboard:**
+
+- 启用 Next.js ISR (增量静态再生)
+- 配置图片优化
+- 使用 CDN 加速静态资源

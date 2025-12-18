@@ -59,13 +59,6 @@ services:
       DB_USER: ${DB_USER:-${MYSQL_USER:-sparkset}}
       DB_PASSWORD: ${DB_PASSWORD:-${MYSQL_PASSWORD:-sparkset_password}}
       DB_NAME: ${DB_NAME:-${MYSQL_DATABASE:-sparkset}}
-
-      # AI config
-      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
-      AI_PROVIDER: ${AI_PROVIDER:-openai}
-      AI_API_KEY: ${AI_API_KEY:-}
-      AI_BASE_URL: ${AI_BASE_URL:-}
-      AI_FALLBACK_MODELS: ${AI_FALLBACK_MODELS:-}
     ports:
       - '${API_PORT:-3333}:3333'
     healthcheck:

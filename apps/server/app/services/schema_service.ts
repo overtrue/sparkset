@@ -86,7 +86,7 @@ export class SchemaService {
    * 使用指定的 AI Provider 生成文本
    */
   private async generateTextWithProvider(prompt: string, provider: AIProvider): Promise<string> {
-    const apiKey = provider.apiKey || process.env.OPENAI_API_KEY;
+    const apiKey = provider.apiKey;
     if (!apiKey) {
       throw new Error('No API key available for AI provider');
     }

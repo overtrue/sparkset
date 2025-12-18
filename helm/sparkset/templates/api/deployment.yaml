@@ -69,37 +69,6 @@ spec:
             configMapKeyRef:
               name: {{ include "sparkset.fullname" . }}-api-config
               key: DB_NAME
-        - name: AI_MODEL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ include "sparkset.fullname" . }}-api-config
-              key: AI_MODEL
-        - name: AI_PROVIDER
-          valueFrom:
-            configMapKeyRef:
-              name: {{ include "sparkset.fullname" . }}-api-config
-              key: AI_PROVIDER
-        {{- if .Values.api.env.AI_API_KEY }}
-        - name: AI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "sparkset.fullname" . }}-api-secrets
-              key: ai-api-key
-        {{- end }}
-        {{- if .Values.api.env.AI_BASE_URL }}
-        - name: AI_BASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ include "sparkset.fullname" . }}-api-config
-              key: AI_BASE_URL
-        {{- end }}
-        {{- if .Values.api.env.AI_FALLBACK_MODELS }}
-        - name: AI_FALLBACK_MODELS
-          valueFrom:
-            configMapKeyRef:
-              name: {{ include "sparkset.fullname" . }}-api-config
-              key: AI_FALLBACK_MODELS
-        {{- end }}
         {{- if .Values.api.env.API_KEY }}
         - name: API_KEY
           valueFrom:

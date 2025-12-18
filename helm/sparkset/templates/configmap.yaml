@@ -14,14 +14,6 @@ data:
   DB_PORT: {{ .Values.api.env.DB_PORT | quote }}
   DB_USER: {{ .Values.api.env.DB_USER | quote }}
   DB_NAME: {{ .Values.api.env.DB_NAME | quote }}
-  AI_MODEL: {{ .Values.api.env.AI_MODEL | quote }}
-  AI_PROVIDER: {{ .Values.api.env.AI_PROVIDER | quote }}
-  {{- if .Values.api.env.AI_BASE_URL }}
-  AI_BASE_URL: {{ .Values.api.env.AI_BASE_URL | quote }}
-  {{- end }}
-  {{- if .Values.api.env.AI_FALLBACK_MODELS }}
-  AI_FALLBACK_MODELS: {{ .Values.api.env.AI_FALLBACK_MODELS | quote }}
-  {{- end }}
 {{- end }}
 
 {{- if .Values.dashboard.enabled }}

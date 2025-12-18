@@ -83,21 +83,18 @@ node ace migration:run
 
 Choose one of the following options:
 
-**For OpenAI:**
+**Configure AI Providers:**
+
+AI providers are now configured through the database (Dashboard → AI Providers) rather than environment variables.
 
 ```bash
-export OPENAI_API_KEY=sk-your-api-key-here
-export AI_PROVIDER=openai
+# After starting the server, configure AI providers via:
+# 1. Navigate to http://localhost:3333/ai-providers (Dashboard)
+# 2. Add your AI provider with API key and configuration
+# 3. Set the default provider
 ```
 
-**For Anthropic:**
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-your-api-key-here
-export AI_PROVIDER=anthropic
-```
-
-See [Configuration](#-configuration) section for more details.
+See [AI Provider Configuration](#-ai-provider-configuration) section for more details.
 
 7. **Start the development servers**
 
@@ -238,17 +235,29 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022     # Optional
 
 **Generic (single provider):**
 
-```bash
-AI_API_KEY=sk-your-key
-AI_PROVIDER=openai  # or anthropic
-AI_MODEL=gpt-4o-mini
-```
+#### AI Provider Configuration
 
-**Fallback Models:**
+AI providers are now configured **through the database** rather than environment variables:
 
-```bash
-AI_FALLBACK_MODELS='[{"model":"gpt-3.5-turbo","provider":"openai"}]'
-```
+1. **Access Dashboard**: Navigate to `http://localhost:3000/ai-providers` (or your dashboard URL)
+2. **Add Provider**: Click "Add AI Provider" and fill in:
+   - Provider name (e.g., "OpenAI Production")
+   - Provider type (openai, anthropic, deepseek, groq, moonshot, etc.)
+   - API Key (required)
+   - Base URL (optional, for custom endpoints)
+   - Default Model (optional)
+3. **Set Default**: Select one provider as the default
+
+**Supported Provider Types:**
+
+- `openai` - OpenAI API
+- `anthropic` - Anthropic API
+- `deepseek` - DeepSeek API
+- `groq` - Groq API
+- `moonshot` - Moonshot/Kimi API
+- `zhipu` - Zhipu AI API
+- `qwen` - Alibaba Qwen API
+- `openai-compatible` - Any OpenAI-compatible API
 
 #### API Server Configuration
 

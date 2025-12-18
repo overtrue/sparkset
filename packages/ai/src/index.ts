@@ -51,8 +51,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // OpenAI
   openai: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('OpenAI API key is required');
+      }
       const client = createOpenAI({
-        apiKey: config.apiKey || process.env.OPENAI_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL,
       });
       return client(model);
@@ -62,8 +65,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // Anthropic
   anthropic: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('Anthropic API key is required');
+      }
       const client = createAnthropic({
-        apiKey: config.apiKey || process.env.ANTHROPIC_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL,
       });
       return client(model);
@@ -73,8 +79,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // DeepSeek (官方 SDK)
   deepseek: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('DeepSeek API key is required');
+      }
       const client = createDeepSeek({
-        apiKey: config.apiKey || process.env.DEEPSEEK_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL, // 如果不指定，使用官方默认 URL
       });
       return client(model);
@@ -84,8 +93,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // Groq (OpenAI 兼容)
   groq: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('Groq API key is required');
+      }
       const client = createOpenAI({
-        apiKey: config.apiKey || process.env.GROQ_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL || 'https://api.groq.com/openai/v1',
       });
       return client(model);
@@ -95,8 +107,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // Moonshot / Kimi (OpenAI 兼容)
   moonshot: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('Moonshot API key is required');
+      }
       const client = createOpenAI({
-        apiKey: config.apiKey || process.env.MOONSHOT_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL || 'https://api.moonshot.cn/v1',
       });
       return client(model);
@@ -106,8 +121,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // 智谱 AI / GLM (OpenAI 兼容)
   zhipu: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('Zhipu API key is required');
+      }
       const client = createOpenAI({
-        apiKey: config.apiKey || process.env.ZHIPU_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL || 'https://open.bigmodel.cn/api/paas/v4',
       });
       return client(model);
@@ -117,8 +135,11 @@ const providerFactories: Record<string, ProviderFactory> = {
   // 通义千问 / Qwen (OpenAI 兼容)
   qwen: {
     createModel(model, config) {
+      if (!config.apiKey) {
+        throw new Error('Qwen API key is required');
+      }
       const client = createOpenAI({
-        apiKey: config.apiKey || process.env.DASHSCOPE_API_KEY,
+        apiKey: config.apiKey,
         baseURL: config.baseURL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       });
       return client(model);
