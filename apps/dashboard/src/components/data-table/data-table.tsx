@@ -40,6 +40,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import { DataTablePagination } from './data-table-pagination';
+import { DataTableEmptyState } from './data-table-empty-state';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -257,9 +258,9 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))
           ) : (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={finalColumns.length} className="h-24 text-center">
-                {emptyMessage}
+            <TableRow className="hover:bg-transparent hover:shadow-none border-none">
+              <TableCell colSpan={finalColumns.length} className="h-64 p-8 border-none">
+                <DataTableEmptyState message={emptyMessage} />
               </TableCell>
             </TableRow>
           )}

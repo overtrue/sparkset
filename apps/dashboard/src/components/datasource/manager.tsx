@@ -6,15 +6,16 @@ import Link from 'next/link';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import {
+  createDatasource,
   type CreateDatasourceInput,
   type DatasourceDTO,
-  createDatasource,
   removeDatasource,
   syncDatasource,
-  updateDatasource,
   testConnectionByConfig,
   TestConnectionResult,
+  updateDatasource,
 } from '../../lib/api';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
@@ -22,17 +23,17 @@ import { DataTableColumnHeader } from '../data-table/data-table-column-header';
 import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+
+// 支持的数据库类型列表
+const DATABASE_TYPES = [
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'postgres', label: 'PostgreSQL' },
+  { value: 'sqlite', label: 'SQLite' },
+];
 
 const defaultForm: CreateDatasourceInput = {
   name: '',
@@ -93,15 +94,30 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
     return isVerified && form.name && form.host && form.username && form.database;
   }, [isVerified, form]);
 
-  const onChange = (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) => {
-    setForm((prev: CreateDatasourceInput) => ({
-      ...prev,
-      [key]: key === 'port' ? Number(e.target.value) : e.target.value,
-    }));
-    // 用户修改配置时，重置验证状态
-    setIsVerified(false);
-    setTestResult(null);
-  };
+  const onChange =
+    (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement> | string) => {
+      const value = typeof e === 'string' ? e : e.target.value;
+
+      // 智能端口切换：当切换数据库类型时自动更新默认端口
+      if (key === 'type') {
+        const portMap: Record<string, number> = { mysql: 3306, postgres: 5432, sqlite: 0 };
+        const newPort = portMap[value as string] ?? 3306;
+        setForm((prev: CreateDatasourceInput) => ({
+          ...prev,
+          type: value as string,
+          port: newPort,
+        }));
+      } else {
+        setForm((prev: CreateDatasourceInput) => ({
+          ...prev,
+          [key]: key === 'port' ? Number(value) : value,
+        }));
+      }
+
+      // 用户修改配置时，重置验证状态
+      setIsVerified(false);
+      setTestResult(null);
+    };
 
   const handleTestConnection = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -402,7 +418,18 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="type">类型</Label>
-                  <Input id="type" value={form.type} readOnly />
+                  <Select value={form.type} onValueChange={(value) => onChange('type')(value)}>
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="选择数据库类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATABASE_TYPES.map((dbType) => (
+                        <SelectItem key={dbType.value} value={dbType.value}>
+                          {dbType.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="port">端口</Label>
@@ -451,11 +478,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                 <div className="grid gap-2">
                   <Label htmlFor="password">
                     密码{' '}
-                    {editingId && (
-                      <span className="text-muted-foreground">
-                        (留空则不修改，测试连接时需输入)
-                      </span>
-                    )}
+                    {editingId && <span className="text-muted-foreground">(留空则不修改)</span>}
                   </Label>
                   <Input
                     id="password"
