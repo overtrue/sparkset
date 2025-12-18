@@ -1,5 +1,5 @@
 import { AIClient, buildPrompt } from '@sparkset/ai';
-import { TableSchema } from '@sparkset/models';
+import { TableSchema } from '../db/types';
 import { PlannedQuery, SqlSnippet } from './types';
 
 export interface SchemaHint {

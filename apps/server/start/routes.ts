@@ -1,0 +1,76 @@
+/*
+|--------------------------------------------------------------------------
+| Routes file
+|--------------------------------------------------------------------------
+|
+| The routes file is used for defining the HTTP routes.
+|
+*/
+
+import router from '@adonisjs/core/services/router';
+
+const HealthController = () => import('#controllers/health_controller');
+const ConversationsController = () => import('#controllers/conversations_controller');
+const DatasourcesController = () => import('#controllers/datasources_controller');
+const ActionsController = () => import('#controllers/actions_controller');
+const QueriesController = () => import('#controllers/queries_controller');
+const AIProvidersController = () => import('#controllers/ai_providers_controller');
+
+router.get('/health', [HealthController, 'handle']);
+
+// Datasource routes
+router
+  .group(() => {
+    router.get('/', [DatasourcesController, 'index']);
+    router.post('/', [DatasourcesController, 'store']);
+    router.post('/:id/sync', [DatasourcesController, 'sync']);
+    router.post('/:id/semantic-descriptions', [
+      DatasourcesController,
+      'generateSemanticDescriptions',
+    ]);
+    router.get('/:id/schema', [DatasourcesController, 'schema']);
+    router.put('/:id/tables/:tableId', [DatasourcesController, 'updateTableMetadata']);
+    router.put('/:id/columns/:columnId', [DatasourcesController, 'updateColumnMetadata']);
+    router.post('/:id/set-default', [DatasourcesController, 'setDefault']);
+    router.get('/:id', [DatasourcesController, 'show']);
+    router.put('/:id', [DatasourcesController, 'update']);
+    router.delete('/:id', [DatasourcesController, 'destroy']);
+  })
+  .prefix('/datasources');
+
+// Action routes
+router
+  .group(() => {
+    router.get('/', [ActionsController, 'index']);
+    router.get('/:id', [ActionsController, 'show']);
+    router.post('/', [ActionsController, 'store']);
+    router.post('/generate-sql', [ActionsController, 'generateSQL']);
+    router.put('/:id', [ActionsController, 'update']);
+    router.delete('/:id', [ActionsController, 'destroy']);
+    router.post('/:id/execute', [ActionsController, 'execute']);
+  })
+  .prefix('/actions');
+
+// Query routes
+router.post('/query', [QueriesController, 'run']);
+
+// Conversation routes
+router
+  .group(() => {
+    router.get('/', [ConversationsController, 'index']);
+    router.get('/:id', [ConversationsController, 'show']);
+    router.post('/', [ConversationsController, 'store']);
+    router.post('/:id/messages', [ConversationsController, 'appendMessage']);
+  })
+  .prefix('/conversations');
+
+// AI Provider routes
+router
+  .group(() => {
+    router.get('/', [AIProvidersController, 'index']);
+    router.post('/', [AIProvidersController, 'store']);
+    router.post('/:id/set-default', [AIProvidersController, 'setDefault']);
+    router.put('/:id', [AIProvidersController, 'update']);
+    router.delete('/:id', [AIProvidersController, 'destroy']);
+  })
+  .prefix('/ai-providers');

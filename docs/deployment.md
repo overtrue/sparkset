@@ -16,7 +16,7 @@
 #### 构建 API 镜像
 
 ```bash
-docker build -f apps/api/Dockerfile -t sparkset/api:latest .
+docker build -f apps/server/Dockerfile -t sparkset/server:latest .
 ```
 
 #### 构建 Dashboard 镜像
@@ -108,7 +108,7 @@ docker-compose logs -f mysql
 docker-compose exec api sh
 
 # 在容器内运行迁移
-pnpm prisma:migrate:deploy
+node ace migration:run
 ```
 
 7. **访问应用**
@@ -230,7 +230,7 @@ kubectl logs -l app.kubernetes.io/component=mysql
 kubectl exec -it deployment/sparkset-api -- sh
 
 # 运行迁移
-pnpm prisma:migrate:deploy
+cd apps/server && node ace migration:run
 ```
 
 ### 更新部署

@@ -14,12 +14,10 @@ Sparkset 运营助手旨在帮助企业运营团队通过自然语言与数据�
 
 3. **AI 与 SQL 引擎**：接收用户的自然语言请求，构造包含数据源上下文的提示词，经由 Vercel AI SDK 调用模型生成 SQL。生成的 SQL 先经 dry‑run 校验，确认只读、安全后再执行；多个 SQL 的组合也在此处理并合并结果。该层同时包含工具调用逻辑，未来可以根据模型返回选择合适的工具执行（例如 API、文件读取）。
 
-4. **API 层（AdonisJS）**：提供统一的 HTTP 接口，负责身份验证、参数校验、调用核心服务并返回结果。所有前端、CLI 调用均经由此层。
+4. **API 层（AdonisJS）**：提供统一的 HTTP 接口，负责身份验证、参数校验、调用核心服务并返回结果。所有前端调用均经由此层。
 
 5. **交互层**：
    - **Dashboard**：基于 Next.js 和 shadcn/ui，实现管理界面，提供数据源管理、查询工作台、对话记录、模板列表等模块。采用可折叠的侧边栏布局[ui-thing.behonbaker.com](https://ui-thing.behonbaker.com/blocks/sidebar#:~:text=More%20options%20for%20header%20links)方便导航。
-
-   - **CLI**：提供命令行工具，支持添加/同步数据源、执行动作、查看历史记录等，适用于自动化或技术用户场景。
 
 6. **持久化存储**：用于存储会话和动作模板，便于复用和审计。会话记录按消息拆分存储，动作模板记录生成的 SQL 或其他工具调用参数。
 
@@ -49,7 +47,7 @@ text
 
 复制代码
 
-`├── apps │   ├── api               # AdonisJS 项目，提供后端 REST API │   │   ├── app/Controllers/Http │   │   ├── app/Services   # 业务逻辑：数据源管理、AI 调用、查询执行 │   │   ├── routes.ts      # API 路由 │   │   ├── config         # 配置文件 │   │   └── database       # 迁移和种子 │   ├── dashboard         # Next.js 前端应用 │   │   ├── app/           # 页面或路由 │   │   ├── components     # 通用 UI 组件 │   │   ├── lib            # API 调用封装、hook │   │   └── public │   └── cli               # Node CLI 工具 │       ├── src/commands   # 各子命令 │       └── bin ├── packages │   ├── core              # 核心逻辑：数据源管理、查询构建、执行器 │   ├── ai                # AI 提供者注册、提示词拼装、调用封装 │   ├── db                # 数据库连接封装（MySQL 等） │   ├── models            # 公共类型定义（DataSource、Action 等） │   ├── utils             # 工具函数与通用逻辑 │   └── config            # 公共配置加载 └── README.md`
+`├── apps │   ├── server             # AdonisJS 项目，提供后端 REST API │   │   ├── app/controllers │   │   ├── app/services   # 业务逻辑：数据源管理、AI 调用、查询执行 │   │   ├── app/db          # Repository 接口定义和实现 │   │   ├── routes.ts      # API 路由 │   │   ├── config         # 配置文件 │   │   └── database       # 迁移和种子 │   └── dashboard         # Next.js 前端应用 │       ├── app/           # 页面或路由 │       ├── components     # 通用 UI 组件 │       ├── lib            # API 调用封装、hook │       └── public ├── packages │   ├── core              # 核心逻辑：数据源管理、查询构建、执行器，包含 DBClient 接口 │   ├── ai                # AI 提供者注册、提示词拼装、调用封装 │   ├── models            # 公共类型定义（DataSource、Action 等） │   ├── utils             # 工具函数与通用逻辑 │   └── config            # 公共配置加载 └── README.md`
 
 ### 命名与代码规范
 
@@ -59,7 +57,7 @@ text
 
 2. **命名优雅美观**：目录、文件、变量和函数名称应简洁且具描述性。统一采用约定俗成的大小写风格：目录使用 kebab‑case，变量使用 camelCase，类与接口使用 PascalCase。
 
-3. **代码组织合理**：逻辑相关的功能聚合在一起，避免不同层次代码混杂。例如数据库连接封装在 `packages/db`，AI 调用封装在 `packages/ai`，各类业务模块在 `app/services`（也可命名为 `app/modules`）中分层实现。
+3. **代码组织合理**：逻辑相关的功能聚合在一起，避免不同层次代码混杂。例如数据库 Repository 接口定义在 `apps/server/src/app/db/interfaces.ts`，DBClient 接口在 `packages/core/src/db/types.ts`，AI 调用封装在 `packages/ai`，各类业务模块在 `app/services`（也可命名为 `app/modules`）中分层实现。
 
 4. **逻辑简洁严谨**：实现核心流程时保持逻辑清晰，避免过度嵌套和重复代码；对复杂步骤提供必要的注释，以便后续维护。
 
@@ -133,7 +131,7 @@ ts
 
 ## 关键模块说明
 
-1. **DataSource Manager**：负责新增、编辑和删除数据源，提供同步接口。同步任务可以定时触发或通过 CLI/后台手动触发，更新 Schema 缓存表。
+1. **DataSource Manager**：负责新增、编辑和删除数据源，提供同步接口。同步任务可以定时触发或通过 API 手动触发，更新 Schema 缓存表。
 
 2. **AI Service**：封装 Vercel AI SDK，支持多模型/多提供商选择、fallback 策略[vercel.com](https://vercel.com/docs/ai-gateway/models-and-providers#:~:text=between%20different%20AI%20models%20,ensure%20high%20availability%20and%20reliability)。负责构造系统提示词，将 Schema 信息嵌入提示，生成 SQL 或指令。
 
@@ -145,20 +143,18 @@ ts
 
 6. **API 层**：提供 RESTful 接口，包括数据源管理、动作执行、会话记录、模板管理等。中间件负责鉴权、日志和异常处理。
 
-7. **Dashboard & CLI**：
+7. **Dashboard**：
    - Dashboard 提供可视化的查询工作台、结果展示、会话历史、模板管理等。利用 shadcn/ui 的侧边栏布局[ui-thing.behonbaker.com](https://ui-thing.behonbaker.com/blocks/sidebar#:~:text=More%20options%20for%20header%20links)实现良好用户体验。
-
-   - CLI 面向技术用户或自动化脚本，支持命令行下的查询和管理操作。
 
 ## 流程说明
 
-1. 用户通过 Dashboard 或 CLI 提出自然语言问题，系统在会话表中记录请求。
+1. 用户通过 Dashboard 提出自然语言问题，系统在会话表中记录请求。
 
 2. API 层调用 AI Service，根据数据源 Schema 拼装提示词，交由模型生成 SQL 或选择合适工具。
 
 3. 对于 `sql` 类型，Query Builder 解析并执行生成的 SQL 列表；对于其他类型，调用对应工具处理。
 
-4. 执行结果返回 API 层，再反馈给前端或 CLI；同时将结果摘要、生成的 SQL 和其他元数据保存到消息表，方便追溯。
+4. 执行结果返回 API 层，再反馈给前端；同时将结果摘要、生成的 SQL 和其他元数据保存到消息表，方便追溯。
 
 5. 用户可将某次成功的查询保存为 Action 模板，后续在同一或不同会话中直接复用。
 
@@ -174,7 +170,7 @@ ts
 
 ## 扩展与迭代
 
-- **数据源扩展**：通过在 `packages/db` 中实现新的连接模块，更新 DataSource 类型，即可支持新的数据库。
+- **数据源扩展**：通过在 `apps/server/src/app/db/lucid-db-client.ts` 中实现新的连接逻辑，更新 DataSource 类型，即可支持新的数据库。
 
 - **工具生态**：新增文件处理、外部 API 调用、数据清洗等工具，只需实现对应 handler 并在 Tool Registry 中注册，AI 即可选择使用。
 
@@ -204,8 +200,6 @@ ts
 
 7. **MySQL 官方文档和驱动库**：熟悉连接和查询方式，为跨数据源查询打下基础。
 
-8. **CLI 框架资料**：例如 Commander.js 或 oclif，了解如何构建命令行工具。
-
 ### 任务拆分
 
 开发过程可以按照以下阶段进行，每个阶段对应若干任务和交付物：
@@ -222,28 +216,24 @@ ts
 
 5. 初始化 Next.js 项目：配置 Tailwind CSS，安装 shadcn/ui 并演示基础布局。
 
-6. 初始化 CLI 项目：选型命令行框架并搭建基础命令结构。
-
 #### 阶段 2：核心模块开发
 
 1. **数据源管理用例**：
    - 实现 `POST /datasources`、`PUT /datasources/:id`、`DELETE /datasources/:id` 接口，支持创建、修改和删除数据源，并进行基础校验（名称唯一、连接信息完整）。
 
-   - 实现 CLI 命令 `datasource:add`、`datasource:update`、`datasource:remove`；编写参数提示和成功/失败提示。
-
    - Dashboard 中开发添加/编辑数据源的表单页面，提交后调用 API 并显示结果；在数据源列表页提供删除按钮。
 
-   - 实现 `POST /datasources/:id/sync` API 和 `datasource:sync` CLI 命令，用于手动同步 Schema；编写计划任务在后台定时同步。
+   - 实现 `POST /datasources/:id/sync` API，用于手动同步 Schema；编写计划任务在后台定时同步。
 
 2. **Schema 缓存用例**：
    - 编写同步任务，连接数据库读取 `information_schema`，将表名、字段名、字段类型和注释存入 `table_schema` 和 `column_definition` 缓存表。
 
-   - 提供 API `GET /schemas/:datasourceId` 返回缓存结构供 AI 模块使用；在 CLI 中提供 `datasource:schema` 命令查看同步结果。
+   - 提供 API `GET /schemas/:datasourceId` 返回缓存结构供 AI 模块使用。
 
 3. **Action 和工具管理用例**：
    - 定义 Action 模型并创建 `actions` 表，包含 `id`、`name`、`type`、`payload` 等字段。
 
-   - 实现 `POST /actions`、`GET /actions/:id`、`GET /actions` 接口用于保存和查询模板；CLI 命令 `action:save`、`action:list`。
+   - 实现 `POST /actions`、`GET /actions/:id`、`GET /actions` 接口用于保存和查询模板。
 
    - 实现工具注册表数据结构，提供 `GET /tools` 接口列出可用工具名称、描述和输入结构。
 
@@ -262,14 +252,14 @@ ts
 6. **会话与消息用例**：
    - 在 `conversations` 和 `conversation_messages` 表实现增删查接口；记录每次查询的请求、生成的 SQL、返回结果。
 
-   - 提供 `POST /conversations` 创建会话、`POST /conversations/:id/messages` 追加消息；CLI 命令 `conversation:list` 列出历史会话。
+   - 提供 `POST /conversations` 创建会话、`POST /conversations/:id/messages` 追加消息。
 
    - 在 Dashboard 中展示对话列表，点击可展开查看每条消息和 SQL 详情；支持保存为模板的操作按钮。
 
 #### 阶段 3：API 与交互层
 
 1. **API 集成用例**：
-   - 根据核心模块完成所有 RESTful API 实现，确保前端/CLI 调用的数据格式和错误信息统一。
+   - 根据核心模块完成所有 RESTful API 实现，确保前端调用的数据格式和错误信息统一。
 
    - 实现 `POST /query` 接口，接收自然语言请求，调用 AI 服务并返回查询结果；支持分页和筛选参数。
 
@@ -288,19 +278,14 @@ ts
 
    - 使用 shadcn/ui 的侧边栏和表格组件组织布局，保持交互简单、美观。
 
-3. **CLI 开发用例**：
-   - 补充 `query:run` 命令：接受自然语言参数，调用 `/query` API，并以表格形式输出结果；支持 `--action` 参数执行指定模板。
-
-   - `conversation:list` 命令：列出所有会话 ID 和创建时间；`conversation:show <id>` 显示具体消息和结果。
-
    - `action:exec <id>` 命令：执行已有模板并展示结果。
 
    - `help` 命令提供帮助信息，所有命令输出均符合交互体验要求。
 
-4. **前后端集成和测试**：
+3. **前后端集成和测试**：
    - 制定接口文档并在前端调用时遵循；对常见错误状态码进行处理和用户提示。
 
-   - 编写单元测试覆盖 API 控制器与服务逻辑；编写端到端测试验证 UI 和 CLI 的主要用例。
+   - 编写单元测试覆盖 API 控制器与服务逻辑；编写端到端测试验证 UI 的主要用例。
 
    - 确保页面加载时有合适的 loading 状态，发生错误时展示友好的提示。
 
@@ -338,7 +323,7 @@ ts
 
 4. **文档完善**：相关模块有清晰的文档或注释，方便他人理解和维护。
 
-5. **用户体验**：Dashboard 页面布局合理、反馈及时，CLI 提示信息友好。
+5. **用户体验**：Dashboard 页面布局合理、反馈及时。
 
 6. **扩展性验证**：新增一种工具或数据源类型时，不需要大改现有框架即可集成，证明设计具有扩展性。
 

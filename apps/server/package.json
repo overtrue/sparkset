@@ -1,0 +1,56 @@
+{
+  "name": "@sparkset/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#exceptions/*": "./app/exceptions/*",
+    "#controllers/*": "./app/controllers/*",
+    "#services/*": "./app/services/*",
+    "#validators/*": "./app/validators/*",
+    "#middleware/*": "./app/middleware/*",
+    "#providers/*": "./app/providers/*",
+    "#start/*": "./start/*.js"
+  },
+  "scripts": {
+    "dev": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/console.ts serve --hmr",
+    "dev:node": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/server.ts",
+    "build": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/console.ts build",
+    "start": "node server.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "migrate": "echo '⚠️  Migration command via ace is currently not working. See scripts/MIGRATION_NOTES.md for manual migration steps.' && exit 1",
+    "migrate:rollback": "node ace migration:rollback",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:ace": "NODE_ENV=test NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/test.ts"
+  },
+  "dependencies": {
+    "@adonisjs/bodyparser": "^6.0.0",
+    "@adonisjs/core": "^6.0.0",
+    "@adonisjs/cors": "^2.2.1",
+    "@adonisjs/lucid": "^21.8.1",
+    "@adonisjs/validator": "^6.0.0",
+    "@sparkset/ai": "workspace:*",
+    "@sparkset/core": "workspace:*",
+    "dotenv": "^17.2.3",
+    "luxon": "^3.7.2",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@adonisjs/assembler": "^7.8.2",
+    "@adonisjs/tsconfig": "^1.4.1",
+    "@japa/api-client": "^3.1.0",
+    "@japa/assert": "^4.0.1",
+    "@japa/plugin-adonisjs": "^4.0.0",
+    "@japa/runner": "^4.2.0",
+    "@swc/core": "^1.15.6",
+    "hot-hook": "^0.4.0",
+    "pino-pretty": "^13.0.0",
+    "ts-node": "^10.9.2",
+    "ts-node-maintained": "^10.9.6",
+    "tsx": "^4.19.2",
+    "vitest": "^4.0.15"
+  }
+}

@@ -1,4 +1,4 @@
-import { TableSchema } from '@sparkset/models';
+import { TableSchema } from './types';
 
 export interface PromptOptions {
   question: string;

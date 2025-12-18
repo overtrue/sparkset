@@ -9,5 +9,5 @@
     "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src"],
-  "references": [{ "path": "../models" }, { "path": "../ai" }, { "path": "../db" }]
+  "references": [{ "path": "../ai" }]
 }

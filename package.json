@@ -10,12 +10,8 @@
     "test": "turbo run test",
     "format": "turbo run format",
     "prepare": "husky",
-    "prisma:generate": "pnpm --filter @sparkset/db prisma generate --schema packages/db/prisma/schema.prisma",
-    "prisma:migrate:diff": "pnpm --filter @sparkset/db prisma migrate diff --from-empty --to-schema-datamodel packages/db/prisma/schema.prisma --script > packages/db/prisma/migrations/0001_init.sql",
-    "prisma:migrate:deploy": "pnpm --filter @sparkset/db prisma migrate deploy --schema packages/db/prisma/schema.prisma"
-  },
-  "prisma": {
-    "schema": "packages/db/prisma/schema.prisma"
+    "migration:run": "cd apps/server && node ace migration:run",
+    "migration:rollback": "cd apps/server && node ace migration:rollback"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

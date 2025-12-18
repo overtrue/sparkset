@@ -51,13 +51,7 @@ cd sparkset
 pnpm install
 ```
 
-3. **生成 Prisma Client**
-
-```bash
-pnpm prisma:generate
-```
-
-4. **配置数据库**
+3. **配置数据库**
 
 创建 MySQL 数据库并配置连接。你可以使用以下任一方式：
 
@@ -77,14 +71,12 @@ export DB_PASSWORD=yourpassword
 export DB_NAME=sparkset
 ```
 
-5. **运行数据库迁移**
+4. **运行数据库迁移**
 
 ```bash
-# 应用迁移（推荐）
-pnpm prisma:migrate:deploy
-
-# 或手动运行 SQL 迁移
-mysql -u root -p sparkset < packages/db/prisma/migrations/0001_init.sql
+# 在 server 目录运行迁移
+cd apps/server
+node ace migration:run
 ```
 
 6. **配置 AI 提供商**
@@ -111,10 +103,10 @@ export AI_PROVIDER=anthropic
 
 打开两个终端窗口：
 
-**终端 1 - API 服务器：**
+**终端 1 - 服务器：**
 
 ```bash
-pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/server
 ```
 
 API 将在 `http://localhost:3333` 可用
@@ -153,17 +145,6 @@ mysql -uroot -p123456 sparkset_demo < scripts/demo-seed.sql
 
 CLI 非常适合自动化和技术用户：
 
-```bash
-# 运行自然语言查询
-pnpm dev --filter @sparkset/cli -- query:run "显示前 10 个用户"
-
-# 列出所有对话
-pnpm dev --filter @sparkset/cli -- conversation:list
-
-# 执行保存的动作模板
-pnpm dev --filter @sparkset/cli -- action:exec 1
-```
-
 ### API
 
 对于程序化访问，可以使用 REST API：
@@ -195,14 +176,12 @@ Sparkset 使用 [Turborepo](https://turbo.build/) 构建为 monorepo，以实现
 ```
 sparkset/
 ├── apps/
-│   ├── api/              # Fastify REST API 服务器
+│   ├── api/              # AdonisJS REST API 服务器
 │   │   ├── src/app/      # 控制器、服务、验证器
 │   │   └── tests/        # API 测试
-│   ├── dashboard/        # Next.js Web 应用
-│   │   ├── src/app/      # Next.js 页面和路由
-│   │   └── src/components/ # React 组件
-│   └── cli/              # 命令行接口
-│       └── src/          # CLI 命令
+│   └── dashboard/        # Next.js Web 应用
+│       ├── src/app/      # Next.js 页面和路由
+│       └── src/components/ # React 组件
 ├── packages/
 │   ├── core/             # 核心业务逻辑
 │   │   ├── 查询执行器和规划器
@@ -211,7 +190,7 @@ sparkset/
 │   │   ├── 提供商管理
 │   │   └── 提示词模板
 │   ├── db/               # 数据库层
-│   │   ├── Prisma schema
+│   │   └── Lucid migrations
 │   │   └── 仓储模式
 │   ├── models/           # 共享 TypeScript 类型
 │   ├── utils/            # 工具函数
@@ -221,12 +200,11 @@ sparkset/
 
 ### 关键目录
 
-- **`apps/api`**：基于 Fastify 的 REST API，包含控制器、服务和验证器
+- **`apps/server`**：基于 AdonisJS 的服务器，包含控制器、服务和验证器，包含 Repository 接口定义
 - **`apps/dashboard`**：使用 shadcn/ui 组件的 Next.js 应用
 - **`apps/cli`**：用于自动化的命令行工具
-- **`packages/core`**：核心查询执行和动作处理逻辑
+- **`packages/core`**：核心查询执行和动作处理逻辑，包含 DBClient 接口定义
 - **`packages/ai`**：AI 提供商抽象和提示词管理
-- **`packages/db`**：Prisma ORM schema 和数据库访问层
 
 ## ⚙️ 配置说明
 
@@ -304,8 +282,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3333  # API 服务器 URL
 # 构建所有包
 pnpm build
 
-# 启动 API 服务器（生产环境）
-cd apps/api
+# 启动服务器（生产环境）
+cd apps/server
 pnpm start
 
 # 启动仪表板（生产环境）
@@ -321,7 +299,7 @@ pnpm start
 
 1. 在托管平台中设置所有必需的环境变量
 2. 确保数据库可以从托管环境访问
-3. 运行迁移：`pnpm prisma:migrate:deploy`
+3. 运行迁移：`cd apps/server && node ace migration:run`
 4. 构建并启动服务
 
 #### 选项 2：Vercel（仪表板）
@@ -363,7 +341,7 @@ pnpm test
 
 # 运行特定包的测试
 pnpm --filter @sparkset/core test
-pnpm --filter @sparkset/api test
+pnpm --filter @sparkset/server test
 
 # 以监视模式运行测试
 pnpm --filter @sparkset/core test --watch
@@ -394,14 +372,11 @@ pnpm prettier --write path/to/file.ts
 pnpm dev
 
 # 运行特定应用
-pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/server
 pnpm dev --filter @sparkset/dashboard
 
-# 生成 Prisma Client（在 schema 更改后）
-pnpm prisma:generate
-
-# 应用数据库迁移
-pnpm prisma:migrate:deploy
+# 运行数据库迁移（在 schema 更改后）
+cd apps/server && node ace migration:run
 ```
 
 ### 开发工作流
@@ -482,7 +457,7 @@ Sparkset 包含多项安全特性来保护你的数据：
 - 使用 [Turborepo](https://turbo.build/) 构建
 - UI 组件来自 [shadcn/ui](https://ui.shadcn.com/)
 - AI 集成通过 [Vercel AI SDK](https://sdk.vercel.ai/)
-- 数据库管理使用 [Prisma](https://www.prisma.io/)
+- 数据库管理使用 [AdonisJS Lucid](https://docs.adonisjs.com/guides/database/lucid)
 
 ## 📮 支持与社区
 

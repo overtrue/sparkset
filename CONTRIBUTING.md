@@ -54,13 +54,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
    pnpm install
    ```
 
-2. **Generate Prisma Client**:
-
-   ```bash
-   pnpm prisma:generate
-   ```
-
-3. **Set up environment variables**:
+2. **Set up environment variables**:
    Create a `.env` file in the root directory:
 
    ```bash
@@ -69,17 +63,18 @@ By participating in this project, you agree to maintain a respectful and inclusi
    # ... other variables
    ```
 
-4. **Run database migrations**:
+3. **Run database migrations**:
 
    ```bash
-   pnpm prisma:migrate:deploy
+   cd apps/server
+   node ace migration:run
    ```
 
-5. **Start development servers**:
+4. **Start development servers**:
 
    ```bash
-   # Terminal 1: API server
-   pnpm dev --filter @sparkset/api
+   # Terminal 1: Server
+   pnpm dev --filter @sparkset/server
 
    # Terminal 2: Dashboard
    pnpm dev --filter @sparkset/dashboard
@@ -93,7 +88,7 @@ pnpm test
 
 # Run tests for a specific package
 pnpm --filter @sparkset/core test
-pnpm --filter @sparkset/api test
+pnpm --filter @sparkset/server test
 
 # Run tests in watch mode
 pnpm --filter @sparkset/core test --watch
@@ -397,11 +392,11 @@ Sparkset uses Turborepo for monorepo management:
 
 ### Database Changes
 
-- **Create migrations**: Always create Prisma migrations for schema changes
+- **Create migrations**: Always create Lucid migrations for schema changes
 - **Test migrations**: Test both up and down migrations
 - **Update seeds**: Update demo seeds if schema changes affect them
-- **Migration location**: Prisma schema and migrations are in `packages/db/prisma/`
-- **Apply migrations**: Use `pnpm prisma:migrate:deploy` to apply migrations
+- **Migration location**: Lucid migrations are in `apps/server/database/migrations/`
+- **Apply migrations**: Use `cd apps/server && node ace migration:run` to apply migrations
 
 ### UI Components
 
@@ -424,14 +419,15 @@ Sparkset uses Turborepo for monorepo management:
 
 ### API Development
 
-- **Fastify framework**: API uses Fastify in `apps/api`
+- **AdonisJS framework**: Server uses AdonisJS in `apps/server`
 - **Route organization**: Routes, services under `src/app`
-- **Tests**: Place tests in `apps/api/tests`
+- **Tests**: Place tests in `apps/server/tests`
 - **Validation**: Use Zod schemas for input validation (in `src/app/validators/`)
+- **Database**: Uses AdonisJS Lucid ORM for database operations
 
 ### Testing Guidelines
 
-- **Vitest**: Used for `apps/api` and `packages/core`
+- **Vitest**: Used for `apps/server` and `packages/core`
 - **Test placement**: Place specs under `tests/**` or `src/**/__tests__`
 - **Test types**: Prefer focused unit tests for services/planner/executor; add integration tests for routes
 - **Run tests**: Use `pnpm --filter <pkg> test`
@@ -454,7 +450,7 @@ A: Use `pnpm dlx shadcn@latest add <component>` in the dashboard directory. This
 A: If it's used across multiple modules, place it in `src/components/`. If it's module-specific, place it in `src/components/{module}/`.
 
 **Q: How do I test database changes?**
-A: Create Prisma migrations, test them locally, and ensure demo seeds still work.
+A: Create Lucid migrations in `apps/server/database/migrations/`, test them locally with `node ace migration:run`, and ensure demo seeds still work.
 
 **Q: What if my PR has linting errors?**
 A: Run `pnpm lint` and `pnpm format` locally, then fix the issues. Pre-commit hooks will also catch them.

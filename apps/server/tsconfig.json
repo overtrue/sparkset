@@ -1,0 +1,23 @@
+{
+  "extends": "@adonisjs/tsconfig/tsconfig.app.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./build",
+    "baseUrl": ".",
+    "paths": {
+      "#controllers/*": ["./app/controllers/*"],
+      "#exceptions/*": ["./app/exceptions/*"],
+      "#services/*": ["./app/services/*"],
+      "#validators/*": ["./app/validators/*"],
+      "#middleware/*": ["./app/middleware/*"],
+      "#providers/*": ["./app/providers/*"],
+      "#start/*": ["./start/*"],
+      "@sparkset/core/*": ["../../packages/core/src/*"],
+      "@sparkset/ai/*": ["../../packages/ai/src/*"],
+      "@sparkset/utils/*": ["../../packages/utils/src/*"],
+      "@sparkset/config/*": ["../../packages/config/src/*"]
+    }
+  },
+  "include": ["app", "config", "start", "bin", "tests", "adonisrc.ts"],
+  "exclude": ["build"]
+}

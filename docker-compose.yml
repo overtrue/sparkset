@@ -38,7 +38,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/server/Dockerfile
     container_name: sparkset-api
     restart: unless-stopped
     depends_on:
@@ -68,8 +68,6 @@ services:
       AI_FALLBACK_MODELS: ${AI_FALLBACK_MODELS:-}
     ports:
       - '${API_PORT:-3333}:3333'
-    volumes:
-      - ./packages/db/prisma:/app/packages/db/prisma:ro
     healthcheck:
       test:
         [

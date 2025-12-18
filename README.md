@@ -14,7 +14,6 @@ Sparkset is an AI-powered operational assistant that helps teams interact with d
 
 <img width="2032" height="1161" alt="Clipboard_Screenshot_1765940903" src="https://github.com/user-attachments/assets/3fdbe7b3-38dd-4b78-a5a0-03faa16349f4" />
 
-
 ## ✨ Features
 
 - **🤖 Natural Language to SQL**: Convert plain English questions into optimized SQL queries using AI
@@ -52,13 +51,7 @@ cd sparkset
 pnpm install
 ```
 
-3. **Generate Prisma Client**
-
-```bash
-pnpm prisma:generate
-```
-
-4. **Set up your database**
+3. **Set up your database**
 
 Create a MySQL database and configure the connection. You can use either approach:
 
@@ -78,14 +71,12 @@ export DB_PASSWORD=yourpassword
 export DB_NAME=sparkset
 ```
 
-5. **Run database migrations**
+4. **Run database migrations**
 
 ```bash
-# Apply migrations (recommended)
-pnpm prisma:migrate:deploy
-
-# Or manually run SQL migrations
-mysql -u root -p sparkset < packages/db/prisma/migrations/0001_init.sql
+# Navigate to server directory and run migrations
+cd apps/server
+node ace migration:run
 ```
 
 6. **Configure AI provider**
@@ -112,10 +103,10 @@ See [Configuration](#-configuration) section for more details.
 
 Open two terminal windows:
 
-**Terminal 1 - API Server:**
+**Terminal 1 - Server:**
 
 ```bash
-pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/server
 ```
 
 The API will be available at `http://localhost:3333`
@@ -150,21 +141,6 @@ The Dashboard provides a user-friendly interface for managing datasources, runni
 4. **View results**: See formatted results, generated SQL, and execution details
 5. **Save templates**: Save successful queries as reusable action templates
 
-### CLI
-
-The CLI is perfect for automation and technical users:
-
-```bash
-# Run a natural language query
-pnpm dev --filter @sparkset/cli -- query:run "Show me the top 10 users"
-
-# List all conversations
-pnpm dev --filter @sparkset/cli -- conversation:list
-
-# Execute a saved action template
-pnpm dev --filter @sparkset/cli -- action:exec 1
-```
-
 ### API
 
 For programmatic access, use the REST API:
@@ -196,14 +172,12 @@ Sparkset is built as a monorepo using [Turborepo](https://turbo.build/) for effi
 ```
 sparkset/
 ├── apps/
-│   ├── api/              # Fastify REST API server
+│   ├── api/              # AdonisJS REST API server
 │   │   ├── src/app/      # Controllers, services, validators
 │   │   └── tests/        # API tests
-│   ├── dashboard/        # Next.js web application
-│   │   ├── src/app/      # Next.js pages and routes
-│   │   └── src/components/ # React components
-│   └── cli/              # Command-line interface
-│       └── src/          # CLI commands
+│   └── dashboard/        # Next.js web application
+│       ├── src/app/      # Next.js pages and routes
+│       └── src/components/ # React components
 ├── packages/
 │   ├── core/             # Core business logic
 │   │   ├── Query executor and planner
@@ -212,8 +186,7 @@ sparkset/
 │   │   ├── Provider management
 │   │   └── Prompt templates
 │   ├── db/               # Database layer
-│   │   ├── Prisma schema
-│   │   └── Repositories
+│   │   └── Repository interfaces
 │   ├── models/           # Shared TypeScript types
 │   ├── utils/            # Utility functions
 │   └── config/           # Configuration management
@@ -222,12 +195,10 @@ sparkset/
 
 ### Key Directories
 
-- **`apps/api`**: Fastify-based REST API with controllers, services, and validators
+- **`apps/server`**: AdonisJS Server with controllers, services, and validators, contains repository interfaces
 - **`apps/dashboard`**: Next.js application with shadcn/ui components
-- **`apps/cli`**: Command-line tool for automation
-- **`packages/core`**: Core query execution and action processing logic
+- **`packages/core`**: Core query execution and action processing logic, contains DBClient interfaces
 - **`packages/ai`**: AI provider abstraction and prompt management
-- **`packages/db`**: Prisma ORM schema and database access layer
 
 ## ⚙️ Configuration
 
@@ -305,8 +276,8 @@ Build all packages for production:
 # Build all packages
 pnpm build
 
-# Start API server (production)
-cd apps/api
+# Start server (production)
+cd apps/server
 pnpm start
 
 # Start Dashboard (production)
@@ -322,7 +293,7 @@ Deploy to platforms like Railway, Render, or DigitalOcean:
 
 1. Set all required environment variables in your hosting platform
 2. Ensure your database is accessible from the hosting environment
-3. Run migrations: `pnpm prisma:migrate:deploy`
+3. Run migrations: `cd apps/server && node ace migration:run`
 4. Build and start the services
 
 #### Option 2: Vercel (Dashboard)
@@ -351,7 +322,7 @@ cp .env.example .env
 docker-compose up -d
 
 # Run database migrations
-docker-compose exec api pnpm prisma:migrate:deploy
+docker-compose exec api node ace migration:run
 
 # Access the application
 # Dashboard: http://localhost:3000
@@ -361,8 +332,8 @@ docker-compose exec api pnpm prisma:migrate:deploy
 **Build Docker Images:**
 
 ```bash
-# Build API image
-docker build -f apps/api/Dockerfile -t sparkset/api:latest .
+# Build server image
+docker build -f apps/server/Dockerfile -t sparkset/server:latest .
 
 # Build Dashboard image
 docker build -f apps/dashboard/Dockerfile \
@@ -406,7 +377,7 @@ pnpm test
 
 # Run tests for a specific package
 pnpm --filter @sparkset/core test
-pnpm --filter @sparkset/api test
+pnpm --filter @sparkset/server test
 
 # Run tests in watch mode
 pnpm --filter @sparkset/core test --watch
@@ -437,14 +408,11 @@ pnpm prettier --write path/to/file.ts
 pnpm dev
 
 # Run specific app
-pnpm dev --filter @sparkset/api
+pnpm dev --filter @sparkset/server
 pnpm dev --filter @sparkset/dashboard
 
-# Generate Prisma Client (after schema changes)
-pnpm prisma:generate
-
-# Apply database migrations
-pnpm prisma:migrate:deploy
+# Run database migrations (after schema changes)
+cd apps/server && node ace migration:run
 ```
 
 ### Development Workflow
@@ -525,7 +493,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with [Turborepo](https://turbo.build/)
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - AI integration via [Vercel AI SDK](https://sdk.vercel.ai/)
-- Database management with [Prisma](https://www.prisma.io/)
+- Database management with [AdonisJS Lucid](https://docs.adonisjs.com/guides/database/lucid)
 
 ## 📮 Support & Community
 

@@ -36,3 +36,6 @@ data:
   NODE_ENV: {{ .Values.dashboard.env.NODE_ENV | quote }}
   NEXT_PUBLIC_API_URL: {{ .Values.dashboard.env.NEXT_PUBLIC_API_URL | quote }}
 {{- end }}
+
+
+

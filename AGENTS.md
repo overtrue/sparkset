@@ -2,17 +2,17 @@
 
 ## Project Structure & Module Organization
 
-- Monorepo managed by Turborepo. Top-level `apps/` (api, dashboard, cli) and `packages/` (core, db, ai, models, utils, config). Scripts and seeds live in `scripts/`.
-- API (Fastify) in `apps/api`; routes, services under `src/app`, tests in `apps/api/tests`.
+- Monorepo managed by Turborepo. Top-level `apps/` (server, dashboard) and `packages/` (core, ai, utils, config). Scripts and seeds live in `scripts/`.
+- Server (AdonisJS) in `apps/server`; routes, services under `src/app`, tests in `apps/server/tests`.
 - Dashboard (Next.js) in `apps/dashboard`; UI components in `src/components`, pages in `src/app`. shadcn components are auto-added under `src/components/ui` via CLI.
-- CLI in `apps/cli/src`. Shared logic in `packages/*`. Prisma schema and migrations in `packages/db/prisma`.
+- CLI in `apps/cli/src`. Shared logic in `packages/*`. Lucid migrations in `apps/server/database/migrations`.
 
 ## Build, Test, and Development Commands
 
 - `pnpm dev` (root): run all dev targets via Turborepo.
-- `pnpm --filter @sparkset/api dev` / `...dashboard dev`: run API or dashboard only.
-- `pnpm --filter @sparkset/api test` / `...core test`: Vitest unit/integration.
-- `pnpm prisma:migrate:deploy` (root) applies Prisma migrations; `pnpm prisma:generate` regenerates client.
+- `pnpm --filter @sparkset/server dev` / `...dashboard dev`: run server or dashboard only.
+- `pnpm --filter @sparkset/server test` / `...core test`: Vitest unit/integration.
+- `cd apps/server && node ace migration:run` runs Lucid migrations.
 - Seed/demo DB: `mysql -uroot -p'123456' sparkset_demo < scripts/demo-seed.sql`.
 
 ## Coding Style & Naming Conventions

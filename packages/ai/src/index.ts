@@ -439,6 +439,9 @@ export class StubAIClient implements AIClient {
   }
 }
 
+// 导出类型
+export type { ColumnDefinition, TableSchema } from './types';
+
 // 导出提示词构建函数
 export { buildActionPrompt, buildPrompt } from './prompt';
 export type { ActionPromptOptions, PromptOptions } from './prompt';

@@ -1,4 +1,4 @@
-import { DBClient, DataSourceConfig, QueryResult } from '@sparkset/db';
+import { DBClient, DataSourceConfig, QueryResult } from '../db/types';
 import { ExecutionResult, SqlSnippet } from './types';
 
 export interface ExecutorDeps {
@@ -121,7 +121,7 @@ function parseDatabaseError(error: unknown): Error {
     }
   }
 
-  // 如果没有匹配到，尝试从 Prisma 错误消息中提取信息
+  // 如果没有匹配到，尝试从数据库错误消息中提取信息
   if (errorString.includes("doesn't exist")) {
     const tableMatch = errorString.match(/Table ['"`]([^'"`]+)['"`] doesn't exist/i);
     if (tableMatch) {

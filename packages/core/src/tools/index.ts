@@ -1,6 +1,9 @@
 import { QueryExecutor, SqlActionExecutor } from '../query/executor';
 import { SqlSnippet } from '../query/types';
 
+// Re-export SqlActionExecutor for convenience
+export { SqlActionExecutor } from '../query/executor';
+
 export type ActionType = 'sql' | 'api' | 'file' | string;
 
 export interface ActionContext<P = unknown> {
