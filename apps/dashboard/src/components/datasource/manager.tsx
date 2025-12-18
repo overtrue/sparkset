@@ -13,6 +13,8 @@ import {
   removeDatasource,
   syncDatasource,
   updateDatasource,
+  testConnectionByConfig,
+  TestConnectionResult,
 } from '../../lib/api';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
@@ -30,6 +32,7 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 const defaultForm: CreateDatasourceInput = {
   name: '',
@@ -64,22 +67,92 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const canSubmit = useMemo(() => {
-    if (editingId) {
-      return form.name && form.host && form.username && form.database;
+  // 连通性验证相关的状态
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
+
+  // 验证通过状态（单独管理，不依赖表单变化自动清除）
+  const [isVerified, setIsVerified] = useState(false);
+
+  const canTest = useMemo(() => {
+    // 测试需要完整的连接信息
+    if (!form.host || !form.username || !form.database) {
+      return false;
     }
-    return form.name && form.host && form.username && form.database && form.password;
+
+    if (editingId) {
+      // 编辑模式：可以测试，如果密码为空则使用存储的密码
+      return true;
+    }
+    // 创建模式：需要所有字段（包括密码）才能测试
+    return !!form.password;
   }, [form, editingId]);
 
-  const onChange = (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) =>
+  const shouldShowSubmit = useMemo(() => {
+    // 必须验证通过，且所有基础字段完整
+    return isVerified && form.name && form.host && form.username && form.database;
+  }, [isVerified, form]);
+
+  const onChange = (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev: CreateDatasourceInput) => ({
       ...prev,
       [key]: key === 'port' ? Number(e.target.value) : e.target.value,
     }));
+    // 用户修改配置时，重置验证状态
+    setIsVerified(false);
+    setTestResult(null);
+  };
+
+  const handleTestConnection = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!canTest || testing) return;
+    setTesting(true);
+    try {
+      let result: TestConnectionResult;
+
+      if (editingId) {
+        // 编辑模式：使用测试配置（后端会处理使用存储密码或传入密码）
+        const testConfig = {
+          type: form.type,
+          host: form.host,
+          port: form.port,
+          username: form.username,
+          password: form.password, // 如果为空，后端会使用存储的密码
+          database: form.database,
+        };
+        result = await testConnectionByConfig(testConfig);
+      } else {
+        // 创建模式：直接使用表单配置
+        const testConfig = {
+          type: form.type,
+          host: form.host,
+          port: form.port,
+          username: form.username,
+          password: form.password,
+          database: form.database,
+        };
+        result = await testConnectionByConfig(testConfig);
+      }
+
+      setTestResult(result);
+      if (result.success) {
+        setIsVerified(true);
+        toast.success('连通性验证通过');
+      } else {
+        setIsVerified(false);
+      }
+    } catch (err) {
+      const errorMsg = (err as Error)?.message ?? '连通性验证失败';
+      setTestResult({ success: false, message: errorMsg });
+      toast.error(errorMsg);
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || submitting) return;
+    if (!shouldShowSubmit || submitting) return;
     setSubmitting(true);
     try {
       if (editingId) {
@@ -120,6 +193,10 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       setEditingId(null);
       setForm(defaultForm);
     }
+    // 重置验证状态
+    setTestResult(null);
+    setTesting(false);
+    setIsVerified(false);
     setDialogOpen(true);
   };
 
@@ -127,6 +204,9 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
     setDialogOpen(false);
     setEditingId(null);
     setForm(defaultForm);
+    setTestResult(null);
+    setTesting(false);
+    setIsVerified(false);
   };
 
   const handleSync = async (id: number) => {
@@ -303,8 +383,8 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
             <DialogTitle>{editingId ? '编辑数据源' : '添加数据源'}</DialogTitle>
             <DialogDescription>
               {editingId
-                ? '修改数据源配置信息'
-                : '填写以下信息以连接新的数据源。创建成功后，系统将自动验证连接。'}
+                ? '修改数据源配置信息，修改后建议重新验证连接'
+                : '填写以下信息并验证连接后，即可创建数据源'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -371,27 +451,110 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                 <div className="grid gap-2">
                   <Label htmlFor="password">
                     密码{' '}
-                    {editingId && <span className="text-muted-foreground">(留空则不修改)</span>}
+                    {editingId && (
+                      <span className="text-muted-foreground">
+                        (留空则不修改，测试连接时需输入)
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id="password"
                     type="password"
                     value={form.password}
                     onChange={onChange('password')}
-                    placeholder={editingId ? '留空则不修改' : ''}
+                    placeholder={editingId ? '留空则不修改' : '测试连接时必须输入'}
                     required={!editingId}
                   />
                 </div>
               </div>
+
+              {/* 连通性验证状态区域 */}
+              {(testResult !== null || testing) && (
+                <div className="rounded-lg border p-3 space-y-2 bg-muted/50">
+                  <div className="flex items-center gap-2 font-medium">
+                    {testing && (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        <span className="text-blue-600">正在验证数据库连接...</span>
+                      </>
+                    )}
+                    {testResult?.success && !testing && (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span className="text-green-600">连接验证成功</span>
+                      </>
+                    )}
+                    {testResult?.success === false && !testing && (
+                      <>
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-red-600">连接验证失败</span>
+                      </>
+                    )}
+                  </div>
+                  {testResult?.message && (
+                    <p className="text-sm text-muted-foreground">{testResult.message}</p>
+                  )}
+                  {editingId && testResult?.success === false && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      提示：请检查数据库配置，包括主机名、端口、用户名和密码
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                取消
-              </Button>
-              <Button type="submit" disabled={!canSubmit || submitting}>
-                {submitting ? '提交中...' : editingId ? '更新' : '创建'}
-              </Button>
-            </DialogFooter>
+
+            <div className="flex gap-2 sm:flex-col-reverse sm:gap-0">
+              <div className="flex gap-2 sm:flex-row-reverse">
+                {!shouldShowSubmit ? (
+                  <>
+                    {/* 创建/编辑模式：只显示验证连通性按钮 */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTestConnection}
+                      disabled={!canTest || testing}
+                      className="w-full sm:w-auto"
+                      title={
+                        editingId && !form.password
+                          ? '测试时将使用存储的密码'
+                          : '验证数据库连接是否正常'
+                      }
+                    >
+                      {testing ? '验证中...' : '验证连通性'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCloseDialog}
+                      className="w-full sm:w-auto"
+                    >
+                      取消
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* 验证通过后：显示确认按钮 */}
+                    <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+                      {submitting
+                        ? editingId
+                          ? '更新中...'
+                          : '创建中...'
+                        : editingId
+                          ? '保存'
+                          : '添加'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCloseDialog}
+                      className="w-full sm:w-auto"
+                    >
+                      取消
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

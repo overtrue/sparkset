@@ -23,7 +23,9 @@ router
   .group(() => {
     router.get('/', [DatasourcesController, 'index']);
     router.post('/', [DatasourcesController, 'store']);
+    router.post('/test-connection', [DatasourcesController, 'testConnectionByConfig']);
     router.post('/:id/sync', [DatasourcesController, 'sync']);
+    router.post('/:id/test-connection', [DatasourcesController, 'testConnection']);
     router.post('/:id/semantic-descriptions', [
       DatasourcesController,
       'generateSemanticDescriptions',

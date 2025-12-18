@@ -68,6 +68,37 @@ export async function updateDatasource(
   });
 }
 
+export interface TestConnectionResult {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+}
+
+export async function testDatasourceConnection(id: number): Promise<TestConnectionResult> {
+  return request<TestConnectionResult>(`/datasources/${id}/test-connection`, {
+    method: 'POST',
+  });
+}
+
+export async function testConnectionByConfig(
+  config: Omit<CreateDatasourceInput, 'name' | 'isDefault'>,
+): Promise<TestConnectionResult> {
+  return request<TestConnectionResult>(`/datasources/test-connection`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
+export async function testDatasourceConnectionWithPassword(
+  id: number,
+  password: string,
+): Promise<TestConnectionResult> {
+  return request<TestConnectionResult>(`/datasources/${id}/test-connection`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
+}
+
 export async function setDefaultDatasource(id: number): Promise<{ success: boolean }> {
   return request(`/datasources/${id}/set-default`, { method: 'POST' });
 }
