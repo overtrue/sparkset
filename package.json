@@ -29,5 +29,8 @@
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx,json,md}": "prettier --check"
+  },
+  "dependencies": {
+    "mysql2": "^3.16.0"
   }
 }
