@@ -4,9 +4,10 @@ interface PageHeaderProps {
   title: string;
   description?: string | React.ReactNode;
   children?: React.ReactNode;
+  action?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, children }: PageHeaderProps) {
+export function PageHeader({ title, description, children, action }: PageHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
@@ -17,7 +18,10 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
           </div>
         )}
       </div>
-      {children && <div className="flex items-center gap-2">{children}</div>}
+      <div className="flex items-center gap-2">
+        {children}
+        {action}
+      </div>
     </div>
   );
 }

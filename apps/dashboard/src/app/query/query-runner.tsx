@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { PageHeader } from '../../components/page-header';
-import { HistoryDrawer } from '../../components/query/history-drawer';
-import { QueryResult } from '../../components/query/result';
-import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Card, CardContent } from '../../components/ui/card';
-import { Skeleton } from '../../components/ui/skeleton';
-import { QueryResponse, runQuery } from '../../lib/query';
+import { PageHeader } from '@/components/page-header';
+import { HistoryDrawer } from '@/components/query/history-drawer';
+import { QueryResult } from '@/components/query/result';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { QueryResponse, runQuery } from '@/lib/query';
 import QueryForm from './query-form';
 
 interface Props {

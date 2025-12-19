@@ -526,8 +526,9 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                 <TableCell>
                                   {editingColumn?.columnId === column.id ? (
                                     <Input
-                                      value={editingColumn.columnComment}
+                                      value={editingColumn?.columnComment || ''}
                                       onChange={(e) =>
+                                        editingColumn &&
                                         setEditingColumn({
                                           ...editingColumn,
                                           columnComment: e.target.value,
@@ -545,8 +546,9 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                 <TableCell>
                                   {editingColumn?.columnId === column.id ? (
                                     <Textarea
-                                      value={editingColumn.semanticDescription}
+                                      value={editingColumn?.semanticDescription || ''}
                                       onChange={(e) =>
+                                        editingColumn &&
                                         setEditingColumn({
                                           ...editingColumn,
                                           semanticDescription: e.target.value,

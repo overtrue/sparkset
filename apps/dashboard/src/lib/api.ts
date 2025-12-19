@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:58074';
 
 async function request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const hasBody = init.body !== undefined;

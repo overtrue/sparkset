@@ -284,7 +284,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     try {
       const result = await generateActionSQL({
         name: form.name.trim(),
-        description: form.description.trim() || '',
+        description: form.description?.trim() || '',
         datasourceId: selectedDatasourceId,
       });
 

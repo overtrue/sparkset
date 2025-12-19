@@ -15,8 +15,8 @@ import {
   fetchConversation,
   fetchConversations,
   MessageDTO,
-} from '../../lib/api';
-import { Button } from '../ui/button';
+} from '@/lib/api';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -24,8 +24,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '../ui/sheet';
-import { Skeleton } from '../ui/skeleton';
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface HistoryDrawerProps {
   trigger?: React.ReactNode;

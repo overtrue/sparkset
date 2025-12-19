@@ -19,8 +19,9 @@
     "start": "node server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "migrate": "echo '⚠️  Migration command via ace is currently not working. See scripts/MIGRATION_NOTES.md for manual migration steps.' && exit 1",
-    "migrate:rollback": "node ace migration:rollback",
+    "migrate": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/console.ts migration:run",
+    "migrate:rollback": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/console.ts migration:rollback",
+    "migrate:status": "NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/console.ts migration:status",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:ace": "NODE_ENV=test NODE_OPTIONS=--experimental-specifier-resolution=node tsx bin/test.ts"

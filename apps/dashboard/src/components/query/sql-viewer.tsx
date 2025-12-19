@@ -3,8 +3,8 @@ import { RiCodeSSlashLine, RiAlignJustify, RiAlignLeft } from '@remixicon/react'
 
 import { useMemo, useState } from 'react';
 import { format } from 'sql-formatter';
-import { CodeViewer } from '../code-viewer';
-import { Button } from '../ui/button';
+import { CodeViewer } from '@/components/code-viewer';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -12,7 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '../ui/sheet';
+} from '@/components/ui/sheet';
 
 interface SqlViewerProps {
   sql: string;

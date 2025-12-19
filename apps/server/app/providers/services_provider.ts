@@ -31,6 +31,9 @@ import { ConversationService } from '../services/conversation_service.js';
 import { DatasourceService } from '../services/datasource_service.js';
 import { QueryService } from '../services/query_service.js';
 import { SchemaService } from '../services/schema_service.js';
+import { DatasetService } from '../services/dataset_service.js';
+import { ChartService } from '../services/chart_service.js';
+import { ChartCompiler } from '../services/chart_compiler.js';
 import '../types/container.js';
 
 export default class ServicesProvider {
@@ -205,6 +208,19 @@ export default class ServicesProvider {
       if (actionExecutor) {
         this.app.container.singleton(ActionExecutor, () => actionExecutor!);
       }
+
+      // 注册 Chart 服务
+      const chartCompiler = new ChartCompiler();
+      const datasetService = new DatasetService(database, datasourceService);
+      const chartService = new ChartService(datasetService, chartCompiler);
+
+      this.app.container.singleton(DatasetService, () => datasetService);
+      this.app.container.singleton('DatasetService', () => datasetService);
+      this.app.container.singleton(ChartCompiler, () => chartCompiler);
+      this.app.container.singleton('ChartCompiler', () => chartCompiler);
+      this.app.container.singleton(ChartService, () => chartService);
+      this.app.container.singleton('ChartService', () => chartService);
+
       return;
     } else {
       datasourceService = new DatasourceService();
@@ -259,6 +275,20 @@ export default class ServicesProvider {
       if (actionExecutor) {
         this.app.container.singleton(ActionExecutor, () => actionExecutor!);
       }
+
+      // 注册 Chart 服务（内存模式）
+      const chartCompiler = new ChartCompiler();
+      // 内存模式下，DatasetService 需要一个 mock database
+      const mockDatabase = null as any;
+      const datasetService = new DatasetService(mockDatabase, datasourceService);
+      const chartService = new ChartService(datasetService, chartCompiler);
+
+      this.app.container.singleton(DatasetService, () => datasetService);
+      this.app.container.singleton('DatasetService', () => datasetService);
+      this.app.container.singleton(ChartCompiler, () => chartCompiler);
+      this.app.container.singleton('ChartCompiler', () => chartCompiler);
+      this.app.container.singleton(ChartService, () => chartService);
+      this.app.container.singleton('ChartService', () => chartService);
     }
   }
 

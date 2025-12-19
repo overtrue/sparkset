@@ -2,11 +2,11 @@
 import { RiDatabase2Line, RiRefreshLine } from '@remixicon/react';
 
 import { useEffect, useState } from 'react';
-import { fetchSchema, TableSchemaDTO } from '../../lib/api';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { fetchSchema, TableSchemaDTO } from '@/lib/api';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Sheet,
   SheetContent,
@@ -14,8 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '../ui/sheet';
-import { Skeleton } from '../ui/skeleton';
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SchemaDrawerProps {
   datasourceId?: number;

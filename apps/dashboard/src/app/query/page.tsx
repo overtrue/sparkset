@@ -1,6 +1,6 @@
-import { PageHeader } from '../../components/page-header';
-import { fetchAIProviders, fetchDatasources } from '../../lib/api';
-import { QueryEmptyState } from '../../components/query/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { fetchAIProviders, fetchDatasources } from '@/lib/api';
+import { QueryEmptyState } from '@/components/query/empty-state';
 import QueryRunner from './query-runner';
 
 const QueryPage = async () => {

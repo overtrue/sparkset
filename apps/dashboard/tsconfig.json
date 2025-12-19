@@ -5,8 +5,17 @@
     "allowJs": true,
     "noEmit": true,
     "incremental": true,
+    "types": ["node", "react", "react-dom"],
+    "lib": ["dom", "dom.iterable", "es2020"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sparkset/core/*": ["../../packages/core/src/*"],
+      "@sparkset/ai/*": ["../../packages/ai/src/*"],
+      "@sparkset/utils/*": ["../../packages/utils/src/*"],
+      "@sparkset/config/*": ["../../packages/config/src/*"]
     }
   },
   "include": [

@@ -20,6 +20,8 @@ import {
   RiPlayLine,
   RiSparkling2Line,
   RiFlashlightLine,
+  RiBarChartLine,
+  RiDatabaseLine,
 } from '@remixicon/react';
 import type { ComponentType } from 'react';
 import Link from 'next/link';
@@ -44,6 +46,8 @@ const menuGroups: MenuGroup[] = [
     label: '功能模块',
     items: [
       { title: '查询', url: '/query', icon: RiPlayLine },
+      { title: '数据集', url: '/datasets', icon: RiDatabaseLine },
+      { title: '图表', url: '/charts', icon: RiBarChartLine },
       { title: 'Actions', url: '/actions', icon: RiFlashlightLine },
       { title: '数据源', url: '/', icon: RiDatabase2Line },
       { title: 'AI 配置', url: '/ai-providers', icon: RiSparkling2Line },
@@ -118,8 +122,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       >
                         <Link {...linkProps}>
                           <Icon
-                            className="text-muted-foreground group-data-[active=true]/menu-button:text-foreground"
-                            size={20}
+                            className="h-5 w-5 text-muted-foreground group-data-[active=true]/menu-button:text-foreground"
                             aria-hidden="true"
                           />
                           <span>{item.title}</span>

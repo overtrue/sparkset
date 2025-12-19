@@ -15,6 +15,8 @@ const DatasourcesController = () => import('#controllers/datasources_controller'
 const ActionsController = () => import('#controllers/actions_controller');
 const QueriesController = () => import('#controllers/queries_controller');
 const AIProvidersController = () => import('#controllers/ai_providers_controller');
+const DatasetsController = () => import('#controllers/datasets_controller');
+const ChartsController = () => import('#controllers/charts_controller');
 
 router.get('/health', [HealthController, 'handle']);
 
@@ -76,3 +78,28 @@ router
     router.delete('/:id', [AIProvidersController, 'destroy']);
   })
   .prefix('/ai-providers');
+
+// Dataset routes
+router
+  .group(() => {
+    router.get('/', [DatasetsController, 'index']);
+    router.post('/', [DatasetsController, 'store']);
+    router.get('/:id', [DatasetsController, 'show']);
+    router.put('/:id', [DatasetsController, 'update']);
+    router.delete('/:id', [DatasetsController, 'destroy']);
+    router.post('/:id/preview', [DatasetsController, 'preview']);
+  })
+  .prefix('/api/datasets');
+
+// Chart routes
+router
+  .group(() => {
+    router.get('/', [ChartsController, 'index']);
+    router.post('/', [ChartsController, 'store']);
+    router.get('/:id', [ChartsController, 'show']);
+    router.put('/:id', [ChartsController, 'update']);
+    router.delete('/:id', [ChartsController, 'destroy']);
+    router.get('/:id/render', [ChartsController, 'render']);
+    router.post('/preview', [ChartsController, 'preview']);
+  })
+  .prefix('/api/charts');

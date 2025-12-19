@@ -1,8 +1,8 @@
 'use client';
 import { RiArrowDownSLine, RiCheckLine } from '@remixicon/react';
 import { useEffect, useState } from 'react';
-import { cn } from '../lib/utils';
-import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -10,9 +10,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from './ui/command';
-import { Label } from './ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+} from '@/components/ui/command';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Datasource {
   id: number;

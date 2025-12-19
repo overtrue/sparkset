@@ -1,11 +1,12 @@
 'use client';
-import { RiFileTextLine, RiSave3Line } from '@remixicon/react';
+import { RiFileTextLine, RiSave3Line, RiBarChartLine } from '@remixicon/react';
 
 import { useState } from 'react';
-import { QueryResponse } from '../../lib/query';
-import { SaveActionDialog } from '../action/save-dialog';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { QueryResponse } from '@/lib/query';
+import { SaveActionDialog } from '@/components/action/save-dialog';
+import { SaveChartDialog } from '@/components/charts/save-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResultTable } from './result-table';
 import { SchemaDrawer } from './schema-drawer';
 import { SqlViewer } from './sql-viewer';
@@ -20,6 +21,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
   const [sqlDrawerOpen, setSqlDrawerOpen] = useState(false);
   const [schemaDrawerOpen, setSchemaDrawerOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveChartDialogOpen, setSaveChartDialogOpen] = useState(false);
 
   return (
     <>
@@ -46,6 +48,15 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 <RiSave3Line className="h-4 w-4" />
                 保存为 Action
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setSaveChartDialogOpen(true)}
+              >
+                <RiBarChartLine className="h-4 w-4" />
+                保存为图表
+              </Button>
               <SqlViewer sql={result.sql} open={sqlDrawerOpen} onOpenChange={setSqlDrawerOpen} />
               <SchemaDrawer
                 datasourceId={datasourceId}
@@ -65,6 +76,15 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
         onOpenChange={setSaveDialogOpen}
         sql={result.sql}
         datasourceId={datasourceId}
+        defaultName={question || ''}
+      />
+
+      <SaveChartDialog
+        open={saveChartDialogOpen}
+        onOpenChange={setSaveChartDialogOpen}
+        sql={result.sql}
+        datasourceId={datasourceId}
+        rows={result.rows}
         defaultName={question || ''}
       />
     </>
