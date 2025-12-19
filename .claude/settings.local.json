@@ -3,7 +3,7 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor\\(ai\\): remove local environment variable AI configuration\n\nBREAKING CHANGES:\n- 不再支持从环境变量读取 AI 配置 \\(OPENAI_API_KEY, AI_PROVIDER 等\\)\n- AI 配置完全由数据库 ai_providers 表管理\n- 移除所有 AI 相关环境变量定义和代码\n\nChanges:\n- packages/config/src/ai.ts: 简化 loadAIConfig 为仅使用数据库配置\n- packages/ai/src/index.ts: 移除 env var fallback，严格 API Key 检查\n- apps/server/start/env.ts: 移除 AI_* 环境变量定义\n- apps/server/services/schema_service.ts: 修复 API Key 读取\n- docker-compose.yml & helm: 移除 AI 环境变量配置\n- 文档: 更新部署指南和配置说明\n\n迁移说明:\n用户需要在启动后通过 Dashboard \\(http://<host>/ai-providers\\) 配置 AI Provider\n\n🤖 Generated with Claude Code\nEOF\n\\)\")",
+      "Bash(git commit -m \"$(cat <<'EOF'\nrefactor(ai): remove local environment variable AI configuration\n\nBREAKING CHANGES:\n- 不再支持从环境变量读取 AI 配置 (OPENAI_API_KEY, AI_PROVIDER 等)\n- AI 配置完全由数据库 ai_providers 表管理\n- 移除所有 AI 相关环境变量定义和代码\n\nChanges:\n- packages/config/src/ai.ts: 简化 loadAIConfig 为仅使用数据库配置\n- packages/ai/src/index.ts: 移除 env var fallback，严格 API Key 检查\n- apps/server/start/env.ts: 移除 AI_* 环境变量定义\n- apps/server/services/schema_service.ts: 修复 API Key 读取\n- docker-compose.yml & helm: 移除 AI 环境变量配置\n- 文档: 更新部署指南和配置说明\n\n迁移说明:\n用户需要在启动后通过 Dashboard (http://<host>/ai-providers) 配置 AI Provider\n\n🤖 Generated with Claude Code\nEOF\n\\)\")",
       "Bash(npx prettier:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
@@ -13,9 +13,16 @@
       "Bash(pnpm add:*)",
       "Bash(git show:*)",
       "Bash(npx tsc:*)",
-      "Bash(node -e \"\nconst fs = require\\(''fs''\\);\nconst errors = [];\n\n// Try to parse the files as JavaScript\nconst files = [\n  ''src/components/query/empty-state.tsx'',\n  ''src/app/query/page.tsx'',\n  ''src/components/query/result-table.tsx''\n];\n\nfiles.forEach\\(file => {\n  try {\n    const content = fs.readFileSync\\(file, ''utf-8''\\);\n    // Basic syntax check\n    if \\(content.includes\\(''import ''\\) || content.includes\\(''export ''\\) || content.includes\\(''function''\\) || content.includes\\(''return''\\)\\) {\n      console.log\\(file + '': Appears valid''\\);\n    }\n  } catch \\(e\\) {\n    errors.push\\({file, error: e.message}\\);\n  }\n}\\);\n\nif \\(errors.length > 0\\) {\n  console.error\\(''Errors:'', errors\\);\n  process.exit\\(1\\);\n}\n\")",
+      "Bash(node -e \"\nconst fs = require('fs');\nconst errors = [];\n\n// Try to parse the files as JavaScript\nconst files = [\n  'src/components/query/empty-state.tsx',\n  'src/app/query/page.tsx',\n  'src/components/query/result-table.tsx'\n];\n\nfiles.forEach(file => {\n  try {\n    const content = fs.readFileSync(file, 'utf-8');\n    // Basic syntax check\n    if (content.includes('import ') || content.includes('export ') || content.includes('function') || content.includes('return')) {\n      console.log(file + ': Appears valid');\n    }\n  } catch (e) {\n    errors.push({file, error: e.message});\n  }\n});\n\nif (errors.length > 0) {\n  console.error('Errors:', errors);\n  process.exit(1);\n}\n\")",
       "Bash(find:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx next build:*)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git rm:*)",
+      "Bash(git rebase:*)"
     ]
   }
 }
