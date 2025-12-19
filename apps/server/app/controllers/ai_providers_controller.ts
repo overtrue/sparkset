@@ -30,12 +30,18 @@ export default class AIProvidersController {
 
   async destroy({ params, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid provider ID' });
+    }
     await this.service.remove(id);
     return response.noContent();
   }
 
   async setDefault({ params, response }: HttpContext) {
     const parsed = setDefaultSchema.parse(params);
+    if (isNaN(parsed.id)) {
+      return response.badRequest({ message: 'Invalid provider ID' });
+    }
     await this.service.setDefault(parsed.id);
     return response.ok({ success: true });
   }
@@ -45,6 +51,9 @@ export default class AIProvidersController {
    */
   async testConnection({ params, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid provider ID' });
+    }
     const result = await this.service.testConnectionById(id);
 
     if (result.success) {
