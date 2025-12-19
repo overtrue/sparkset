@@ -47,7 +47,7 @@ interface ProviderFactory {
 /**
  * 已注册的 provider 工厂
  */
-const providerFactories: Record<string, ProviderFactory> = {
+export const providerFactories: Record<string, ProviderFactory> = {
   // OpenAI
   openai: {
     createModel(model, config) {
@@ -198,7 +198,7 @@ function createModel(
  * 获取 provider 的默认 baseURL
  * 注意：有官方 SDK 的 provider（如 deepseek）不需要在这里配置
  */
-function getDefaultBaseURL(provider: string): string | undefined {
+export function getDefaultBaseURL(provider: string): string | undefined {
   const defaults: Record<string, string> = {
     groq: 'https://api.groq.com/openai/v1',
     moonshot: 'https://api.moonshot.cn/v1',
@@ -457,6 +457,161 @@ function extractSQL(text: string): string {
 export class StubAIClient implements AIClient {
   async generateSQL(options: ModelCallOptions): Promise<string> {
     return `-- generated SQL for prompt: ${options.prompt}`;
+  }
+}
+
+/**
+ * 获取 Provider 标签
+ */
+function getProviderLabel(provider: string): string {
+  const labels: Record<string, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    deepseek: 'DeepSeek',
+    groq: 'Groq',
+    moonshot: 'Moonshot',
+    zhipu: '智谱 AI',
+    qwen: '通义千问',
+    'openai-compatible': 'OpenAI 兼容',
+  };
+  return labels[provider] || provider;
+}
+
+/**
+ * 测试 AI Provider 连通性
+ * 通过调用一个简单的 API 请求来验证配置是否有效
+ */
+export async function testAIProviderConnection(options: {
+  provider: string;
+  apiKey?: string;
+  baseURL?: string;
+  model?: string;
+}): Promise<{ success: boolean; message: string; timestamp?: string }> {
+  const { provider, apiKey, baseURL, model = 'gpt-4o-mini' } = options;
+
+  try {
+    // 验证 provider 是否支持
+    if (!providerFactories[provider]) {
+      return {
+        success: false,
+        message: `不支持的 Provider 类型: ${provider}`,
+      };
+    }
+
+    // 验证 API Key（部分 provider 需要）
+    if (
+      ['openai', 'anthropic', 'deepseek', 'groq', 'moonshot', 'zhipu', 'qwen'].includes(provider)
+    ) {
+      if (!apiKey) {
+        return {
+          success: false,
+          message: `${getProviderLabel(provider)} 需要 API Key`,
+        };
+      }
+    }
+
+    // 验证 baseURL（对于 openai-compatible）
+    if (provider === 'openai-compatible' && !baseURL) {
+      return {
+        success: false,
+        message: 'OpenAI 兼容 Provider 需要 Base URL',
+      };
+    }
+
+    // 对于需要 API Key 的情况，必须进行实际的网络请求验证
+    if (apiKey) {
+      // 确定要使用的 API 端点 URL
+      let testURL: string;
+
+      if (provider === 'openai-compatible') {
+        // openai-compatible 必须有 baseURL
+        testURL = `${baseURL?.replace(/\/$/, '')}/models`;
+      } else if (
+        provider === 'groq' ||
+        provider === 'moonshot' ||
+        provider === 'zhipu' ||
+        provider === 'qwen'
+      ) {
+        // 这些 provider 有默认的 baseURL
+        const url = baseURL || getDefaultBaseURL(provider);
+        testURL = `${url?.replace(/\/$/, '')}/models`;
+      } else if (provider === 'openai') {
+        testURL = 'https://api.openai.com/v1/models';
+      } else if (provider === 'anthropic') {
+        testURL = 'https://api.anthropic.com/v1/models';
+      } else if (provider === 'deepseek') {
+        testURL = 'https://api.deepseek.com/models';
+      } else {
+        return {
+          success: false,
+          message: `无法确定 ${getProviderLabel(provider)} 的测试地址`,
+        };
+      }
+
+      try {
+        // 构建请求头
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        // 不同 provider 使用不同的认证方式
+        if (provider === 'anthropic') {
+          headers['x-api-key'] = apiKey;
+          headers['anthropic-version'] = '2023-06-01';
+        } else {
+          // OpenAI, DeepSeek, Groq, Moonshot, Zhipu, Qwen, OpenAI-compatible
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+
+        const response = await fetch(testURL, {
+          method: 'GET',
+          headers,
+          signal: AbortSignal.timeout(5000), // 5秒超时
+        });
+
+        if (response.ok) {
+          return {
+            success: true,
+            message: '连接成功',
+            timestamp: new Date().toISOString(),
+          };
+        } else if (response.status === 401 || response.status === 403) {
+          return {
+            success: false,
+            message: 'API Key 无效或权限不足',
+          };
+        } else {
+          return {
+            success: false,
+            message: `连接失败 (HTTP ${response.status})`,
+          };
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            return { success: false, message: '连接超时' };
+          }
+          if (error.message.includes('Failed to fetch') || error.message.includes('fetch failed')) {
+            return { success: false, message: '无法连接到服务地址，请检查网络或 Base URL' };
+          }
+        }
+        return {
+          success: false,
+          message: `连接异常: ${error instanceof Error ? error.message : '未知错误'}`,
+        };
+      }
+    }
+
+    // 理论上不会到这里，因为所有需要测试的 provider 都需要 API Key
+    return {
+      success: false,
+      message: '需要提供 API Key 进行验证',
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '测试失败',
+    };
   }
 }
 

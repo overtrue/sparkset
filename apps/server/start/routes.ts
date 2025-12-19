@@ -73,6 +73,8 @@ router
   .group(() => {
     router.get('/', [AIProvidersController, 'index']);
     router.post('/', [AIProvidersController, 'store']);
+    router.post('/test-connection', [AIProvidersController, 'testConnectionByConfig']);
+    router.post('/:id/test-connection', [AIProvidersController, 'testConnection']);
     router.post('/:id/set-default', [AIProvidersController, 'setDefault']);
     router.put('/:id', [AIProvidersController, 'update']);
     router.delete('/:id', [AIProvidersController, 'destroy']);

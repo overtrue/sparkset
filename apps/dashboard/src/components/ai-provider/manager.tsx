@@ -3,8 +3,12 @@ import {
   RiAddLine,
   RiArrowDownSLine,
   RiCheckLine,
+  RiCheckboxCircleLine,
+  RiCloseCircleLine,
   RiDeleteBin2Line,
   RiEdit2Line,
+  RiLoader4Line,
+  RiRefreshLine,
   RiStarLine,
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
@@ -18,6 +22,8 @@ import {
   createAIProvider,
   removeAIProvider,
   setDefaultAIProvider,
+  testAIProviderConnectionByConfig,
+  type TestConnectionResult,
   updateAIProvider,
 } from '../../lib/api';
 import { ConfirmDialog } from '../confirm-dialog';
@@ -34,14 +40,7 @@ import {
   CommandItem,
   CommandList,
 } from '../ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -77,12 +76,33 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const canSubmit = useMemo(() => {
-    if (editingId) {
-      return form.name && form.type;
+  // 连通性验证相关的状态
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
+
+  // 验证通过状态（单独管理，不依赖表单变化自动清除）
+  const [isVerified, setIsVerified] = useState(false);
+
+  const canTest = useMemo(() => {
+    // 测试需要类型和 API Key（部分 provider 需要）
+    if (!form.type) return false;
+    // 对于需要 API Key 的 provider，必须有 API Key 才能测试
+    if (
+      ['openai', 'anthropic', 'deepseek', 'groq', 'moonshot', 'zhipu', 'qwen'].includes(form.type)
+    ) {
+      return !!form.apiKey;
     }
-    return form.name && form.type && form.apiKey;
-  }, [form, editingId]);
+    // openai-compatible 需要 baseURL
+    if (form.type === 'openai-compatible') {
+      return !!form.baseURL;
+    }
+    return true;
+  }, [form]);
+
+  const shouldShowSubmit = useMemo(() => {
+    // 必须验证通过，且所有基础字段完整
+    return isVerified && form.name && form.type;
+  }, [isVerified, form]);
 
   const onChange =
     (key: keyof CreateAIProviderInput) => (e: ChangeEvent<HTMLInputElement> | string) => {
@@ -91,6 +111,10 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         ...prev,
         [key]: value,
       }));
+
+      // 用户修改配置时，重置验证状态
+      setIsVerified(false);
+      setTestResult(null);
     };
 
   const handleOpenDialog = (provider?: AIProviderDTO) => {
@@ -108,6 +132,10 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       setEditingId(null);
       setForm(defaultForm);
     }
+    // 重置验证状态
+    setTestResult(null);
+    setTesting(false);
+    setIsVerified(false);
     setDialogOpen(true);
   };
 
@@ -115,17 +143,49 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     setDialogOpen(false);
     setEditingId(null);
     setForm(defaultForm);
+    setTestResult(null);
+    setTesting(false);
+    setIsVerified(false);
+  };
+
+  const handleTestConnection = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!canTest || testing) return;
+    setTesting(true);
+    try {
+      const testConfig = {
+        type: form.type,
+        apiKey: form.apiKey,
+        baseURL: form.baseURL,
+        defaultModel: form.defaultModel,
+      };
+      const result = await testAIProviderConnectionByConfig(testConfig);
+
+      setTestResult(result);
+      if (result.success) {
+        setIsVerified(true);
+        toast.success('连通性验证通过');
+      } else {
+        setIsVerified(false);
+      }
+    } catch (err) {
+      const errorMsg = (err as Error)?.message ?? '连通性验证失败';
+      setTestResult({ success: false, message: errorMsg });
+      toast.error(errorMsg);
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || submitting) return;
+    if (!shouldShowSubmit || submitting) return;
     setSubmitting(true);
     try {
       if (editingId) {
         const updateData = { ...form };
         if (!updateData.apiKey) {
-          delete updateData.apiKey;
+          delete (updateData as Partial<CreateAIProviderInput>).apiKey;
         }
         const updated = await updateAIProvider(editingId, updateData);
         setProviders((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
@@ -318,7 +378,9 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
           <DialogHeader>
             <DialogTitle>{editingId ? '编辑 Provider' : '添加 Provider'}</DialogTitle>
             <DialogDescription>
-              {editingId ? '修改 Provider 配置信息' : '填写以下信息以配置新的 AI Provider'}
+              {editingId
+                ? '修改 Provider 配置信息，修改后建议重新验证连接'
+                : '填写以下信息并验证连接后，即可创建 Provider'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -430,15 +492,89 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                   placeholder="gpt-4o-mini"
                 />
               </div>
+
+              {/* 连通性验证状态区域 */}
+              {(testResult !== null || testing) && (
+                <div className="rounded-lg border p-3 space-y-2 bg-muted/50">
+                  <div className="flex items-center gap-2 font-medium">
+                    {testing && (
+                      <>
+                        <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
+                        <span className="text-blue-600">正在验证 Provider 连接...</span>
+                      </>
+                    )}
+                    {testResult?.success && !testing && (
+                      <>
+                        <RiCheckboxCircleLine className="h-4 w-4 text-green-500" />
+                        <span className="text-green-600">连接验证成功</span>
+                      </>
+                    )}
+                    {testResult?.success === false && !testing && (
+                      <>
+                        <RiCloseCircleLine className="h-4 w-4 text-red-500" />
+                        <span className="text-red-600">连接验证失败</span>
+                      </>
+                    )}
+                  </div>
+                  {testResult?.message && (
+                    <p className="text-sm text-muted-foreground">{testResult.message}</p>
+                  )}
+                  {editingId && testResult?.success === false && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      提示：请检查 API Key、Base URL 和 Provider 类型配置
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                取消
-              </Button>
-              <Button type="submit" disabled={!canSubmit || submitting}>
-                {submitting ? '提交中...' : editingId ? '更新' : '创建'}
-              </Button>
-            </DialogFooter>
+
+            <div className="flex gap-2 sm:flex-col-reverse sm:gap-0">
+              <div className="flex gap-2 sm:flex-row-reverse">
+                {!shouldShowSubmit ? (
+                  <>
+                    {/* 创建/编辑模式：只显示验证连通性按钮 */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTestConnection}
+                      disabled={!canTest || testing}
+                      className="w-full sm:w-auto"
+                    >
+                      {testing ? '验证中...' : '验证连通性'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCloseDialog}
+                      className="w-full sm:w-auto"
+                    >
+                      取消
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* 验证通过后：显示确认按钮 */}
+                    <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+                      {submitting
+                        ? editingId
+                          ? '更新中...'
+                          : '创建中...'
+                        : editingId
+                          ? '保存'
+                          : '添加'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCloseDialog}
+                      className="w-full sm:w-auto"
+                    >
+                      取消
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

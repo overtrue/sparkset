@@ -39,4 +39,42 @@ export default class AIProvidersController {
     await this.service.setDefault(parsed.id);
     return response.ok({ success: true });
   }
+
+  /**
+   * 测试现有 Provider 的连通性
+   */
+  async testConnection({ params, response }: HttpContext) {
+    const id = Number(params.id);
+    const result = await this.service.testConnectionById(id);
+
+    if (result.success) {
+      return response.ok(result);
+    } else {
+      return response.badRequest(result);
+    }
+  }
+
+  /**
+   * 测试新 Provider 配置的连通性（不保存到数据库）
+   */
+  async testConnectionByConfig({ request, response }: HttpContext) {
+    const body = request.body() as {
+      type: string;
+      apiKey?: string;
+      baseURL?: string;
+      defaultModel?: string;
+    };
+
+    if (!body.type) {
+      return response.badRequest({ success: false, message: '缺少必要的配置参数: type' });
+    }
+
+    const result = await this.service.testConnection(body);
+
+    if (result.success) {
+      return response.ok(result);
+    } else {
+      return response.badRequest(result);
+    }
+  }
 }

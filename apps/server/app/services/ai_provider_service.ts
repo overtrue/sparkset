@@ -1,3 +1,4 @@
+import { testAIProviderConnection } from '@sparkset/ai';
 import { AIProviderRepository } from '../db/interfaces';
 import type { AIProvider } from '../models/types';
 
@@ -133,5 +134,64 @@ export class AIProviderService {
 
     // 设置指定 provider 为默认
     this.store.set(id, { ...existing, isDefault: true });
+  }
+
+  /**
+   * 测试 AI Provider 连通性
+   * @param config Provider 配置
+   * @returns 测试结果
+   */
+  async testConnection(config: {
+    type: string;
+    apiKey?: string;
+    baseURL?: string;
+    defaultModel?: string;
+  }): Promise<{ success: boolean; message: string; timestamp?: string }> {
+    try {
+      const result = await testAIProviderConnection({
+        provider: config.type,
+        apiKey: config.apiKey,
+        baseURL: config.baseURL,
+        model: config.defaultModel,
+      });
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : '测试失败',
+      };
+    }
+  }
+
+  /**
+   * 测试现有 Provider 的连通性
+   * @param id Provider ID
+   * @returns 测试结果
+   */
+  async testConnectionById(
+    id: number,
+  ): Promise<{ success: boolean; message: string; timestamp?: string }> {
+    let provider: AIProvider | undefined;
+
+    if (this.repo) {
+      const list = await this.repo.list();
+      provider = list.find((p) => p.id === id);
+    } else {
+      provider = this.store.get(id);
+    }
+
+    if (!provider) {
+      return {
+        success: false,
+        message: 'Provider 未找到',
+      };
+    }
+
+    return this.testConnection({
+      type: provider.type,
+      apiKey: provider.apiKey,
+      baseURL: provider.baseURL,
+      defaultModel: provider.defaultModel,
+    });
   }
 }

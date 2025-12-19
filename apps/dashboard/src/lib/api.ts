@@ -304,6 +304,21 @@ export async function setDefaultAIProvider(id: number): Promise<{ success: boole
   return request(`/ai-providers/${id}/set-default`, { method: 'POST' });
 }
 
+export async function testAIProviderConnection(id: number): Promise<TestConnectionResult> {
+  return request<TestConnectionResult>(`/ai-providers/${id}/test-connection`, {
+    method: 'POST',
+  });
+}
+
+export async function testAIProviderConnectionByConfig(
+  config: Omit<CreateAIProviderInput, 'name' | 'isDefault'>,
+): Promise<TestConnectionResult> {
+  return request<TestConnectionResult>(`/ai-providers/test-connection`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
 // Conversations
 export interface ConversationDTO {
   id: number;
