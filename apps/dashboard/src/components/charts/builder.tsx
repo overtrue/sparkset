@@ -66,6 +66,8 @@ interface ChartBuilderProps {
   onCancel?: () => void;
   initialSpec?: ChartSpec;
   initialDatasetId?: number;
+  initialTitle?: string;
+  initialDescription?: string;
 }
 
 export function ChartBuilder({
@@ -74,6 +76,8 @@ export function ChartBuilder({
   onCancel,
   initialSpec,
   initialDatasetId,
+  initialTitle,
+  initialDescription,
 }: ChartBuilderProps) {
   const [previewData, setPreviewData] = React.useState<unknown[]>([]);
   const [previewConfig, setPreviewConfig] = React.useState<ChartConfig>({});
@@ -90,8 +94,8 @@ export function ChartBuilder({
     resolver: zodResolver(formSchema),
     defaultValues: {
       datasetId: initialDatasetId || 0,
-      title: initialSpec?.encoding?.x?.label || '',
-      description: '',
+      title: initialTitle || initialSpec?.encoding?.x?.label || '',
+      description: initialDescription || '',
       chartType: initialSpec?.chartType || 'line',
       xField: initialSpec?.encoding?.x?.field || '',
       yFields: initialSpec?.encoding?.y || [{ field: '', agg: 'sum', label: '', color: '#3b82f6' }],

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,15 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { toast } from 'sonner';
 
 interface Props {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function ChartDetailPage({ params }: Props) {
   const router = useRouter();
-  const id = Number(params.id);
+  const unwrappedParams = use(params);
+  const id = Number(unwrappedParams.id);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
