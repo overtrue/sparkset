@@ -18,6 +18,14 @@ export class DatasourceService {
     return Array.from(this.store.values());
   }
 
+  async get(id: number): Promise<DataSource | null> {
+    if (this.repo) {
+      const list = await this.repo.list();
+      return list.find((item) => item.id === id) || null;
+    }
+    return this.store.get(id) || null;
+  }
+
   async create(input: CreateDataSourceInput): Promise<DataSource> {
     if (this.repo) {
       // 如果是第一个数据源（列表为空），自动设置为默认

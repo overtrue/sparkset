@@ -137,20 +137,6 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header with create button */}
-      <div className="flex justify-between items-center">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">图表列表</h2>
-          <p className="text-muted-foreground">共 {charts.length} 个图表</p>
-        </div>
-        <Button asChild>
-          <Link href="/charts/new">
-            <RiAddLine className="h-4 w-4 mr-2" />
-            新建图表
-          </Link>
-        </Button>
-      </div>
-
       {/* Chart cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {charts.map((chart) => (
