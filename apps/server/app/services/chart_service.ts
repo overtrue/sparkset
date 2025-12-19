@@ -4,6 +4,7 @@ import Dataset from '../models/dataset.js';
 import { ChartCompiler } from './chart_compiler.js';
 import { DatasetService } from './dataset_service.js';
 import type { ChartSpec, ChartRenderResult } from '../types/chart.js';
+import { toId } from '../utils/validation.js';
 
 @inject()
 export class ChartService {
@@ -28,10 +29,11 @@ export class ChartService {
    * 详情
    */
   async get(id: number, userId?: number): Promise<Chart | null> {
-    if (isNaN(id) || id <= 0) {
+    const validId = toId(id);
+    if (!validId) {
       return null;
     }
-    const query = Chart.query().preload('dataset').where('id', id);
+    const query = Chart.query().preload('dataset').where('id', validId);
     // For now, ignore userId filter (no auth)
     return query.first();
   }
@@ -77,10 +79,11 @@ export class ChartService {
       spec: ChartSpec;
     }>,
   ): Promise<Chart> {
-    if (isNaN(id) || id <= 0) {
+    const validId = toId(id);
+    if (!validId) {
       throw new Error('Invalid chart ID');
     }
-    const chart = await Chart.findOrFail(id);
+    const chart = await Chart.findOrFail(validId);
 
     // 如果更新 spec，需要验证
     if (data.spec) {
@@ -101,10 +104,11 @@ export class ChartService {
    * 删除
    */
   async delete(id: number): Promise<void> {
-    if (isNaN(id) || id <= 0) {
+    const validId = toId(id);
+    if (!validId) {
       throw new Error('Invalid chart ID');
     }
-    const chart = await Chart.findOrFail(id);
+    const chart = await Chart.findOrFail(validId);
     await chart.delete();
   }
 
@@ -112,10 +116,11 @@ export class ChartService {
    * 渲染图表（从保存的配置）
    */
   async render(id: number, useCache = true): Promise<ChartRenderResult> {
-    if (isNaN(id) || id <= 0) {
+    const validId = toId(id);
+    if (!validId) {
       throw new Error('Invalid chart ID');
     }
-    const chart = await Chart.findOrFail(id);
+    const chart = await Chart.findOrFail(validId);
     const dataset = await Dataset.findOrFail(chart.datasetId);
 
     // 执行 dataset 获取数据

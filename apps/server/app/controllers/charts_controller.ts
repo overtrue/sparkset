@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { ChartService } from '../services/chart_service.js';
 import { z } from 'zod';
+import { toId } from '../utils/validation.js';
 
 const createSchema = z.object({
   datasetId: z.number().int().positive(),
@@ -85,8 +86,8 @@ export default class ChartsController {
   }
 
   async show({ params, response }: HttpContext) {
-    const id = Number(params.id);
-    if (isNaN(id)) {
+    const id = toId(params.id);
+    if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
     }
     const chart = await this.service.get(id);
@@ -99,8 +100,8 @@ export default class ChartsController {
   }
 
   async update({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
-    if (isNaN(id)) {
+    const id = toId(params.id);
+    if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
     }
     const parsed = createSchema.partial().parse(request.body());
@@ -118,8 +119,8 @@ export default class ChartsController {
   }
 
   async destroy({ params, response }: HttpContext) {
-    const id = Number(params.id);
-    if (isNaN(id)) {
+    const id = toId(params.id);
+    if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
     }
 
@@ -133,8 +134,8 @@ export default class ChartsController {
   }
 
   async render({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
-    if (isNaN(id)) {
+    const id = toId(params.id);
+    if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
     }
     const useCache = request.input('useCache', 'true') === 'true';
