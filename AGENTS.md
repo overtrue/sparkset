@@ -192,3 +192,42 @@
 - Set `DATABASE_URL` for API to hit real MySQL; default falls back to in-memory stores (limited).
 - Dashboard expects `NEXT_PUBLIC_API_URL`; CLI can override API with `--api`.
 - Avoid committing secrets; use `.env` locally and never add it to git.
+
+## Communication Guidelines
+
+- **Language**: Please use the same language with the user in your communication and responses.
+- **Tone**: Be professional, concise, and helpful.
+- **Code Examples**: Always provide clear, working code examples when relevant.
+- **Error Handling**: Explain errors clearly and provide solutions.
+
+## AI Assistant Behavior
+
+- **Context Awareness**: Always read and understand the existing codebase before making changes.
+- **Incremental Changes**: Make small, testable changes that compile and pass tests.
+- **No Assumptions**: Verify information through testing or documentation, never guess.
+- **Ask When Uncertain**: If requirements are unclear, ask clarifying questions before proceeding.
+- **Respect Existing Patterns**: Follow the project's established conventions and patterns.
+- **Quality First**: Never skip tests or validation to achieve results.
+
+## Tool Usage
+
+- **Always Read First**: Read files before editing them.
+- **Plan Before Acting**: Use TodoWrite for multi-step tasks.
+- **Batch Operations**: Use parallel tool calls when possible.
+- **Verify Changes**: Always check git status and diff before committing.
+- **Clean Workspace**: Remove temporary files and artifacts after operations.
+
+## Error Handling
+
+- **Root Cause Analysis**: Always investigate why failures occur.
+- **Never Skip Tests**: Never disable tests to make things work.
+- **Fix Don't Workaround**: Address underlying issues, not symptoms.
+- **3-Attempt Rule**: After 3 failed attempts, stop and reassess the approach.
+
+## Git Workflow
+
+- **Check Status First**: Always run `git status` at session start.
+- **Feature Branches**: Work on feature branches, never main/master.
+- **Incremental Commits**: Commit frequently with meaningful messages.
+- **Verify Before Commit**: Review changes with `git diff` before staging.
+- **No Force Push**: Avoid force pushing unless explicitly requested.
