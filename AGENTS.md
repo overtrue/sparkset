@@ -1,257 +1,257 @@
-# 开发指南
+# Development Guidelines
 
-## 严格禁止的操作
+## Strict Prohibited Operations
 
-### Git 操作限制
+### Git Operation Restrictions
 
-- **绝对禁止执行 git reset、git revert、git rebase、git restore 等回滚工作的命令**
-- **只允许使用 git logs、git status、git diff 等安全操作来对比文件变化以及恢复文件内容**
-- **禁止删除或修改 .git 目录**
-- **任何 git 操作前必须得到用户明确许可**
+- **Absolutely prohibit executing git reset, git revert, git rebase, git restore, and other rollback commands**
+- **Only allow safe operations like git logs, git status, git diff to compare files and restore content**
+- **Prohibit deleting or modifying the .git directory**
+- **Any git operation must get explicit user permission first**
 
-### 文件系统操作限制
+### File System Operation Restrictions
 
-- **绝对禁止执行 rm -rf 命令**
-- **禁止删除目录，特别是项目根目录或重要目录**
-- **删除文件前必须明确告知用户并得到许可**
+- **Absolutely prohibit executing rm -rf command**
+- **Prohibit deleting directories, especially project root or important directories**
+- **Must clearly inform user and get permission before deleting files**
 
-## 沟通语言
+## Communication Language
 
-**重要**：请使用与用户相同的语言进行所有沟通和交流。包括：
+**Important**: Please use the same language with the user in your communication and responses. This includes:
 
-- 所有对话和回复
-- 代码注释（除非项目规范要求英文）
-- 文档说明
-- 错误提示和解释
-- 任务计划和总结
+- All conversations and responses
+- Code comments (unless project specification requires English)
+- Documentation and explanations
+- Error messages and explanations
+- Task plans and summaries
 
-## 理念
+## Philosophy
 
-### 核心信念
+### Core Beliefs
 
-- **渐进式进展优于大爆炸式改动** - 小改动，保证能编译通过并测试通过
-- **从现有代码中学习** - 实施前先研究和规划
-- **务实优于教条** - 适应项目实际情况
-- **清晰的意图优于聪明的代码** - 保持无聊和明显
+- **Incremental progress over big bangs** - Small changes that compile and pass tests
+- **Learning from existing code** - Study and plan before implementing
+- **Pragmatic over dogmatic** - Adapt to project reality
+- **Clear intent over clever code** - Be boring and obvious
 
-### 简单意味着
+### Simplicity Means
 
-- 每个函数/类单一职责
-- 避免过早抽象
-- 不要耍小聪明 - 选择无聊的解决方案
-- 如果需要解释，那就太复杂了
+- Single responsibility per function/class
+- Avoid premature abstractions
+- No clever tricks - choose the boring solution
+- If you need to explain it, it's too complex
 
-## 流程
+## Process
 
-### 1. 规划与分阶段
+### 1. Planning & Staging
 
-将复杂工作分解为 3-5 个阶段。记录在 `IMPLEMENTATION_PLAN.md` 中：
+Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 
 ```markdown
-## 阶段 N: [名称]
+## Stage N: [Name]
 
-**目标**: [具体交付物]
-**成功标准**: [可测试的结果]
-**测试**: [具体测试用例]
-**状态**: [未开始|进行中|已完成]
+**Goal**: [Specific deliverable]
+**Success Criteria**: [Testable outcomes]
+**Tests**: [Specific test cases]
+**Status**: [Not Started|In Progress|Complete]
 ```
 
-- 进展时更新状态
-- 所有阶段完成后删除文件
+- Update status as you progress
+- Remove file when all stages are done
 
-### 2. 实施流程
+### 2. Implementation Flow
 
-1. **理解** - 研究代码库中的现有模式
-2. **测试** - 先写测试（红灯）
-3. **实现** - 最少代码通过测试（绿灯）
-4. **重构** - 在测试通过的情况下清理代码
-5. **验证** - 确保编译通过且测试运行
-6. **更新 TODO** - 标记已完成的任务并总结成就
-7. **提交** - 使用清晰的消息链接到计划
+1. **Understand** - Study existing patterns in codebase
+2. **Test** - Write test first (red)
+3. **Implement** - Minimal code to pass (green)
+4. **Refactor** - Clean up with tests passing
+5. **Validate** - Ensure compilation and tests run
+6. **Update TODO** - Mark completed tasks and summarize achievements
+7. **Commit** - With clear message linking to plan
 
-**关键**: 代码编译成功后，始终要：
+**Key**: After code compiles successfully, always:
 
-- 更新 TODO 列表标记已完成任务
-- 添加完成内容的总结
-- 规划下一步（如适用）
-- 永远不要让 TODO 列表过时或停滞
+- Update TODO list to mark completed tasks
+- Add summary of completed content
+- Plan next steps (if applicable)
+- Never let TODO list become outdated or stagnant
 
-### 3. 遇到困难时（尝试 3 次后）
+### 3. When Stuck (After 3 Attempts)
 
-**关键**: 每个问题最多尝试 3 次，然后停止。
+**Critical**: Maximum 3 attempts per issue, then STOP.
 
-1. **记录失败内容**：
-   - 你尝试了什么
-   - 具体的错误消息
-   - 你认为失败的原因
+1. **Document what failed**:
+   - What you tried
+   - Specific error messages
+   - Why you think it failed
 
-2. **研究替代方案**：
-   - 找到 2-3 个类似的实现
-   - 记录使用的不同方法
+2. **Research alternatives**:
+   - Find 2-3 similar implementations
+   - Note different approaches used
 
-3. **质疑根本问题**：
-   - 这是正确的抽象级别吗？
-   - 可以分解成更小的问题吗？
-   - 有完全更简单的方法吗？
+3. **Question fundamentals**:
+   - Is this the right abstraction level?
+   - Can this be split into smaller problems?
+   - Is there a simpler approach entirely?
 
-4. **尝试不同角度**：
-   - 不同的库/框架功能？
-   - 不同的架构模式？
-   - 删除抽象而不是增加？
+4. **Try different angle**:
+   - Different library/framework feature?
+   - Different architectural pattern?
+   - Remove abstraction instead of adding?
 
-## 技术标准
+## Technical Standards
 
-### 架构原则
+### Architecture Principles
 
-- **组合优于继承** - 使用依赖注入
-- **接口优于单例** - 实现可测试性和灵活性
-- **显式优于隐式** - 清晰的数据流和依赖
-- **尽可能测试驱动** - 永不禁用测试，修复它们
+- **Composition over inheritance** - Use dependency injection
+- **Interfaces over singletons** - Enable testing and flexibility
+- **Explicit over implicit** - Clear data flow and dependencies
+- **Test-driven when possible** - Never disable tests, fix them
 
-### 代码质量
+### Code Quality
 
-- **每次提交必须**：
-  - 成功编译
-  - 通过所有现有测试
-  - 为新功能包含测试
-  - 遵循项目格式化/代码检查规则
+- **Every commit must**:
+  - Compile successfully
+  - Pass all existing tests
+  - Include tests for new functionality
+  - Follow project formatting/linting
 
-- **提交前**：
-  - 运行格式化器/代码检查器
-  - 自我审查更改
-  - 确保提交消息解释"为什么"
+- **Before committing**:
+  - Run formatters/linters
+  - Self-review changes
+  - Ensure commit message explains "why"
 
-### 错误处理
+### Error Handling
 
-- 快速失败并提供描述性消息
-- 包含调试上下文
-- 在适当级别处理错误
-- 永远不要默默吞掉异常
+- Fail fast with descriptive messages
+- Include context for debugging
+- Handle errors at appropriate level
+- Never silently swallow exceptions
 
-### 编译错误处理
+### Compilation Error Handling
 
-**基本原则**：永远不要删除代码来绕过编译错误。修复根本原因。
+**Fundamental Principle**: Never delete code to bypass compilation errors. Fix the root cause.
 
-遇到编译错误时：
+When encountering compilation errors:
 
-1. **永远不要这样做**：
-   - 删除有问题的方法/代码
-   - 注释掉错误行
-   - 使用占位符实现（TODO，抛出 NotImplemented）
-   - 修改业务逻辑以匹配错误假设
+1. **NEVER do this**:
+   - Delete problematic methods/code
+   - Comment out error lines
+   - Use placeholder implementations (TODO, throw NotImplemented)
+   - Modify business logic to match wrong assumptions
 
-2. **始终这样做**：
-   - 理解错误发生的原因
-   - 研究实际的数据模型/API
-   - 修复你的代码以匹配现实，而不是相反
-   - 如果属性不存在，找出：
-     - 正确的属性名是什么？
-     - 应该向模型添加此属性吗？
-     - 有替代方法吗？
+2. **ALWAYS do this**:
+   - Understand why the error occurred
+   - Research actual data models/API
+   - Fix your code to match reality, not the other way around
+   - If property doesn't exist, find out:
+     - What is the correct property name?
+     - Should this property be added to the model?
+     - Is there an alternative approach?
 
-3. **错误解决流程**：
-
-   ```
-   错误发生 → 理解根本原因 → 研究正确解决方案 → 修复实际问题
-   ```
-
-   而不是：
+3. **Error resolution flow**:
 
    ```
-   错误发生 → 删除有问题的代码 → 编译通过 ❌
+   Error occurs → Understand root cause → Research correct solution → Fix actual problem
    ```
 
-4. **常见陷阱和解决方案**：
-   - **属性名称不匹配**：研究实际模型，使用正确名称
-   - **缺少功能**：基于实际能力实现，而不是假设
-   - **类型不兼容**：理解类型，正确转换
-   - **缺少依赖**：添加所需的导入/包
+   NOT:
 
-5. **质量优于速度**：
-   - 工作的部分实现 > 破损的完整实现
-   - 正确的实现 > 快速编译
-   - 理解问题 > 绕过问题
+   ```
+   Error occurs → Delete problematic code → Compiles ❌
+   ```
 
-**记住**：删除错误代码是在逃避问题，而不是解决问题。每个错误都是更好理解系统的机会。
+4. **Common pitfalls and solutions**:
+   - **Property name mismatch**: Research actual model, use correct name
+   - **Missing functionality**: Implement based on actual capabilities, not assumptions
+   - **Type incompatibility**: Understand types, convert correctly
+   - **Missing dependencies**: Add required imports/packages
 
-## 决策框架
+5. **Quality over speed**:
+   - Working partial implementation > broken complete implementation
+   - Correct implementation > fast compilation
+   - Understand problem > bypass problem
 
-当存在多个有效方法时，基于以下选择：
+**Remember**: Deleting error code is avoiding the problem, not solving it. Every error is an opportunity to better understand the system.
 
-1. **可测试性** - 我能轻松测试这个吗？
-2. **可读性** - 6 个月后有人能理解这个吗？
-3. **一致性** - 这与项目模式匹配吗？
-4. **简单性** - 这是最简单的可行解决方案吗？
-5. **可逆性** - 以后改变有多难？
+## Decision Framework
 
-## 项目集成
+When multiple valid approaches exist, choose based on:
 
-### 学习代码库
+1. **Testability** - Can I easily test this?
+2. **Readability** - Will someone understand this in 6 months?
+3. **Consistency** - Does this match project patterns?
+4. **Simplicity** - Is this the simplest solution that works?
+5. **Reversibility** - How hard to change later?
 
-- 找到 3 个类似的功能/组件
-- 识别常见模式和约定
-- 尽可能使用相同的库/工具
-- 遵循现有的测试模式
+## Project Integration
 
-### 工具
+### Learning the Codebase
 
-- 使用项目现有的构建系统
-- 使用项目的测试框架
-- 使用项目的格式化器/代码检查器设置
-- 没有强有力的理由不要引入新工具
-- **可以并且更多的使用已安装的 agents** - 充分利用各种专门的 agents 来提高效率和质量
+- Find 3 similar features/components
+- Identify common patterns and conventions
+- Use same libraries/utilities when possible
+- Follow existing test patterns
 
-## 质量门槛
+### Tools
 
-### 完成的定义
+- Use project's existing build system
+- Use project's test framework
+- Use project's formatter/linter settings
+- Don't introduce new tools without strong justification
+- **Use installed agents more** - Leverage various specialized agents to improve efficiency and quality
 
-- [ ] 测试编写并通过
-- [ ] 代码遵循项目约定
-- [ ] 没有代码检查器/格式化器警告
-- [ ] 提交消息清晰
-- [ ] 实现与计划匹配
-- [ ] 没有不带问题编号的 TODO
+## Quality Gates
 
-### 测试指南
+### Definition of Done
 
-- 测试行为，而不是实现
-- 尽可能每个测试一个断言
-- 清晰的测试名称描述场景
-- 使用现有的测试工具/帮助器
-- 测试应该是确定性的
+- [ ] Tests written and passing
+- [ ] Code follows project conventions
+- [ ] No linter/formatter warnings
+- [ ] Commit messages are clear
+- [ ] Implementation matches plan
+- [ ] No TODOs without issue numbers
 
-## 重要提醒
+### Test Guidelines
 
-**永远不要**：
+- Test behavior, not implementation
+- One assertion per test when possible
+- Clear test names describing scenario
+- Use existing test utilities/helpers
+- Tests should be deterministic
 
-- 使用 `--no-verify` 绕过提交钩子
-- 禁用测试而不是修复它们
-- 提交不能编译的代码
-- 做假设 - 用现有代码验证
-- 删除代码只为通过编译
-- 使用 TODO 或占位符绕过实现
-- 修改正确的业务逻辑以匹配错误的代码
+## Important Reminders
 
-**始终**：
+**NEVER**:
 
-- 增量提交工作代码
-- 随时更新计划文档
-- 从现有实现中学习
-- 3 次失败尝试后停止并重新评估
-- 从根本原因修复编译错误
-- 在修复前理解错误发生的原因
-- 确保实现完整且功能正常
+- Use `--no-verify` to bypass commit hooks
+- Disable tests instead of fixing them
+- Commit code that doesn't compile
+- Make assumptions - verify with existing code
+- Delete code just to make compilation pass
+- Use TODO or placeholders to bypass implementation
+- Modify correct business logic to match wrong code
+
+**ALWAYS**:
+
+- Commit working code incrementally
+- Update plan documentation as you go
+- Learn from existing implementations
+- Stop after 3 failed attempts and reassess
+- Fix compilation errors from root cause
+- Understand why errors occur before fixing
+- Ensure implementation is complete and functional
 
 ---
 
-## Project Structure & Module Organization (项目结构与模块组织)
+## Project Structure & Module Organization
 
 - Monorepo managed by Turborepo. Top-level `apps/` (server, dashboard) and `packages/` (core, ai, utils, config). Scripts and seeds live in `scripts/`.
 - Server (AdonisJS) in `apps/server`; routes, services under `src/app`, tests in `apps/server/tests`.
 - Dashboard (Next.js) in `apps/dashboard`; UI components in `src/components`, pages in `src/app`. shadcn components are auto-added under `src/components/ui` via CLI.
 - CLI in `apps/cli/src`. Shared logic in `packages/*`. Lucid migrations in `apps/server/database/migrations`.
 
-## Build, Test, and Development Commands (构建、测试和开发命令)
+## Build, Test, and Development Commands
 
 - `pnpm dev` (root): run all dev targets via Turborepo.
 - `pnpm --filter @sparkset/server dev` / `...dashboard dev`: run server or dashboard only.
@@ -259,29 +259,29 @@
 - `cd apps/server && node ace migration:run` runs Lucid migrations.
 - Seed/demo DB: `mysql -uroot -p'123456' sparkset_demo < scripts/demo-seed.sql`.
 
-## Coding Style & Naming Conventions (代码风格与命名约定)
+## Coding Style & Naming Conventions
 
 - TypeScript-first. Follow spec.md naming: kebab-case dirs, camelCase vars, PascalCase types.
 - Formatting via Prettier (pre-commit), lint via ESLint. Respect shadcn UI tokens; prefer shadcn components added via `pnpm dlx shadcn@latest add <component>`. Avoid hand-rolled UI unless necessary.
 
-## Testing Guidelines (测试指南)
+## Testing Guidelines
 
 - Vitest for `apps/api` and `packages/core`. Place specs under `tests/**` or `src/**/__tests__`.
 - Prefer focused unit tests for services/planner/executor; add integration tests for routes. Run with `pnpm --filter <pkg> test`.
 
-## Commit & Pull Request Guidelines (提交与 PR 指南)
+## Commit & Pull Request Guidelines
 
 - **Commit messages MUST be in English**: All commit messages must be written in English, regardless of the language used in code comments or documentation.
 - Commit messages in imperative, scoped style seen in history (e.g., `feat: ...`, `fix(api): ...`, `chore(dashboard): ...`). One logical change per commit; avoid mixing formatting and features.
 - PRs should include: summary of changes, testing evidence (commands run), screenshots for UI changes, and linked issue/requirement when applicable.
 
-## UI & Component Policy (UI 与组件策略)
+## UI & Component Policy
 
 - Use shadcn components via CLI (list at https://ui.shadcn.com/llms.txt). Layouts should reference blocks (https://ui.shadcn.com/blocks); sidebar-02 is the baseline for dashboard shell.
 - Keep `components.json` in sync; new components must be added through shadcn CLI so tailwind tokens stay consistent.
 - For customization guidelines, see Component Development Guidelines > shadcn Component Customization Guidelines.
 
-## Component Development Guidelines (组件开发指南)
+## Component Development Guidelines
 
 ### shadcn Component Customization Guidelines
 
@@ -303,7 +303,7 @@
   - Enables easy maintenance and version upgrades
   - Separates concerns: atomic components vs. business logic
 
-### File Naming Convention (文件命名约定)
+### File Naming Convention
 
 - **Component files MUST use kebab-case naming**: `query-form.tsx`, `ai-provider-manager.tsx`, `page-header.tsx`
 - **Exception**: shadcn UI components in `src/components/ui/` follow shadcn's naming (usually kebab-case)
@@ -314,7 +314,7 @@
   - **Rationale**: The directory already provides the namespace context, so repeating it in the filename is redundant
   - **Exception**: Only use `{module}-{name}.tsx` format when the component is a global component in `components/` root (e.g., `datasource-selector.tsx` is global and used across modules)
 
-### Component Organization (组件组织)
+### Component Organization
 
 - **Global vs Module Components**:
   - **Global public components**: Components that can be used across multiple modules/features should be placed directly in `src/components/` (not in module subdirectories)
@@ -367,7 +367,7 @@
     - Cleaner, more readable page components
     - Easier to locate and modify specific functionality
 
-### Component Design Principles (组件设计原则)
+### Component Design Principles
 
 - **Visual Hierarchy**:
   - Primary actions should be visually prominent (larger, primary color)
@@ -431,7 +431,7 @@
     - Ensure all checks pass before committing
   - **Best practice**: Format and lint code immediately after making changes, not just before committing
 
-## Security & Configuration Tips (安全与配置提示)
+## Security & Configuration Tips
 
 - Set `DATABASE_URL` for API to hit real MySQL; default falls back to in-memory stores (limited).
 - Dashboard expects `NEXT_PUBLIC_API_URL`; CLI can override API with `--api`.
