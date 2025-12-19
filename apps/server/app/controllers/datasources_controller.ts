@@ -9,6 +9,7 @@ import {
   datasourceUpdateSchema,
   setDefaultSchema,
 } from '../validators/datasource';
+import { toId } from '../utils/validation.js';
 
 @inject()
 export default class DatasourcesController {
@@ -36,13 +37,15 @@ export default class DatasourcesController {
   }
 
   async destroy({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     await this.service.remove(id);
     return response.noContent();
   }
 
   async sync({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = (await this.service.list()).find((item) => item.id === id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -53,7 +56,8 @@ export default class DatasourcesController {
   }
 
   async generateSemanticDescriptions({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = (await this.service.list()).find((item) => item.id === id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -64,7 +68,8 @@ export default class DatasourcesController {
   }
 
   async schema({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = (await this.service.list()).find((item) => item.id === id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -74,7 +79,8 @@ export default class DatasourcesController {
   }
 
   async show({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = (await this.service.list()).find((item) => item.id === id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -84,8 +90,10 @@ export default class DatasourcesController {
   }
 
   async updateTableMetadata({ params, request, response }: HttpContext) {
-    const datasourceId = Number(params.id);
-    const tableId = Number(params.tableId);
+    const datasourceId = toId(params.id);
+    if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
+    const tableId = toId(params.tableId);
+    if (!tableId) return response.badRequest({ message: 'Invalid table ID' });
     const datasource = (await this.service.list()).find((item) => item.id === datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -103,8 +111,10 @@ export default class DatasourcesController {
   }
 
   async updateColumnMetadata({ params, request, response }: HttpContext) {
-    const datasourceId = Number(params.id);
-    const columnId = Number(params.columnId);
+    const datasourceId = toId(params.id);
+    if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
+    const columnId = toId(params.columnId);
+    if (!columnId) return response.badRequest({ message: 'Invalid column ID' });
     const datasource = (await this.service.list()).find((item) => item.id === datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
@@ -128,7 +138,8 @@ export default class DatasourcesController {
   }
 
   async testConnection({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = (await this.service.list()).find((item) => item.id === id);
 
     if (!datasource) {

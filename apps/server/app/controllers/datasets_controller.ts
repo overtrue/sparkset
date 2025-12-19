@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { DatasetService } from '../services/dataset_service.js';
 import { z } from 'zod';
+import { toId } from '../utils/validation.js';
 
 const createSchema = z.object({
   datasourceId: z.number().int().positive(),
@@ -40,7 +41,8 @@ export default class DatasetsController {
   }
 
   async show({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const dataset = await this.service.get(id);
 
     if (!dataset) {
@@ -51,7 +53,8 @@ export default class DatasetsController {
   }
 
   async update({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const parsed = createSchema.partial().parse(request.body());
 
     const existing = await this.service.get(id);
@@ -64,7 +67,8 @@ export default class DatasetsController {
   }
 
   async destroy({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
 
     const existing = await this.service.get(id);
     if (!existing) {
@@ -76,7 +80,8 @@ export default class DatasetsController {
   }
 
   async preview({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const parsed = previewSchema.parse(request.body());
 
     const existing = await this.service.get(id);

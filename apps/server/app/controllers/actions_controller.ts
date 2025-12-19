@@ -5,6 +5,7 @@ import { ActionService } from '../services/action_service';
 import { AIProviderService } from '../services/ai_provider_service';
 import { SchemaService } from '../services/schema_service';
 import { actionCreateSchema, actionUpdateSchema } from '../validators/action';
+import { toId } from '../utils/validation.js';
 
 @inject()
 export default class ActionsController {
@@ -21,7 +22,8 @@ export default class ActionsController {
   }
 
   async show({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
     return response.ok(item);
@@ -40,13 +42,15 @@ export default class ActionsController {
   }
 
   async destroy({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid action ID' });
     await this.service.remove(id);
     return response.noContent();
   }
 
   async execute({ params, request, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
     if (!this.actionExecutor)

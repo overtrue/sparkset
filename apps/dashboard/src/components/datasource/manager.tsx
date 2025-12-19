@@ -489,7 +489,6 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                     value={form.password}
                     onChange={onChange('password')}
                     placeholder={editingId ? '留空则不修改' : '留空则使用无密码连接'}
-                    required={!editingId}
                   />
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { ConversationService } from '../services/conversation_service';
 import { conversationCreateSchema, messageAppendSchema } from '../validators/conversation';
+import { toId } from '../utils/validation.js';
 
 @inject()
 export default class ConversationsController {
@@ -13,7 +14,8 @@ export default class ConversationsController {
   }
 
   async show({ params, response }: HttpContext) {
-    const id = Number(params.id);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid conversation ID' });
     const conv = await this.service.get(id);
     if (!conv) {
       return response.notFound({ message: 'Conversation not found' });
@@ -29,9 +31,11 @@ export default class ConversationsController {
   }
 
   async appendMessage({ params, request, response }: HttpContext) {
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid conversation ID' });
     const parsed = messageAppendSchema.parse({
       ...request.body(),
-      conversationId: params.id,
+      conversationId: id,
     });
     const msg = await this.service.appendMessage({
       conversationId: parsed.conversationId,

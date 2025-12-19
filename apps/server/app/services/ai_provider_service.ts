@@ -1,6 +1,7 @@
 import { testAIProviderConnection } from '@sparkset/ai';
 import { AIProviderRepository } from '../db/interfaces';
 import type { AIProvider } from '../models/types';
+import { toId } from '../utils/validation.js';
 
 export interface CreateAIProviderInput {
   name: string;
@@ -83,9 +84,12 @@ export class AIProviderService {
   }
 
   async update(input: UpdateAIProviderInput): Promise<AIProvider> {
-    if (this.repo) return this.repo.update(input);
+    const id = toId(input.id);
+    if (!id) throw new Error('Invalid provider ID');
 
-    const existing = this.store.get(input.id);
+    if (this.repo) return this.repo.update({ ...input, id });
+
+    const existing = this.store.get(id);
     if (!existing) throw new Error('AI Provider not found');
 
     // 如果设置为默认，先取消其他 provider 的默认状态
@@ -108,21 +112,27 @@ export class AIProviderService {
   }
 
   async remove(id: number) {
+    const validId = toId(id);
+    if (!validId) throw new Error('Invalid provider ID');
+
     if (this.repo) {
-      await this.repo.remove(id);
+      await this.repo.remove(validId);
       return;
     }
-    if (!this.store.has(id)) throw new Error('AI Provider not found');
-    this.store.delete(id);
+    if (!this.store.has(validId)) throw new Error('AI Provider not found');
+    this.store.delete(validId);
   }
 
   async setDefault(id: number) {
+    const validId = toId(id);
+    if (!validId) throw new Error('Invalid provider ID');
+
     if (this.repo) {
-      await this.repo.setDefault(id);
+      await this.repo.setDefault(validId);
       return;
     }
 
-    const existing = this.store.get(id);
+    const existing = this.store.get(validId);
     if (!existing) throw new Error('AI Provider not found');
 
     // 取消所有 provider 的默认状态
@@ -171,13 +181,21 @@ export class AIProviderService {
   async testConnectionById(
     id: number,
   ): Promise<{ success: boolean; message: string; timestamp?: string }> {
+    const validId = toId(id);
+    if (!validId) {
+      return {
+        success: false,
+        message: 'Invalid provider ID',
+      };
+    }
+
     let provider: AIProvider | undefined;
 
     if (this.repo) {
       const list = await this.repo.list();
-      provider = list.find((p) => p.id === id);
+      provider = list.find((p) => p.id === validId);
     } else {
-      provider = this.store.get(id);
+      provider = this.store.get(validId);
     }
 
     if (!provider) {
