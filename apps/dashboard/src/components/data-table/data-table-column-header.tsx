@@ -1,5 +1,5 @@
 'use client';
-import { RiArrowDownLine, RiArrowUpLine, RiExpandVerticalLine } from '@remixicon/react';
+import { RiArrowDownSFill, RiArrowUpSFill, RiExpandUpDownFill } from '@remixicon/react';
 
 import { Column } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,12 @@ export function DataTableColumnHeader<TData, TValue>({
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
         <span>{title}</span>
-        {column.getIsSorted() === 'desc' ? (
-          <RiArrowDownLine className="ml-2 h-4 w-4" />
-        ) : column.getIsSorted() === 'asc' ? (
-          <RiArrowUpLine className="ml-2 h-4 w-4" />
+        {column.getIsSorted() === 'asc' ? (
+          <RiArrowUpSFill className="ml-2 h-4 w-4" />
+        ) : column.getIsSorted() === 'desc' ? (
+          <RiArrowDownSFill className="ml-2 h-4 w-4" />
         ) : (
-          <RiExpandVerticalLine className="ml-2 h-4 w-4" />
+          <RiExpandUpDownFill className="ml-2 h-4 w-4" />
         )}
       </Button>
     </div>
