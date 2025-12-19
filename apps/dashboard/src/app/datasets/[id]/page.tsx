@@ -4,16 +4,24 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { datasetsApi } from '@/lib/api/datasets';
-import type { Dataset } from '@/types/chart';
+import type { Dataset, ResultSet } from '@/types/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RiArrowLeftLine, RiAddLine, RiEditLine, RiDeleteBinLine } from '@remixicon/react';
+import {
+  RiArrowLeftLine,
+  RiAddLine,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiPlayLine,
+  RiEyeOffLine,
+} from '@remixicon/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ResultTable } from '@/components/query/result-table';
 
 export default function DatasetDetailPage() {
   const params = useParams();
@@ -25,6 +33,8 @@ export default function DatasetDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({ name: '', description: '' });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [queryResult, setQueryResult] = useState<ResultSet | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
 
   useEffect(() => {
     loadDataset();
@@ -68,6 +78,31 @@ export default function DatasetDetailPage() {
       toast.error('删除失败');
     } finally {
       setDeleteConfirmOpen(false);
+    }
+  };
+
+  const handleExecuteQuery = async () => {
+    if (!dataset) return;
+
+    try {
+      setQueryLoading(true);
+      setQueryResult(null);
+      const result = await datasetsApi.preview(dataset.id);
+      setQueryResult(result);
+      toast.success('查询执行成功');
+    } catch (error) {
+      toast.error('查询执行失败');
+      console.error(error);
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
+  const handleToggleQueryResult = () => {
+    if (queryResult) {
+      setQueryResult(null);
+    } else {
+      handleExecuteQuery();
     }
   };
 
@@ -194,12 +229,15 @@ export default function DatasetDetailPage() {
           <CardContent>
             <Textarea value={dataset.querySql} readOnly rows={8} className="font-mono text-xs" />
             <div className="flex gap-2 mt-4">
-              <Button
-                size="sm"
-                onClick={() => router.push(`/query?sql=${encodeURIComponent(dataset.querySql)}`)}
-              >
-                <RiAddLine className="h-4 w-4 mr-2" />
-                执行查询
+              <Button size="sm" onClick={handleToggleQueryResult} disabled={queryLoading}>
+                {queryLoading ? (
+                  <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
+                ) : queryResult ? (
+                  <RiEyeOffLine className="h-4 w-4 mr-2" />
+                ) : (
+                  <RiPlayLine className="h-4 w-4 mr-2" />
+                )}
+                {queryLoading ? '执行中...' : queryResult ? '隐藏结果' : '执行查询'}
               </Button>
               <Button
                 variant="outline"
@@ -210,6 +248,14 @@ export default function DatasetDetailPage() {
                 创建图表
               </Button>
             </div>
+            {queryResult && (
+              <div className="mt-4 space-y-2">
+                <div className="text-sm text-muted-foreground">
+                  共 {queryResult.rowCount} 行数据
+                </div>
+                <ResultTable rows={queryResult.rows} />
+              </div>
+            )}
           </CardContent>
         </Card>
 
