@@ -28,6 +28,9 @@ export class ChartService {
    * 详情
    */
   async get(id: number, userId?: number): Promise<Chart | null> {
+    if (isNaN(id) || id <= 0) {
+      return null;
+    }
     const query = Chart.query().preload('dataset').where('id', id);
     // For now, ignore userId filter (no auth)
     return query.first();
@@ -74,6 +77,9 @@ export class ChartService {
       spec: ChartSpec;
     }>,
   ): Promise<Chart> {
+    if (isNaN(id) || id <= 0) {
+      throw new Error('Invalid chart ID');
+    }
     const chart = await Chart.findOrFail(id);
 
     // 如果更新 spec，需要验证
@@ -95,6 +101,9 @@ export class ChartService {
    * 删除
    */
   async delete(id: number): Promise<void> {
+    if (isNaN(id) || id <= 0) {
+      throw new Error('Invalid chart ID');
+    }
     const chart = await Chart.findOrFail(id);
     await chart.delete();
   }
@@ -103,6 +112,9 @@ export class ChartService {
    * 渲染图表（从保存的配置）
    */
   async render(id: number, useCache = true): Promise<ChartRenderResult> {
+    if (isNaN(id) || id <= 0) {
+      throw new Error('Invalid chart ID');
+    }
     const chart = await Chart.findOrFail(id);
     const dataset = await Dataset.findOrFail(chart.datasetId);
 

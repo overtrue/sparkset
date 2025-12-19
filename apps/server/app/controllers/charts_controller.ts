@@ -86,6 +86,9 @@ export default class ChartsController {
 
   async show({ params, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid chart ID' });
+    }
     const chart = await this.service.get(id);
 
     if (!chart) {
@@ -97,6 +100,9 @@ export default class ChartsController {
 
   async update({ params, request, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid chart ID' });
+    }
     const parsed = createSchema.partial().parse(request.body());
 
     const existing = await this.service.get(id);
@@ -113,6 +119,9 @@ export default class ChartsController {
 
   async destroy({ params, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid chart ID' });
+    }
 
     const existing = await this.service.get(id);
     if (!existing) {
@@ -125,6 +134,9 @@ export default class ChartsController {
 
   async render({ params, request, response }: HttpContext) {
     const id = Number(params.id);
+    if (isNaN(id)) {
+      return response.badRequest({ message: 'Invalid chart ID' });
+    }
     const useCache = request.input('useCache', 'true') === 'true';
 
     const existing = await this.service.get(id);
