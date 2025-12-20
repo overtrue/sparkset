@@ -12,7 +12,8 @@
 
 Sparkset is an AI-powered operational assistant that helps teams interact with databases using natural language. Ask questions like "How many orders were cancelled this week?" or "Show me users from Beijing" and get instant insights without writing SQL.
 
-<img width="2032" height="1161" alt="Clipboard_Screenshot_1765940903" src="https://github.com/user-attachments/assets/3fdbe7b3-38dd-4b78-a5a0-03faa16349f4" />
+<img width="1534" height="1141" alt="image" src="https://github.com/user-attachments/assets/e5ee7999-e541-410b-9dbd-d7dded810992" />
+
 
 ## ✨ Features
 
