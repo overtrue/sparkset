@@ -196,89 +196,94 @@ export default function DatasetDetailPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* SQL 查询 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>SQL 查询</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea value={dataset.querySql} readOnly rows={8} className="font-mono text-xs" />
-            <div className="flex gap-2 mt-4">
-              <Button size="sm" onClick={handleToggleQueryResult} disabled={queryLoading}>
-                {queryLoading ? (
-                  <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
-                ) : queryResult ? (
-                  <RiEyeOffLine className="h-4 w-4 mr-2" />
-                ) : (
-                  <RiPlayLine className="h-4 w-4 mr-2" />
-                )}
-                {queryLoading ? '执行中...' : queryResult ? '隐藏结果' : '执行查询'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
-              >
-                <RiAddLine className="h-4 w-4 mr-2" />
-                创建图表
-              </Button>
-            </div>
-            {queryResult && (
-              <div className="mt-4 space-y-2">
-                <div className="text-sm text-muted-foreground">
-                  共 {queryResult.rowCount} 行数据
-                </div>
-                <ResultTable rows={queryResult.rows} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 数据结构 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>数据结构</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {dataset.schemaJson?.map((field: any, index: number) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between text-sm p-2 bg-muted rounded"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 左侧：SQL 查询 - 占 2/3 */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>SQL 查询</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea value={dataset.querySql} readOnly rows={8} className="font-mono text-xs" />
+              <div className="flex gap-2 mt-4">
+                <Button size="sm" onClick={handleToggleQueryResult} disabled={queryLoading}>
+                  {queryLoading ? (
+                    <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
+                  ) : queryResult ? (
+                    <RiEyeOffLine className="h-4 w-4 mr-2" />
+                  ) : (
+                    <RiPlayLine className="h-4 w-4 mr-2" />
+                  )}
+                  {queryLoading ? '执行中...' : queryResult ? '隐藏结果' : '执行查询'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
                 >
-                  <span className="font-medium">{field.name}</span>
-                  <Badge variant="secondary">{field.type}</Badge>
+                  <RiAddLine className="h-4 w-4 mr-2" />
+                  创建图表
+                </Button>
+              </div>
+              {queryResult && (
+                <div className="mt-4 space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    共 {queryResult.rowCount} 行数据
+                  </div>
+                  <ResultTable rows={queryResult.rows} />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* 元数据 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>元数据</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">数据源ID:</span>
-              <span className="font-medium">{dataset.datasourceId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Schema Hash:</span>
-              <span className="font-mono text-xs">{dataset.schemaHash}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">创建时间:</span>
-              <span className="font-medium">{new Date(dataset.createdAt).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">更新时间:</span>
-              <span className="font-medium">{new Date(dataset.updatedAt).toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* 右侧：数据结构 + 元数据 - 占 1/3 */}
+        <div className="space-y-6">
+          {/* 数据结构 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>数据结构</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {dataset.schemaJson?.map((field: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-sm p-2 bg-muted rounded"
+                  >
+                    <span className="font-medium">{field.name}</span>
+                    <Badge variant="secondary">{field.type}</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 元数据 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>元数据</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">数据源ID:</span>
+                <span className="font-medium">{dataset.datasourceId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Schema Hash:</span>
+                <span className="font-mono text-xs">{dataset.schemaHash}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">创建时间:</span>
+                <span className="font-medium">{new Date(dataset.createdAt).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">更新时间:</span>
+                <span className="font-medium">{new Date(dataset.updatedAt).toLocaleString()}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <ConfirmDialog

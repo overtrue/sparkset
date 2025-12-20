@@ -1,8 +1,6 @@
 'use client';
 import { RiDatabase2Line } from '@remixicon/react';
 
-import { ColumnDef } from '@tanstack/react-table';
-import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import {
@@ -12,6 +10,8 @@ import {
   EmptyHeader,
   EmptyMedia,
 } from '@/components/ui/empty';
+import { ColumnDef } from '@tanstack/react-table';
+import { useMemo } from 'react';
 
 interface ResultTableProps {
   rows: Record<string, unknown>[];
@@ -59,15 +59,13 @@ export function ResultTable({ rows }: ResultTableProps) {
   }
 
   return (
-    <div className="p-4">
-      <DataTable
-        columns={columns}
-        data={rows}
-        enableGlobalFilter
-        showRecordCount
-        searchPlaceholder="搜索结果..."
-        emptyMessage="无匹配结果"
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={rows}
+      enableGlobalFilter
+      showRecordCount
+      searchPlaceholder="搜索结果..."
+      emptyMessage="无匹配结果"
+    />
   );
 }
