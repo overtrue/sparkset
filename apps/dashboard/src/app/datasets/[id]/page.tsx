@@ -15,6 +15,8 @@ import {
   RiDeleteBinLine,
   RiPlayLine,
   RiEyeOffLine,
+  RiSaveLine,
+  RiCloseLine,
 } from '@remixicon/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -138,89 +140,63 @@ export default function DatasetDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={editing ? '编辑数据集' : dataset.name}
-        description={editing ? '修改数据集信息' : '数据集详情'}
-        action={
+      {/* Page Header with inline editing */}
+      {editing ? (
+        <div className="space-y-4 border-b pb-4">
+          <div className="space-y-2">
+            <Label>名称</Label>
+            <input
+              type="text"
+              value={editData.name}
+              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="数据集名称"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>描述</Label>
+            <Textarea
+              value={editData.description}
+              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+              rows={2}
+              placeholder="数据集描述（可选）"
+            />
+          </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.push('/datasets')}>
-              <RiArrowLeftLine className="h-4 w-4 mr-2" />
-              返回列表
+            <Button size="sm" onClick={handleUpdate}>
+              <RiSaveLine className="h-4 w-4 mr-2" />
+              保存
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+              <RiCloseLine className="h-4 w-4 mr-2" />
+              取消
             </Button>
           </div>
-        }
-      />
+        </div>
+      ) : (
+        <PageHeader
+          title={dataset.name}
+          description={dataset.description || '数据集详情'}
+          action={
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <RiEditLine className="h-4 w-4 mr-2" />
+                编辑
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => router.push('/datasets')}>
+                <RiArrowLeftLine className="h-4 w-4 mr-2" />
+                返回列表
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
+                <RiDeleteBinLine className="h-4 w-4 mr-2" />
+                删除
+              </Button>
+            </div>
+          }
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 基本信息 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>基本信息</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {editing ? (
-              <>
-                <div className="space-y-2">
-                  <Label>名称</Label>
-                  <input
-                    type="text"
-                    value={editData.name}
-                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>描述</Label>
-                  <Textarea
-                    value={editData.description}
-                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={handleUpdate} size="sm">
-                    保存
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
-                    取消
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">名称</div>
-                  <div className="font-medium">{dataset.name}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">描述</div>
-                  <div className="font-medium">
-                    {dataset.description || <span className="text-muted-foreground">无</span>}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-sm text-muted-foreground">ID</div>
-                  <div className="font-mono text-sm">{dataset.id}</div>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                    <RiEditLine className="h-4 w-4 mr-2" />
-                    编辑
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteConfirmOpen(true)}
-                  >
-                    <RiDeleteBinLine className="h-4 w-4 mr-2" />
-                    删除
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
         {/* SQL 查询 */}
         <Card>
           <CardHeader>
@@ -259,7 +235,7 @@ export default function DatasetDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Schema */}
+        {/* 数据结构 */}
         <Card>
           <CardHeader>
             <CardTitle>数据结构</CardTitle>
