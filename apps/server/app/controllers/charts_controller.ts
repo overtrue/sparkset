@@ -111,10 +111,7 @@ export default class ChartsController {
       return response.notFound({ message: 'Chart not found' });
     }
 
-    const record = await this.service.update(id, {
-      ...parsed,
-      spec: parsed.spec,
-    });
+    const record = await this.service.update(id, parsed);
     return response.ok(record);
   }
 

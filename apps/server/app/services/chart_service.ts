@@ -95,7 +95,14 @@ export class ChartService {
       }
     }
 
-    chart.merge(data);
+    // Transform spec to specJson for the model
+    const updateData: any = { ...data };
+    if (updateData.spec) {
+      updateData.specJson = updateData.spec;
+      delete updateData.spec;
+    }
+
+    chart.merge(updateData);
     await chart.save();
     return chart;
   }
