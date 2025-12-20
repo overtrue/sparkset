@@ -33,7 +33,9 @@ export default function DatasetDetailPage() {
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editingSql, setEditingSql] = useState(false);
   const [editData, setEditData] = useState({ name: '', description: '' });
+  const [editSql, setEditSql] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [queryResult, setQueryResult] = useState<ResultSet | null>(null);
   const [queryLoading, setQueryLoading] = useState(false);
@@ -48,6 +50,7 @@ export default function DatasetDetailPage() {
       const data = await datasetsApi.get(Number(id));
       setDataset(data);
       setEditData({ name: data.name, description: data.description || '' });
+      setEditSql(data.querySql);
     } catch (error) {
       toast.error('加载数据集失败');
       router.push('/datasets');
@@ -66,6 +69,19 @@ export default function DatasetDetailPage() {
       loadDataset();
     } catch (error) {
       toast.error('更新失败');
+    }
+  };
+
+  const handleUpdateSql = async () => {
+    if (!dataset) return;
+
+    try {
+      await datasetsApi.update(dataset.id, { querySql: editSql });
+      toast.success('SQL 已更新');
+      setEditingSql(false);
+      loadDataset();
+    } catch (error) {
+      toast.error('SQL 更新失败');
     }
   };
 
@@ -204,27 +220,59 @@ export default function DatasetDetailPage() {
               <CardTitle>SQL 查询</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea value={dataset.querySql} readOnly rows={8} className="font-mono text-xs" />
-              <div className="flex gap-2 mt-4">
-                <Button size="sm" onClick={handleToggleQueryResult} disabled={queryLoading}>
-                  {queryLoading ? (
-                    <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
-                  ) : queryResult ? (
-                    <RiEyeOffLine className="h-4 w-4 mr-2" />
-                  ) : (
-                    <RiPlayLine className="h-4 w-4 mr-2" />
-                  )}
-                  {queryLoading ? '执行中...' : queryResult ? '隐藏结果' : '执行查询'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
-                >
-                  <RiAddLine className="h-4 w-4 mr-2" />
-                  创建图表
-                </Button>
-              </div>
+              {editingSql ? (
+                <>
+                  <Textarea
+                    value={editSql}
+                    onChange={(e) => setEditSql(e.target.value)}
+                    rows={10}
+                    className="font-mono text-xs"
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <Button size="sm" onClick={handleUpdateSql}>
+                      <RiSaveLine className="h-4 w-4 mr-2" />
+                      保存 SQL
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setEditingSql(false)}>
+                      <RiCloseLine className="h-4 w-4 mr-2" />
+                      取消
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Textarea
+                    value={dataset.querySql}
+                    readOnly
+                    rows={8}
+                    className="font-mono text-xs"
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <Button size="sm" onClick={() => setEditingSql(true)}>
+                      <RiEditLine className="h-4 w-4 mr-2" />
+                      编辑 SQL
+                    </Button>
+                    <Button size="sm" onClick={handleToggleQueryResult} disabled={queryLoading}>
+                      {queryLoading ? (
+                        <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
+                      ) : queryResult ? (
+                        <RiEyeOffLine className="h-4 w-4 mr-2" />
+                      ) : (
+                        <RiPlayLine className="h-4 w-4 mr-2" />
+                      )}
+                      {queryLoading ? '执行中...' : queryResult ? '隐藏结果' : '执行查询'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
+                    >
+                      <RiAddLine className="h-4 w-4 mr-2" />
+                      创建图表
+                    </Button>
+                  </div>
+                </>
+              )}
               {queryResult && (
                 <div className="mt-4 space-y-2">
                   <div className="text-sm text-muted-foreground">
