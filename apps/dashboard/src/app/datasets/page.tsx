@@ -5,33 +5,18 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { datasetsApi } from '@/lib/api/datasets';
 import type { Dataset } from '@/types/chart';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  RiAddLine,
-  RiDatabaseLine,
-  RiMore2Line,
-  RiPencilLine,
-  RiDeleteBinLine,
-  RiExternalLinkLine,
-} from '@remixicon/react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Skeleton } from '@/components/ui/skeleton';
+import { RiAddLine, RiDatabaseLine } from '@remixicon/react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import {
+  DataTableRowActions,
+  type RowAction,
+} from '@/components/data-table/data-table-row-actions';
+import { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
 
 export default function DatasetsPage() {
   const router = useRouter();
@@ -80,6 +65,105 @@ export default function DatasetsPage() {
     router.push('/query');
   };
 
+  const handleDeleteSelected = async (rows: Dataset[]) => {
+    for (const row of rows) {
+      try {
+        await datasetsApi.delete(row.id);
+      } catch (err) {
+        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+      }
+    }
+    setDatasets((prev) => prev.filter((d) => !rows.some((r) => r.id === d.id)));
+    toast.success(`成功删除 ${rows.length} 个数据集`);
+  };
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  };
+
+  const columns: ColumnDef<Dataset>[] = [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+      cell: ({ row }) => {
+        const dataset = row.original;
+        return (
+          <Button
+            variant="link"
+            className="h-auto p-0 text-foreground font-medium"
+            onClick={() => router.push(`/datasets/${dataset.id}`)}
+          >
+            {row.getValue('name')}
+          </Button>
+        );
+      },
+      size: 200,
+    },
+    {
+      accessorKey: 'description',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="描述" />,
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">{row.getValue('description') || '-'}</span>
+      ),
+      size: 250,
+    },
+    {
+      accessorKey: 'datasourceId',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="数据源ID" />,
+      cell: ({ row }) => <span className="text-xs">{row.getValue('datasourceId')}</span>,
+      size: 100,
+    },
+    {
+      accessorKey: 'schemaJson',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="字段数" />,
+      cell: ({ row }) => {
+        const schema = row.getValue('schemaJson') as Array<{ name: string; type: string }>;
+        return <Badge variant="secondary">{schema.length} 字段</Badge>;
+      },
+      size: 100,
+    },
+    {
+      accessorKey: 'createdAt',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="创建时间" />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs">
+          {formatDate(row.getValue('createdAt'))}
+        </span>
+      ),
+      size: 160,
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">操作</span>,
+      cell: ({ row }) => {
+        const dataset = row.original;
+        const actions: RowAction[] = [
+          {
+            label: '查看详情',
+            icon: <RiDatabaseLine className="h-4 w-4" />,
+            onClick: () => router.push(`/datasets/${dataset.id}`),
+          },
+          {
+            label: '创建图表',
+            icon: <RiAddLine className="h-4 w-4" />,
+            onClick: () => router.push(`/charts/new?datasetId=${dataset.id}`),
+          },
+          {
+            label: '删除',
+            icon: <RiDatabaseLine className="h-4 w-4" />,
+            onClick: () => handleDelete(dataset),
+            variant: 'destructive',
+          },
+        ];
+
+        return <DataTableRowActions actions={actions} />;
+      },
+      size: 60,
+    },
+  ];
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -93,20 +177,7 @@ export default function DatasetsPage() {
             </Button>
           }
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <div className="text-center py-12 text-muted-foreground">加载中...</div>
       </div>
     );
   }
@@ -154,80 +225,25 @@ export default function DatasetsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {datasets.map((dataset) => (
-          <Card key={dataset.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-lg truncate flex-1">{dataset.name}</CardTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      <RiMore2Line className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => router.push(`/datasets/${dataset.id}`)}>
-                      <RiExternalLinkLine className="h-4 w-4 mr-2" />
-                      查看详情
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => router.push(`/datasets/${dataset.id}/edit`)}>
-                      <RiPencilLine className="h-4 w-4 mr-2" />
-                      编辑
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(dataset)}
-                      className="text-red-600"
-                    >
-                      <RiDeleteBinLine className="h-4 w-4 mr-2" />
-                      删除
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <CardDescription>{dataset.description || '无描述'}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">查询行数:</span>
-                  <span className="font-medium">N/A</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">创建时间:</span>
-                  <span className="font-medium">
-                    {new Date(dataset.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
-              >
-                <RiAddLine className="h-4 w-4 mr-2" />
-                创建图表
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => router.push(`/datasets/${dataset.id}`)}
-              >
-                查看
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        data={datasets}
+        searchKey="name"
+        searchPlaceholder="搜索数据集..."
+        enableRowSelection
+        onDeleteSelected={handleDeleteSelected}
+        deleteConfirmTitle="删除数据集"
+        deleteConfirmDescription={(count) =>
+          `确定要删除选中的 ${count} 个数据集吗？此操作不可撤销。`
+        }
+        emptyMessage="暂无数据集，点击右上角添加"
+      />
 
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title="删除数据集"
-        description={`确定要删除 "${datasetToDelete?.name}" 吗？此操作无法撤销。`}
+        description={`确定要删除 \"${datasetToDelete?.name}\" 吗？此操作无法撤销。`}
         onConfirm={confirmDelete}
         confirmText="删除"
         cancelText="取消"

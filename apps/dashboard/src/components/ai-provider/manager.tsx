@@ -407,24 +407,15 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       id="type"
                     >
                       {form.type ? (
-                        <div className="flex flex-col items-start gap-0.5 text-left w-full flex-1">
-                          <span className="text-sm font-medium leading-tight">
-                            {getProviderLabel(form.type)}
-                          </span>
-                          {AI_PROVIDER_TYPES.find((p) => p.value === form.type)?.description && (
-                            <span className="text-xs text-muted-foreground leading-tight">
-                              {AI_PROVIDER_TYPES.find((p) => p.value === form.type)?.description}
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-sm font-medium">{getProviderLabel(form.type)}</span>
                       ) : (
                         <span className="text-muted-foreground">选择 Provider 类型</span>
                       )}
                       <RiArrowDownSLine className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command className="h-[350px]">
                       <CommandInput placeholder="搜索 Provider..." />
                       <CommandList>
                         <CommandEmpty>未找到匹配的 Provider</CommandEmpty>
@@ -432,23 +423,14 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                           {AI_PROVIDER_TYPES.map((providerType) => (
                             <CommandItem
                               key={providerType.value}
-                              value={`${providerType.value} ${providerType.label} ${providerType.description || ''}`}
+                              value={`${providerType.value} ${providerType.label}`}
                               onSelect={() => {
                                 onChange('type')(providerType.value);
                                 setProviderSelectOpen(false);
                               }}
-                              className="py-2.5"
+                              className="py-2"
                             >
-                              <div className="flex flex-col items-start gap-0.5 w-full flex-1">
-                                <span className="text-sm font-medium leading-tight">
-                                  {providerType.label}
-                                </span>
-                                {providerType.description && (
-                                  <span className="text-xs text-muted-foreground leading-tight">
-                                    {providerType.description}
-                                  </span>
-                                )}
-                              </div>
+                              <span className="text-sm font-medium">{providerType.label}</span>
                               {form.type === providerType.value && (
                                 <RiCheckLine className="ml-auto h-4 w-4 shrink-0" />
                               )}

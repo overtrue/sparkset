@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChartBuilder, type ChartSaveData } from './builder';
+import { ChartBuilder, type ChartSaveData, type ChartBuilderHandle } from './builder';
 import { chartsApi } from '@/lib/api/charts';
 import { toast } from 'sonner';
 import type { Dataset, ChartSpec } from '@/types/chart';
@@ -15,7 +15,10 @@ interface ChartBuilderClientProps {
   initialSpec?: ChartSpec;
   initialTitle?: string;
   initialDescription?: string;
-  initialChartType?: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  // External save trigger
+  onReady?: (handle: { submitForm: () => void; isSubmitting: boolean }) => void;
+  // Show action buttons in preview panel
+  showActions?: boolean;
 }
 
 export function ChartBuilderClient({
@@ -25,10 +28,12 @@ export function ChartBuilderClient({
   initialSpec,
   initialTitle,
   initialDescription,
-  initialChartType,
+  onReady,
+  showActions = false,
 }: ChartBuilderClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const builderRef = useRef<ChartBuilderHandle>(null);
 
   const handleSave = async (data: ChartSaveData) => {
     try {
@@ -65,45 +70,31 @@ export function ChartBuilderClient({
     }
   };
 
-  const handleCancel = () => {
-    router.push('/charts');
-  };
-
-  // Pre-fill form data for edit mode
-  const getInitialData = () => {
-    if (!chartId) return undefined;
-
-    return {
-      datasetId: initialDatasetId,
-      title: initialTitle || '',
-      description: initialDescription || '',
-      chartType: initialChartType || 'line',
-      xField: initialSpec?.encoding.x?.field || '',
-      yFields:
-        initialSpec?.encoding.y?.map((y) => ({
-          field: y.field,
-          agg: y.agg,
-          label: y.label,
-          color: y.color,
-        })) || [],
-      showLegend: initialSpec?.style?.showLegend ?? true,
-      showTooltip: initialSpec?.style?.showTooltip ?? true,
-      showGrid: initialSpec?.style?.showGrid ?? false,
-      stacked: initialSpec?.style?.stacked ?? false,
-      smooth: initialSpec?.style?.smooth ?? false,
-      aspectRatio: initialSpec?.style?.aspectRatio,
-    };
-  };
+  // Expose submitForm to parent - only once
+  const onReadyCalled = useRef(false);
+  useEffect(() => {
+    if (onReady && builderRef.current && !onReadyCalled.current) {
+      onReadyCalled.current = true;
+      onReady({
+        submitForm: () => builderRef.current?.submitForm(),
+        get isSubmitting() {
+          return builderRef.current?.isSubmitting || false;
+        },
+      });
+    }
+  }, [onReady]);
 
   return (
     <ChartBuilder
+      ref={builderRef}
       datasets={datasets}
       onSave={handleSave}
-      onCancel={handleCancel}
       initialDatasetId={initialDatasetId}
       initialSpec={initialSpec}
       initialTitle={initialTitle}
       initialDescription={initialDescription}
+      autoPreview={!!chartId} // Auto-preview in edit mode
+      showActions={showActions} // Show actions in preview panel for new chart
     />
   );
 }

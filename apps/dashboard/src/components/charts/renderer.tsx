@@ -10,6 +10,7 @@ import {
   Bar,
   Area,
   Pie,
+  Cell as RechartsCell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -89,31 +90,77 @@ export function ChartRenderer({
 
   // Render pie chart
   if (chartType === 'pie') {
-    const valueKey = Object.keys(config)[0] || 'value';
-    const nameKey = Object.keys(chartData[0] || {}).find((k) => k !== valueKey) || 'name';
+    // Extract pie-specific props from rechartsProps
+    const { pieConfig, data, margin, showLegend, ...restProps } = rechartsProps as any;
+    const pieProps = pieConfig || {};
+
+    // Determine data and config keys
+    const chartDataArray = (data || chartData) as Record<string, unknown>[];
+    const configKeys = Object.keys(config);
+
+    // Get the value key from config (first key)
+    const valueKey = configKeys[0] || 'value';
+
+    // Try to find the name key from data (any field that's not the value key)
+    const dataKeys = chartDataArray.length > 0 ? Object.keys(chartDataArray[0]) : [];
+    const nameKey = pieProps.nameKey || dataKeys.find((k) => k !== valueKey) || 'name';
+
+    // Build a custom legend payload for pie chart
+    // Each entry in data becomes a legend item
+    const legendPayload = chartDataArray.map((entry, index) => {
+      const entryName = entry[nameKey];
+      // Find config key that matches the entry name or use index
+      const configKey =
+        configKeys.find((k) => config[k].label === entryName) ||
+        configKeys[index % configKeys.length];
+      const color = config[configKey]?.color || '#8884d8';
+
+      return {
+        value: entryName,
+        color: color,
+        type: 'square' as const,
+      };
+    });
+
+    // Build cells with proper colors matching config
+    const cells = chartDataArray.map((entry, index) => {
+      const entryName = entry[nameKey];
+      // Find config key that matches the entry name or use index
+      const configKey =
+        configKeys.find((k) => config[k].label === entryName) ||
+        configKeys[index % configKeys.length];
+      const color = config[configKey]?.color || '#8884d8';
+      return <RechartsCell key={`cell-${index}`} fill={color} />;
+    });
 
     return (
       <ChartContainer config={config} className={className}>
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart {...rechartsProps}>
+          <PieChart data={chartDataArray} margin={margin} {...restProps}>
             <Tooltip content={<ChartTooltipContent hideLabel />} />
-            <Legend content={<ChartLegendContent />} />
+            <Legend
+              content={({ payload }) => {
+                if (!payload) return null;
+                // Merge our custom payload with the one from Recharts
+                const mergedPayload = legendPayload.map((item, index) => ({
+                  ...payload[index],
+                  ...item,
+                }));
+                return <ChartLegendContent payload={mergedPayload} />;
+              }}
+            />
             <Pie
-              data={chartData}
-              dataKey={valueKey}
-              nameKey={nameKey}
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
+              data={chartDataArray}
+              dataKey={pieProps.dataKey || valueKey}
+              nameKey={pieProps.nameKey || nameKey}
+              innerRadius={pieProps.innerRadius ?? 60}
+              outerRadius={pieProps.outerRadius ?? 80}
+              paddingAngle={pieProps.paddingAngle ?? 5}
               cx="50%"
               cy="50%"
-              {...rechartsProps}
+              isAnimationActive={pieProps.isAnimationActive ?? true}
             >
-              {chartData.map((entry, index) => {
-                const key = Object.keys(config)[index % Object.keys(config).length];
-                const color = config[key]?.color || '#8884d8';
-                return <Cell key={`cell-${index}`} fill={color} />;
-              })}
+              {cells}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
@@ -191,9 +238,4 @@ export function ChartRenderer({
       </ResponsiveContainer>
     </ChartContainer>
   );
-}
-
-// Helper component for pie chart cells
-function Cell({ fill, ...props }: { fill: string } & React.SVGProps<SVGRectElement>) {
-  return <rect {...props} fill={fill} />;
 }

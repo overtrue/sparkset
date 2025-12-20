@@ -1,21 +1,119 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { ChartRenderer } from '@/components/charts/renderer';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RiArrowLeftLine, RiEditLine, RiDeleteBin2Line, RiRefreshLine } from '@remixicon/react';
-import Link from 'next/link';
 import { chartsApi } from '@/lib/api/charts';
-import { ChartRenderer } from '@/components/charts/renderer';
-import { ConfirmDialog } from '@/components/confirm-dialog';
+import { datasetsApi } from '@/lib/api/datasets';
+import type { Dataset, ChartSpec } from '@/types/chart';
+import type { ChartConfig } from '@/components/ui/chart';
+import { RiArrowLeftLine, RiDeleteBin2Line, RiEditLine, RiRefreshLine } from '@remixicon/react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface Props {
   params: Promise<{
     id: string;
   }>;
+}
+
+// Helper: Transform data based on spec (same as ChartBuilder)
+function transformData(
+  rows: Record<string, unknown>[],
+  spec: ChartSpec,
+  chartType: string,
+): unknown[] {
+  if (chartType === 'table') {
+    return rows;
+  }
+
+  if (chartType === 'pie' && spec.encoding?.x && spec.encoding?.y) {
+    const xField = spec.encoding.x.field;
+    const yFields = spec.encoding.y;
+
+    const grouped: Record<string, Record<string, number>> = {};
+
+    rows.forEach((row) => {
+      const xValue = String(row[xField]);
+      if (!grouped[xValue]) {
+        grouped[xValue] = {};
+      }
+
+      yFields.forEach((yField) => {
+        const value = Number(row[yField.field]) || 0;
+        if (!grouped[xValue][yField.field]) {
+          grouped[xValue][yField.field] = 0;
+        }
+
+        switch (yField.agg) {
+          case 'sum':
+            grouped[xValue][yField.field] += value;
+            break;
+          case 'count':
+            grouped[xValue][yField.field] += 1;
+            break;
+          case 'min':
+            if (!grouped[xValue][yField.field] || value < grouped[xValue][yField.field]) {
+              grouped[xValue][yField.field] = value;
+            }
+            break;
+          case 'max':
+            if (value > grouped[xValue][yField.field]) {
+              grouped[xValue][yField.field] = value;
+            }
+            break;
+          case 'avg':
+            if (!grouped[xValue][`${yField.field}_sum`]) {
+              grouped[xValue][`${yField.field}_sum`] = 0;
+              grouped[xValue][`${yField.field}_count`] = 0;
+            }
+            grouped[xValue][`${yField.field}_sum`] += value;
+            grouped[xValue][`${yField.field}_count`] += 1;
+            break;
+        }
+      });
+    });
+
+    return Object.entries(grouped).map(([xValue, values]) => {
+      const result: Record<string, unknown> = { [xField]: xValue };
+
+      if (spec.encoding?.y) {
+        spec.encoding.y.forEach((yField) => {
+          if (yField.agg === 'avg') {
+            const sum = values[`${yField.field}_sum`] || 0;
+            const count = values[`${yField.field}_count`] || 1;
+            result[yField.field] = sum / count;
+          } else {
+            result[yField.field] = values[yField.field];
+          }
+        });
+      }
+
+      return result;
+    });
+  }
+
+  return rows;
+}
+
+// Helper: Build chart config (same as ChartBuilder)
+function buildConfig(spec: ChartSpec): ChartConfig {
+  const config: ChartConfig = {};
+
+  if (spec.encoding?.y) {
+    spec.encoding.y.forEach((yField) => {
+      config[yField.field] = {
+        label: yField.label || yField.field,
+        color: yField.color || '#3b82f6',
+      };
+    });
+  }
+
+  return config;
 }
 
 export default function ChartDetailPage({ params }: Props) {
@@ -25,19 +123,41 @@ export default function ChartDetailPage({ params }: Props) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
-  const [renderData, setRenderData] = useState<any>(null);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [previewData, setPreviewData] = useState<unknown[]>([]);
+  const [previewConfig, setPreviewConfig] = useState<ChartConfig>({});
   const [error, setError] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
-    Promise.all([chartsApi.get(id), chartsApi.render(id)])
-      .then(([chart, render]) => {
-        setChartData(chart);
-        setRenderData(render);
-      })
-      .catch((err) => {
+    const loadData = async () => {
+      try {
+        const [chartResult, datasetsResult] = await Promise.all([
+          chartsApi.get(id),
+          datasetsApi.list(),
+        ]);
+        setChartData(chartResult);
+        setDatasets(datasetsResult.items);
+
+        // Generate preview using same logic as ChartBuilder
+        if (chartResult.specJson && chartResult.datasetId) {
+          const previewResult = await datasetsApi.preview(chartResult.datasetId);
+          const transformedData = transformData(
+            previewResult.rows,
+            chartResult.specJson,
+            chartResult.chartType,
+          );
+          const config = buildConfig(chartResult.specJson);
+
+          setPreviewData(transformedData);
+          setPreviewConfig(config);
+        }
+      } catch (err) {
         setError('图表不存在或无法访问');
-      });
+      }
+    };
+
+    loadData();
   }, [id]);
 
   const handleDelete = async () => {
@@ -76,7 +196,7 @@ export default function ChartDetailPage({ params }: Props) {
     );
   }
 
-  if (!chartData || !renderData) {
+  if (!chartData || previewData.length === 0) {
     return (
       <div className="space-y-6">
         <PageHeader title="加载中..." description="" />
@@ -88,7 +208,6 @@ export default function ChartDetailPage({ params }: Props) {
     <div className="space-y-6">
       <PageHeader
         title={chartData.title}
-        description={chartData.description || '图表详情'}
         action={
           <div className="flex gap-2">
             <Button variant="outline" asChild>
@@ -103,6 +222,12 @@ export default function ChartDetailPage({ params }: Props) {
                 编辑
               </Link>
             </Button>
+            <Button variant="outline" asChild>
+              <Link href="/charts/new" className="flex items-center">
+                <RiRefreshLine className="h-4 w-4 mr-2" />
+                基于此创建
+              </Link>
+            </Button>
             <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
               <RiDeleteBin2Line className="h-4 w-4 mr-2" />
               删除
@@ -111,84 +236,49 @@ export default function ChartDetailPage({ params }: Props) {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 图表展示 */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>图表预览</CardTitle>
-              <CardDescription>
-                {chartData.chartType.toUpperCase()} | 数据集：{chartData.dataset?.name || 'N/A'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartRenderer
-                chartType={renderData.chartType}
-                data={renderData.data}
-                config={renderData.config}
-                rechartsProps={renderData.rechartsProps}
-                className="aspect-video"
-              />
-              {renderData.warnings && renderData.warnings.length > 0 && (
-                <div className="mt-4 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
-                  <strong>警告：</strong>
-                  {renderData.warnings.join(', ')}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 配置信息 */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>配置信息</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">图表类型：</span>
-                <span>{chartData.chartType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">数据集ID：</span>
-                <span>{chartData.datasetId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">创建时间：</span>
-                <span>{new Date(chartData.createdAt).toLocaleDateString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>操作</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full" variant="outline" asChild>
-                <Link href={`/charts/${id}/edit`}>
-                  <RiEditLine className="h-4 w-4 mr-2" />
-                  编辑配置
-                </Link>
-              </Button>
-              <Button className="w-full" variant="outline" asChild>
-                <Link href="/charts/new" className="flex items-center">
-                  <RiRefreshLine className="h-4 w-4 mr-2" />
-                  基于此创建
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      {/* 配置信息 - 一行显示 */}
+      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+        <span>
+          图表类型：<span className="text-foreground font-medium">{chartData.chartType}</span>
+        </span>
+        <span>
+          数据集：
+          <span className="text-foreground font-medium">
+            {chartData.dataset?.name || chartData.datasetId}
+          </span>
+        </span>
+        <span>
+          创建时间：
+          <span className="text-foreground font-medium">
+            {new Date(chartData.createdAt).toLocaleDateString()}
+          </span>
+        </span>
       </div>
+
+      {/* 图表展示 - 使用 ChartRenderer，数据处理逻辑与编辑页一致 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>图表预览</CardTitle>
+          <CardDescription>
+            {chartData.chartType.toUpperCase()} | 数据集：{chartData.dataset?.name || 'N/A'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartRenderer
+            chartType={chartData.chartType}
+            data={previewData}
+            config={previewConfig}
+            className="aspect-video"
+          />
+        </CardContent>
+      </Card>
 
       {/* 删除确认对话框 */}
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="删除图表"
-        description={`确定要删除图表 "${chartData.title}" 吗？此操作不可撤销。`}
+        description={`确定要删除图表 \"${chartData.title}\" 吗？此操作不可撤销。`}
         confirmText="删除"
         onConfirm={handleDelete}
         loading={isDeleting}

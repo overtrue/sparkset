@@ -1,11 +1,9 @@
-import { PageHeader } from '@/components/page-header';
-import { ChartBuilderClient } from '@/components/charts/builder-client';
-import { RiArrowLeftLine } from '@remixicon/react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { ChartFormWrapper } from '@/components/charts/chart-form-wrapper';
 import { datasetsApi } from '@/lib/api/datasets';
 import { chartsApi } from '@/lib/api/charts';
 import { notFound, redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import type { Dataset, ChartSpec } from '@/types/chart';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +13,7 @@ interface Props {
   }>;
 }
 
-export default async function EditChartPage({ params }: Props) {
+async function EditChartContent({ params }: Props) {
   const { id } = await params;
   const chartId = Number(id);
 
@@ -44,29 +42,22 @@ export default async function EditChartPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="编辑图表"
-        description="修改图表配置"
-        action={
-          <Button variant="outline" asChild>
-            <Link href={`/charts/${chartId}`}>
-              <RiArrowLeftLine className="h-4 w-4 mr-2" />
-              返回详情
-            </Link>
-          </Button>
-        }
-      />
+    <ChartFormWrapper
+      mode="edit"
+      datasets={datasets}
+      chartId={chartId}
+      initialDatasetId={chart.datasetId}
+      initialSpec={chart.specJson}
+      initialTitle={chart.title}
+      initialDescription={chart.description || ''}
+    />
+  );
+}
 
-      <ChartBuilderClient
-        datasets={datasets}
-        initialDatasetId={chart.datasetId}
-        chartId={chartId}
-        initialSpec={chart.specJson}
-        initialTitle={chart.title}
-        initialDescription={chart.description || ''}
-        initialChartType={chart.chartType}
-      />
-    </div>
+export default function EditChartPage({ params }: Props) {
+  return (
+    <Suspense fallback={<div className="space-y-6">加载中...</div>}>
+      <EditChartContent params={params} />
+    </Suspense>
   );
 }

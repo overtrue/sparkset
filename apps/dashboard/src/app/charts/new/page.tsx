@@ -1,8 +1,4 @@
-import { PageHeader } from '@/components/page-header';
-import { ChartBuilderClient } from '@/components/charts/builder-client';
-import { RiArrowLeftLine } from '@remixicon/react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { ChartFormWrapper } from '@/components/charts/chart-form-wrapper';
 import { datasetsApi } from '@/lib/api/datasets';
 import { redirect } from 'next/navigation';
 
@@ -35,22 +31,5 @@ export default async function NewChartPage({ searchParams }: Props) {
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="创建图表"
-        description="基于数据集配置并创建可视化图表"
-        action={
-          <Button variant="outline" asChild>
-            <Link href="/charts">
-              <RiArrowLeftLine className="h-4 w-4 mr-2" />
-              返回列表
-            </Link>
-          </Button>
-        }
-      />
-
-      <ChartBuilderClient datasets={result.items} initialDatasetId={datasetId} />
-    </div>
-  );
+  return <ChartFormWrapper mode="create" datasets={result.items} initialDatasetId={datasetId} />;
 }

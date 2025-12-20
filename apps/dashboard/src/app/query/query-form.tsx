@@ -1,15 +1,14 @@
 'use client';
-import { RiRefreshLine } from '@remixicon/react';
-import { useState } from 'react';
 import { AiProviderSelector } from '@/components/ai-provider-selector';
 import { DatasourceSelector } from '@/components/datasource-selector';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { runQuery } from '@/lib/query';
+import { RiRefreshLine } from '@remixicon/react';
+import { useState } from 'react';
 
 interface Props {
   datasources: { id: number; name: string; isDefault?: boolean }[];
@@ -69,19 +68,19 @@ const QueryForm = ({
   };
 
   return (
-    <Card className="shadow-none border-border/50 overflow-hidden py-0">
+    <Card className="shadow-lg border-border/50 overflow-hidden rounded-xl p-0">
       <CardContent className="p-0">
-        <form onSubmit={handleSubmit} className="flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-0">
           {/* 主要输入区域 */}
-          <div className="p-4">
+          <div className="bg-background rounded-t-xl">
             <Textarea
               id="question"
-              rows={4}
+              rows={3}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="输入你的查询问题，例如：查询最近一周的订单数量..."
               disabled={loading}
-              className="resize-none text-base border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent min-h-[100px] placeholder:text-muted-foreground/60"
+              className="resize-none text-base border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent min-h-[80px] placeholder:text-muted-foreground/60"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
@@ -91,74 +90,64 @@ const QueryForm = ({
             />
           </div>
 
-          {/* 底部工具栏 - 次要选项 */}
-          <div className="border-t border-border/50 px-4 py-2 bg-muted/20">
-            <div className="flex items-center gap-3 flex-wrap">
-              <DatasourceSelector
-                datasources={datasources}
-                value={datasource}
-                onValueChange={(next) => {
-                  setDatasource(next);
-                  onDatasourceChange?.(next);
-                }}
+          {/* 底部工具栏 */}
+          <div className="border-t border-border/50 px-4 py-3 bg-muted/30 flex items-center gap-3 flex-wrap rounded-b-xl">
+            <DatasourceSelector
+              datasources={datasources}
+              value={datasource}
+              onValueChange={(next) => {
+                setDatasource(next);
+                onDatasourceChange?.(next);
+              }}
+              disabled={loading}
+            />
+
+            <AiProviderSelector
+              providers={aiProviders}
+              value={aiProvider}
+              onValueChange={setAiProvider}
+              disabled={loading}
+            />
+
+            {/* Limit 输入 */}
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="limit" className="text-xs text-muted-foreground whitespace-nowrap">
+                Limit
+              </Label>
+              <Input
+                id="limit"
+                type="number"
+                min={1}
+                max={1000}
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
                 disabled={loading}
+                className="h-7 w-14 text-xs border-border/50 bg-background hover:bg-muted/50 px-2"
               />
-
-              <AiProviderSelector
-                providers={aiProviders}
-                value={aiProvider}
-                onValueChange={setAiProvider}
-                disabled={loading}
-              />
-
-              {/* Limit 输入 */}
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="limit" className="text-xs text-muted-foreground whitespace-nowrap">
-                  Limit
-                </Label>
-                <Input
-                  id="limit"
-                  type="number"
-                  min={1}
-                  max={1000}
-                  value={limit}
-                  onChange={(e) => setLimit(Number(e.target.value))}
-                  disabled={loading}
-                  className="h-7 w-14 text-xs border-border/50 bg-background hover:bg-muted/50 px-2"
-                />
-              </div>
-
-              {/* 提交按钮 */}
-              <div className="flex-1 flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={loading || !question.trim() || !datasource}
-                  className="h-7 px-4 text-xs font-medium"
-                  size="sm"
-                >
-                  {loading ? (
-                    <>
-                      <RiRefreshLine className="mr-1.5 h-3 w-3 animate-spin" />
-                      查询中
-                    </>
-                  ) : (
-                    <>
-                      运行查询
-                      <span className="ml-1.5 text-[10px] opacity-60">⌘↵</span>
-                    </>
-                  )}
-                </Button>
-              </div>
             </div>
 
-            {/* 错误提示 */}
-            {error && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <Alert variant="destructive" className="py-2">
-                  <AlertDescription className="text-xs">{error}</AlertDescription>
-                </Alert>
-              </div>
-            )}
+            {/* 提交按钮 */}
+            <div className="flex-1 flex justify-end gap-2 items-center">
+              {error && <span className="text-xs text-destructive mr-auto">{error}</span>}
+              <Button
+                type="submit"
+                disabled={loading || !question.trim() || !datasource}
+                className="px-4 font-medium"
+                size="sm"
+              >
+                {loading ? (
+                  <>
+                    <RiRefreshLine className="mr-1.5 h-4 w-4 animate-spin" />
+                    查询中
+                  </>
+                ) : (
+                  <>
+                    运行查询
+                    <span className="ml-1.5 text-[10px] opacity-60">⌘↵</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>
