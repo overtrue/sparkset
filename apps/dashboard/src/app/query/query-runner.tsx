@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QueryResponse, runQuery } from '@/lib/query';
+import { RiChat3Line } from '@remixicon/react';
 import { useEffect, useState } from 'react';
 import QueryForm from './query-form';
 
@@ -108,7 +109,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
           {!result && !loading && !error && (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center">
-                <div className="text-6xl mb-4 opacity-20">💬</div>
+                <RiChat3Line className="h-24 w-24 mb-4 opacity-20 mx-auto" />
                 <p className="text-lg font-medium">开始查询</p>
                 <p className="text-sm mt-1">在下方输入问题，AI 将自动生成 SQL 并执行</p>
               </div>
