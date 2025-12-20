@@ -60,8 +60,12 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
     });
   };
 
+  const handleSubmit = (body: Parameters<typeof runQuery>[0]): void => {
+    void handleRun(body);
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
       {/* Page Header */}
       <div className="shrink-0 bg-background z-10">
         <div className="mx-auto flex items-center justify-between">
@@ -76,64 +80,63 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden flex flex-col mx-auto w-full gap-4 py-4">
-        {/* Results Area - Takes up main space */}
-        <div className="flex-1 overflow-auto min-h-0" id="query-results-container">
-          {error && (
-            <div className="mb-4">
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </div>
-          )}
+      <div
+        className="flex-1 flex flex-col mx-auto overflow-y-auto w-full gap-4 py-4"
+        id="query-results-container"
+      >
+        {error && (
+          <div className="mb-4">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
-          {loading && !result && (
-            <Card className="shadow-none mb-4">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-32 w-full" />
-                  <Skeleton className="h-32 w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {result && (
-            <div id="query-results" className="space-y-4 pb-24">
-              <QueryResult result={result} datasourceId={activeDatasource} question={question} />
-            </div>
-          )}
-
-          {/* Empty State - Show when no result and not loading */}
-          {!result && !loading && !error && (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <RiChat3Line className="h-24 w-24 mb-4 opacity-20 mx-auto" />
-                <p className="text-lg font-medium">开始查询</p>
-                <p className="text-sm mt-1">在下方输入问题，AI 将自动生成 SQL 并执行</p>
+        {loading && !result && (
+          <Card className="shadow-none mb-4">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
               </div>
-            </div>
-          )}
-        </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Fixed Query Form at Bottom */}
-        <div className="shrink-0 pb-4">
-          <QueryForm
-            datasources={datasources}
-            aiProviders={aiProviders}
-            defaultDs={defaultDatasourceId}
-            defaultAiProvider={
-              aiProviders.find((p) => p.isDefault)?.id ?? aiProviders[0]?.id ?? undefined
-            }
-            onResult={(res) => setResult(res)}
-            onSubmit={handleRun}
-            loading={loading}
-            onDatasourceChange={(id) => setActiveDatasource(id)}
-            externalQuestion={question}
-            onQuestionChange={setQuestion}
-          />
-        </div>
+        {result && (
+          <div id="query-results" className="space-y-4">
+            <QueryResult result={result} datasourceId={activeDatasource} question={question} />
+          </div>
+        )}
+
+        {/* Empty State - Show when no result and not loading */}
+        {!result && !loading && !error && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className="text-center">
+              <RiChat3Line className="h-24 w-24 mb-4 opacity-20 mx-auto" />
+              <p className="text-lg font-medium">开始查询</p>
+              <p className="text-sm mt-1">在下方输入问题，AI 将自动生成 SQL 并执行</p>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Fixed Query Form at Bottom */}
+      <div className="shrink-0">
+        <QueryForm
+          datasources={datasources}
+          aiProviders={aiProviders}
+          defaultDs={defaultDatasourceId}
+          defaultAiProvider={
+            aiProviders.find((p) => p.isDefault)?.id ?? aiProviders[0]?.id ?? undefined
+          }
+          onResult={(res) => setResult(res)}
+          onSubmit={handleSubmit}
+          loading={loading}
+          onDatasourceChange={(id) => setActiveDatasource(id)}
+          externalQuestion={question}
+          onQuestionChange={setQuestion}
+        />
       </div>
     </div>
   );

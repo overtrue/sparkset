@@ -26,7 +26,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
   return (
     <>
       <Card className="shadow-none py-0 overflow-hidden w-full max-w-full border-border/50 gap-0">
-        <CardHeader className="py-3 px-4 bg-muted/20 border-b border-border/50">
+        <CardHeader className="py-3 px-4 bg-muted/20 border-b border-border/50 gap-0 pb-3!">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center gap-2 shrink-0">
