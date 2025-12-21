@@ -108,7 +108,7 @@ function buildConfig(spec: ChartSpec): ChartConfig {
     spec.encoding.y.forEach((yField) => {
       config[yField.field] = {
         label: yField.label || yField.field,
-        color: yField.color || '#3b82f6',
+        color: yField.color || 'var(--chart-1)',
       };
     });
   }

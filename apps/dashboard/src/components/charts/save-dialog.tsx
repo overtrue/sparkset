@@ -258,7 +258,7 @@ function autoGenerateSpec(rows: any[]) {
             type: 'quantitative' as const,
             agg: 'sum' as const,
             label: quantitativeFields[0].name,
-            color: '#3b82f6',
+            color: 'var(--chart-1)',
           },
         ],
       },

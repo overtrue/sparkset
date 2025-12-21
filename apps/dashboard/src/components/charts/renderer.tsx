@@ -10,7 +10,6 @@ import {
   Bar,
   Area,
   Pie,
-  Cell as RechartsCell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,7 +20,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart';
 import {
@@ -104,51 +102,54 @@ export function ChartRenderer({
     const dataKeys = chartDataArray.length > 0 ? Object.keys(chartDataArray[0]) : [];
     const nameKey = pieProps.nameKey || dataKeys.find((k) => k !== valueKey) || 'name';
 
-    // Build a custom legend payload for pie chart
-    // Each entry in data becomes a legend item
-    const legendPayload = chartDataArray.map((entry, index) => {
+    // Enrich data with fill colors from config (following shadcn/ui pattern)
+    const enrichedData = chartDataArray.map((entry, index) => {
       const entryName = entry[nameKey];
-      // Find config key that matches the entry name or use index
-      const configKey =
-        configKeys.find((k) => config[k].label === entryName) ||
-        configKeys[index % configKeys.length];
-      const color = config[configKey]?.color || '#8884d8';
+      const configKey = configKeys.find((k) => config[k].label === entryName);
 
+      // Get color from config.color, fallback to CSS variables
+      let fillColor: string;
+      if (configKey && config[configKey].color) {
+        fillColor = config[configKey].color;
+      } else {
+        // Fallback to default CSS variables
+        fillColor = `var(--chart-${(index % 5) + 1})`;
+      }
+
+      // Add fill property to data entry (following official shadcn/ui pattern)
       return {
-        value: entryName,
-        color: color,
-        type: 'square' as const,
+        ...entry,
+        fill: fillColor,
       };
     });
 
-    // Build cells with proper colors matching config
-    const cells = chartDataArray.map((entry, index) => {
-      const entryName = entry[nameKey];
-      // Find config key that matches the entry name or use index
-      const configKey =
-        configKeys.find((k) => config[k].label === entryName) ||
-        configKeys[index % configKeys.length];
-      const color = config[configKey]?.color || '#8884d8';
-      return <RechartsCell key={`cell-${index}`} fill={color} />;
-    });
+    // Build legend payload from enriched data
+    const legendPayload = enrichedData.map((entry) => ({
+      value: entry[nameKey],
+      color: entry.fill,
+    }));
 
     return (
       <ChartContainer config={config} className={className}>
-        <PieChart data={chartDataArray} margin={margin} {...restProps}>
+        <PieChart data={enrichedData} margin={margin} {...restProps}>
           <Tooltip content={<ChartTooltipContent hideLabel />} />
           <Legend
-            content={({ payload }) => {
-              if (!payload) return null;
-              // Merge our custom payload with the one from Recharts
-              const mergedPayload = legendPayload.map((item, index) => ({
-                ...payload[index],
-                ...item,
-              }));
-              return <ChartLegendContent payload={mergedPayload} />;
-            }}
+            content={() => (
+              <div className="flex items-center justify-center gap-4 pt-3">
+                {legendPayload.map((item, index) => (
+                  <div key={index} className="flex items-center gap-1.5">
+                    <div
+                      className="h-2 w-2 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-muted-foreground">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           />
           <Pie
-            data={chartDataArray}
+            data={enrichedData}
             dataKey={pieProps.dataKey || valueKey}
             nameKey={pieProps.nameKey || nameKey}
             innerRadius={pieProps.innerRadius ?? 60}
@@ -157,9 +158,7 @@ export function ChartRenderer({
             cx="50%"
             cy="50%"
             isAnimationActive={pieProps.isAnimationActive ?? true}
-          >
-            {cells}
-          </Pie>
+          />
         </PieChart>
       </ChartContainer>
     );

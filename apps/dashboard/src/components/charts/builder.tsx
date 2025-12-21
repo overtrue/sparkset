@@ -111,7 +111,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
         chartType: initialSpec?.chartType || 'line',
         xField: initialSpec?.encoding?.x?.field || '',
         yFields: initialSpec?.encoding?.y || [
-          { field: '', agg: 'sum', label: '', color: '#3b82f6' },
+          { field: '', agg: 'sum', label: '', color: 'var(--chart-1)' },
         ],
         showLegend: initialSpec?.style?.showLegend ?? true,
         showTooltip: initialSpec?.style?.showTooltip ?? true,
@@ -157,7 +157,13 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     // Add Y field
     const addYField = () => {
       const current = watch('yFields');
-      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+      const colors = [
+        'var(--chart-1)',
+        'var(--chart-2)',
+        'var(--chart-3)',
+        'var(--chart-4)',
+        'var(--chart-5)',
+      ];
       const nextColor = colors[current.length % colors.length];
       setValue('yFields', [...current, { field: '', agg: 'sum', label: '', color: nextColor }]);
     };
@@ -433,7 +439,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                                 />
                                 <Input
                                   type="color"
-                                  value={yField.color || '#3b82f6'}
+                                  value={yField.color || 'var(--chart-1)'}
                                   onChange={(e) => {
                                     const updated = [...field.value];
                                     updated[index] = { ...updated[index], color: e.target.value };
@@ -701,7 +707,7 @@ function buildConfig(formData: FormData): ChartConfig {
   formData.yFields.forEach((yField) => {
     config[yField.field] = {
       label: yField.label || yField.field,
-      color: yField.color || '#3b82f6',
+      color: yField.color || 'var(--chart-1)',
     };
   });
 
