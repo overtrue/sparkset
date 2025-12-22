@@ -285,3 +285,21 @@
     @apply opacity-60 md:opacity-100;
   }
 }
+
+/* React Grid Layout - 适配主题的 resize handle 样式 */
+/* 默认所有 handle 的样式 */
+.react-grid-item > .react-resizable-handle::after {
+  /* 使用 muted-foreground 颜色，60% 透明度 */
+  border-right-color: color-mix(in oklch, var(--muted-foreground) 60%, transparent) !important;
+  border-bottom-color: color-mix(in oklch, var(--muted-foreground) 60%, transparent) !important;
+}
+
+/* 除了右下角（se），其他 handle 隐藏图表图标 */
+.react-grid-item > .react-resizable-handle:not(.react-resizable-handle-se)::after {
+  content: none !important;
+}
+
+/* 底部 handle 不贴边，留出一些间距 */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  bottom: 5px !important;
+}

@@ -200,6 +200,15 @@ When multiple valid approaches exist, choose based on:
 - Use project's formatter/linter settings
 - Don't introduce new tools without strong justification
 - **Use installed agents more** - Leverage various specialized agents to improve efficiency and quality
+- **UI Debugging & Verification**: When encountering UI problems, bugs, or layout issues, prioritize using Chrome DevTools MCP to verify and debug
+  - Navigate to the problematic page using MCP tools
+  - Take snapshots to inspect the DOM structure and accessibility tree
+  - Use screenshot capabilities to verify visual appearance
+  - Test interactions (clicks, form fills, etc.) through MCP tools
+  - Check console messages and network requests for debugging
+  - Verify responsive behavior by resizing the page
+  - This approach allows for systematic verification before making code changes
+  - Benefits: Faster iteration cycle, consistent verification process, ability to capture and document issues with screenshots, automated interaction testing
 
 ## Quality Gates
 

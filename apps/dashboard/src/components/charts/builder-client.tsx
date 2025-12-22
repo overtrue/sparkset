@@ -16,7 +16,11 @@ interface ChartBuilderClientProps {
   initialTitle?: string;
   initialDescription?: string;
   // External save trigger
-  onReady?: (handle: { submitForm: () => void; isSubmitting: boolean }) => void;
+  onReady?: (handle: {
+    submitForm: () => Promise<void>;
+    isSubmitting: boolean;
+    isValid: boolean;
+  }) => void;
   // Show action buttons in preview panel
   showActions?: boolean;
 }
@@ -76,9 +80,12 @@ export function ChartBuilderClient({
     if (onReady && builderRef.current && !onReadyCalled.current) {
       onReadyCalled.current = true;
       onReady({
-        submitForm: () => builderRef.current?.submitForm(),
+        submitForm: () => builderRef.current?.submitForm() || Promise.resolve(),
         get isSubmitting() {
           return builderRef.current?.isSubmitting || false;
+        },
+        get isValid() {
+          return builderRef.current?.isValid || false;
         },
       });
     }

@@ -17,6 +17,8 @@ const QueriesController = () => import('#controllers/queries_controller');
 const AIProvidersController = () => import('#controllers/ai_providers_controller');
 const DatasetsController = () => import('#controllers/datasets_controller');
 const ChartsController = () => import('#controllers/charts_controller');
+const DashboardsController = () => import('#controllers/dashboards_controller');
+const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
 
 router.get('/health', [HealthController, 'handle']);
 
@@ -105,3 +107,26 @@ router
     router.post('/preview', [ChartsController, 'preview']);
   })
   .prefix('/api/charts');
+
+// Dashboard routes
+router
+  .group(() => {
+    router.get('/', [DashboardsController, 'index']);
+    router.post('/', [DashboardsController, 'store']);
+    router.get('/:id', [DashboardsController, 'show']);
+    router.put('/:id', [DashboardsController, 'update']);
+    router.delete('/:id', [DashboardsController, 'destroy']);
+  })
+  .prefix('/api/dashboards');
+
+// Dashboard Widget routes
+router
+  .group(() => {
+    router.post('/:dashboardId/widgets', [DashboardWidgetsController, 'store']);
+    // 更具体的路由需要在更通用的路由之前
+    router.put('/:dashboardId/widgets/layout', [DashboardWidgetsController, 'updateLayout']);
+    router.post('/:dashboardId/widgets/:id/refresh', [DashboardWidgetsController, 'refresh']);
+    router.put('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'update']);
+    router.delete('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'destroy']);
+  })
+  .prefix('/api/dashboards');

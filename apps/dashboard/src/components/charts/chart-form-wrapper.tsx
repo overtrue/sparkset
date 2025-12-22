@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { ChartBuilderClient } from '@/components/charts/builder-client';
 import { RiArrowLeftLine, RiSaveLine } from '@remixicon/react';
@@ -32,22 +33,52 @@ export function ChartFormWrapper({
   initialTitle,
   initialDescription,
 }: ChartFormWrapperProps) {
-  const builderHandleRef = useRef<{ submitForm: () => void; isSubmitting: boolean } | null>(null);
+  const builderHandleRef = useRef<{
+    submitForm: () => Promise<void>;
+    isSubmitting: boolean;
+    isValid: boolean;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   const handleSave = async () => {
     if (builderHandleRef.current && !builderHandleRef.current.isSubmitting) {
       setIsSaving(true);
-      builderHandleRef.current.submitForm();
-      // The saving state will be reset by the builder after save completes
-      // But we also set a timeout as a safety measure
-      setTimeout(() => setIsSaving(false), 3000);
+      try {
+        await builderHandleRef.current.submitForm();
+      } catch (error) {
+        // Error is already handled in the builder
+        console.error('保存失败:', error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
   // Store handle in ref, not state (to avoid re-renders)
-  const onReady = useCallback((handle: { submitForm: () => void; isSubmitting: boolean }) => {
-    builderHandleRef.current = handle;
+  const onReady = useCallback(
+    (handle: { submitForm: () => Promise<void>; isSubmitting: boolean; isValid: boolean }) => {
+      builderHandleRef.current = handle;
+      setIsFormValid(handle.isValid);
+    },
+    [],
+  );
+
+  // Update form validity state periodically
+  // Since refs don't trigger re-renders, we poll the validity state
+  const formValidityRef = useRef(false);
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (builderHandleRef.current) {
+        const currentValid = builderHandleRef.current.isValid;
+        if (currentValid !== formValidityRef.current) {
+          formValidityRef.current = currentValid;
+          setIsFormValid(currentValid);
+        }
+      }
+    }, 300); // Check every 300ms
+
+    return () => clearInterval(interval);
   }, []);
 
   const title = mode === 'create' ? '创建图表' : '编辑图表';
@@ -63,7 +94,12 @@ export function ChartFormWrapper({
         action={
           <div className="flex gap-2">
             {/* Both create and edit modes show save button in header */}
-            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving || !isFormValid}
+              title={!isFormValid ? '请填写完整的图表配置' : ''}
+            >
               <RiSaveLine className="h-4 w-4 mr-2" />
               {isSaving ? '保存中...' : '保存'}
             </Button>

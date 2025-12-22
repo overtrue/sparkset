@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 // Form validation schema
 const formSchema = z.object({
   datasetId: z.number().min(1, '请选择数据集'),
-  title: z.string().min(1, '请输入图表标题'),
+  title: z.string().min(1, '请输入图表标题').max(128, '图表标题不能超过128个字符'),
   description: z.string().optional(),
   chartType: z.enum(['line', 'bar', 'area', 'pie', 'table']),
   xField: z.string().min(1, '请选择X轴字段'),
@@ -61,13 +61,14 @@ export interface ChartSaveData {
 }
 
 export interface ChartBuilderHandle {
-  submitForm: () => void;
+  submitForm: () => Promise<void>;
   isSubmitting: boolean;
+  isValid: boolean;
 }
 
 interface ChartBuilderProps {
   datasets: Dataset[];
-  onSave: (data: ChartSaveData) => void;
+  onSave: (data: ChartSaveData) => void | Promise<void>;
   initialSpec?: ChartSpec;
   initialDatasetId?: number;
   initialTitle?: string;
@@ -101,8 +102,9 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       handleSubmit,
       watch,
       setValue,
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
     } = useForm<FormData>({
+      mode: 'onChange', // 实时验证
       resolver: zodResolver(formSchema),
       defaultValues: {
         datasetId: initialDatasetId || 0,
@@ -125,14 +127,133 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     const chartType = watch('chartType');
     const datasetId = watch('datasetId');
     const yFields = watch('yFields');
+    const title = watch('title');
+    const xField = watch('xField');
+
+    // Calculate form validity manually based on actual values
+    // This is more reliable than isValid which may require all fields to be "touched"
+    // Use JSON.stringify for yFields to detect deep changes in array
+    const yFieldsKey = React.useMemo(() => JSON.stringify(yFields), [yFields]);
+    const isFormValid = React.useMemo(() => {
+      const valid =
+        datasetId > 0 &&
+        title.trim().length > 0 &&
+        title.trim().length <= 128 &&
+        xField.trim().length > 0 &&
+        yFields.length > 0 &&
+        yFields.every((y) => y.field && y.field.trim().length > 0);
+
+      // Debug logging (remove in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Form validity check:', {
+          datasetId,
+          title: title.trim(),
+          titleLength: title.trim().length,
+          xField: xField.trim(),
+          xFieldLength: xField.trim().length,
+          yFields,
+          yFieldsKey,
+          yFieldsValid: yFields.every((y) => y.field && y.field.trim().length > 0),
+          isValid: valid,
+        });
+      }
+
+      return valid;
+    }, [datasetId, title, xField, yFieldsKey]);
+
+    // Submit handler - defined before useImperativeHandle
+    const onSubmit = React.useCallback<SubmitHandler<FormData>>(
+      async (data) => {
+        try {
+          const spec: ChartSpec = {
+            specVersion: '1.0',
+            chartType: data.chartType,
+            encoding: {
+              x: { field: data.xField, type: 'nominal', label: data.xField },
+              y: data.yFields.map((y) => ({
+                field: y.field,
+                type: 'quantitative',
+                agg: y.agg,
+                label: y.label || y.field,
+                color: y.color,
+              })),
+            },
+            style: {
+              showLegend: data.showLegend,
+              showTooltip: data.showTooltip,
+              showGrid: data.showGrid,
+              stacked: data.stacked,
+              smooth: data.smooth,
+              aspectRatio: data.aspectRatio,
+            },
+          };
+
+          await onSave({
+            datasetId: data.datasetId,
+            title: data.title,
+            description: data.description,
+            chartType: data.chartType,
+            spec,
+          });
+        } catch (error) {
+          toast.error('保存失败');
+          console.error(error);
+        }
+      },
+      [onSave],
+    );
 
     // Expose form submission to parent
-    React.useImperativeHandle(ref, () => ({
-      submitForm: () => {
-        formRef.current?.requestSubmit();
-      },
-      isSubmitting,
-    }));
+    // Include isFormValid in dependencies to ensure ref updates when validity changes
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        submitForm: async () => {
+          return new Promise<void>((resolve, reject) => {
+            handleSubmit(
+              async (data) => {
+                try {
+                  await onSubmit(data);
+                  resolve();
+                } catch (error) {
+                  reject(error);
+                }
+              },
+              (errors) => {
+                // Handle validation errors
+                // react-hook-form errors structure: { fieldName: { type: string, message: string } }
+                const errorMessages: string[] = [];
+                Object.keys(errors).forEach((fieldName) => {
+                  const error = errors[fieldName as keyof typeof errors];
+                  if (error) {
+                    if (typeof error === 'object' && 'message' in error && error.message) {
+                      errorMessages.push(error.message as string);
+                    } else if (Array.isArray(error)) {
+                      // Handle array fields like yFields
+                      error.forEach((item, index) => {
+                        if (item && typeof item === 'object' && 'message' in item && item.message) {
+                          errorMessages.push(`${fieldName}[${index}]: ${item.message}`);
+                        }
+                      });
+                    }
+                  }
+                });
+
+                if (errorMessages.length > 0) {
+                  toast.error(`请完善表单信息: ${errorMessages.join(', ')}`);
+                } else {
+                  toast.error('请填写完整的图表配置');
+                }
+                reject(new Error('表单验证失败'));
+              },
+            )();
+          });
+        },
+        isSubmitting,
+        isValid: isFormValid,
+      }),
+      [handleSubmit, onSubmit, isSubmitting, isFormValid],
+    );
 
     // Load dataset schema when selected
     React.useEffect(() => {
@@ -209,45 +330,6 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       }
     };
 
-    // Submit handler
-    const onSubmit: SubmitHandler<FormData> = async (data) => {
-      try {
-        const spec: ChartSpec = {
-          specVersion: '1.0',
-          chartType: data.chartType,
-          encoding: {
-            x: { field: data.xField, type: 'nominal', label: data.xField },
-            y: data.yFields.map((y) => ({
-              field: y.field,
-              type: 'quantitative',
-              agg: y.agg,
-              label: y.label || y.field,
-              color: y.color,
-            })),
-          },
-          style: {
-            showLegend: data.showLegend,
-            showTooltip: data.showTooltip,
-            showGrid: data.showGrid,
-            stacked: data.stacked,
-            smooth: data.smooth,
-            aspectRatio: data.aspectRatio,
-          },
-        };
-
-        onSave({
-          datasetId: data.datasetId,
-          title: data.title,
-          description: data.description,
-          chartType: data.chartType,
-          spec,
-        });
-      } catch (error) {
-        toast.error('保存失败');
-        console.error(error);
-      }
-    };
-
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Configuration Panel - 1/3 width */}
@@ -294,11 +376,20 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   <Controller
                     name="title"
                     control={control}
-                    render={({ field }) => <Input {...field} placeholder="例如：销售趋势分析" />}
+                    render={({ field }) => (
+                      <div className="space-y-1">
+                        <Input {...field} placeholder="例如：销售趋势分析" maxLength={128} />
+                        <div className="flex justify-between items-center">
+                          {errors.title && (
+                            <p className="text-sm text-destructive">{errors.title.message}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground ml-auto">
+                            {field.value?.length || 0}/128
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   />
-                  {errors.title && (
-                    <p className="text-sm text-destructive">{errors.title.message}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -398,7 +489,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                                 >
                                   <option value="">选择字段</option>
                                   {selectedDataset?.schemaJson
-                                    .filter((f) => f.type === 'number')
+                                    .filter((f) => f.type === 'quantitative')
                                     .map((f) => (
                                       <option key={f.name} value={f.name}>
                                         {f.name}
@@ -607,7 +698,13 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
               <div className="flex gap-2 p-4 pt-0">
                 <Button
                   type="button"
-                  onClick={() => formRef.current?.requestSubmit()}
+                  onClick={async () => {
+                    try {
+                      await handleSubmit(onSubmit)();
+                    } catch (error) {
+                      // Error handling is done in handleSubmit
+                    }
+                  }}
                   disabled={isSubmitting}
                   className="flex-1"
                 >

@@ -22,6 +22,7 @@ import {
   RiFlashlightLine,
   RiBarChartLine,
   RiDatabaseLine,
+  RiDashboardLine,
 } from '@remixicon/react';
 import type { ComponentType } from 'react';
 import Link from 'next/link';
@@ -48,6 +49,7 @@ const menuGroups: MenuGroup[] = [
       { title: '查询', url: '/query', icon: RiPlayLine },
       { title: '数据集', url: '/datasets', icon: RiDatabaseLine },
       { title: '图表', url: '/charts', icon: RiBarChartLine },
+      { title: '仪表盘', url: '/dashboards', icon: RiDashboardLine },
       { title: 'Actions', url: '/actions', icon: RiFlashlightLine },
       { title: '数据源', url: '/', icon: RiDatabase2Line },
       { title: 'AI 配置', url: '/ai-providers', icon: RiSparkling2Line },
