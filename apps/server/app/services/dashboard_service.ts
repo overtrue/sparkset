@@ -1,6 +1,5 @@
 import { inject } from '@adonisjs/core';
 import Dashboard from '../models/dashboard.js';
-import DashboardWidget from '../models/dashboard_widget.js';
 import { toId } from '../utils/validation.js';
 
 @inject()
@@ -9,6 +8,7 @@ export class DashboardService {
    * 列表
    */
   async list(userId?: number): Promise<Dashboard[]> {
+    void userId;
     const query = Dashboard.query().preload('widgets');
     // For now, ignore userId filter (no auth)
     return query.orderBy('created_at', 'desc');
@@ -18,6 +18,7 @@ export class DashboardService {
    * 详情
    */
   async get(id: number, userId?: number): Promise<Dashboard | null> {
+    void userId;
     const validId = toId(id);
     if (!validId) {
       return null;

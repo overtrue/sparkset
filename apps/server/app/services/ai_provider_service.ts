@@ -38,19 +38,20 @@ export class AIProviderService {
 
   async create(input: CreateAIProviderInput): Promise<AIProvider> {
     if (this.repo) {
+      const normalizedInput = { ...input, isDefault: input.isDefault ?? false };
       // 如果是第一个 provider（列表为空），自动设置为默认
       const list = await this.repo.list();
       if (list.length === 0) {
-        input.isDefault = true;
+        normalizedInput.isDefault = true;
       }
       // 如果设置为默认，先取消其他 provider 的默认状态
-      if (input.isDefault) {
+      if (normalizedInput.isDefault) {
         const existingDefaults = list.filter((p) => p.isDefault);
         for (const provider of existingDefaults) {
           await this.repo.update({ ...provider, isDefault: false });
         }
       }
-      return this.repo.create(input);
+      return this.repo.create(normalizedInput);
     }
 
     const exists = Array.from(this.store.values()).some((item) => item.name === input.name);

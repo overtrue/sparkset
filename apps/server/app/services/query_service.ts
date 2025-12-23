@@ -1,4 +1,4 @@
-import { AIClient, VercelAIClient } from '@sparkset/ai';
+import { AIClient, VercelAIClient, type Logger as AIClientLogger } from '@sparkset/ai';
 import { DBClient, DataSourceConfig, QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
 import { ActionService } from '../services/action_service';
@@ -39,13 +39,24 @@ export class QueryService {
       executor?: QueryExecutor;
       getDBClient?: (datasourceId: number) => Promise<DBClient>;
       getDatasourceConfig?: (datasourceId: number) => Promise<DataSourceConfig>;
-      logger?: {
-        info: (msg: string, ...args: unknown[]) => void;
-        warn: (msg: string, ...args: unknown[]) => void;
-        error: (msg: string | Error, ...args: unknown[]) => void;
-      };
+      logger?: AIClientLogger;
     },
   ) {}
+
+  private toPlannerLogger(logger?: AIClientLogger) {
+    if (!logger) return undefined;
+    return {
+      info: (msg: string, ...args: unknown[]) => logger.info(msg, ...args),
+      warn: (msg: string, ...args: unknown[]) => logger.warn(msg, ...args),
+      error: (msg: string | Error, ...args: unknown[]) => {
+        if (msg instanceof Error) {
+          logger.error(msg);
+          return;
+        }
+        logger.error(msg, ...args);
+      },
+    };
+  }
 
   /**
    * 根据 provider ID 创建 AI Client
@@ -87,7 +98,7 @@ export class QueryService {
     const datasourceId =
       input.datasource ??
       (await this.deps.datasourceService.list()).find((d) => d.isDefault)?.id ??
-      null;
+      undefined;
 
     const planner =
       this.deps.planner ??
@@ -100,7 +111,7 @@ export class QueryService {
           return this.deps.schemaService.list(datasourceId);
         },
         aiClient,
-        logger: this.deps.logger,
+        logger: this.toPlannerLogger(this.deps.logger),
       });
 
     const plan = await planner.plan(input.question, datasourceId, input.limit);

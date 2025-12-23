@@ -31,13 +31,19 @@ export default class ActionsController {
 
   async store({ request, response }: HttpContext) {
     const parsed = actionCreateSchema.parse(request.body());
-    const item = await this.service.create(parsed);
+    const item = await this.service.create({
+      ...parsed,
+      description: parsed.description ?? undefined,
+    });
     return response.created(item);
   }
 
   async update({ params, request, response }: HttpContext) {
     const parsed = actionUpdateSchema.parse({ ...request.body(), ...params });
-    const item = await this.service.update(parsed);
+    const item = await this.service.update({
+      ...parsed,
+      description: parsed.description ?? undefined,
+    });
     return response.ok(item);
   }
 

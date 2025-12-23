@@ -34,5 +34,11 @@
   },
   "dependencies": {
     "mysql2": "^3.16.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@ai-sdk/provider": "3.0.0-beta.32",
+      "@ai-sdk/provider-utils": "4.0.0-beta.59"
+    }
   }
 }

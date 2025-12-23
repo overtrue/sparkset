@@ -4,6 +4,8 @@
     "rootDir": "./",
     "outDir": "./build",
     "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "paths": {
       "#controllers/*": ["./app/controllers/*"],
       "#exceptions/*": ["./app/exceptions/*"],
@@ -12,10 +14,10 @@
       "#middleware/*": ["./app/middleware/*"],
       "#providers/*": ["./app/providers/*"],
       "#start/*": ["./start/*"],
-      "@sparkset/core/*": ["../../packages/core/src/*"],
-      "@sparkset/ai/*": ["../../packages/ai/src/*"],
-      "@sparkset/utils/*": ["../../packages/utils/src/*"],
-      "@sparkset/config/*": ["../../packages/config/src/*"]
+      "@sparkset/core/*": ["../../packages/core/dist/*"],
+      "@sparkset/ai/*": ["../../packages/ai/dist/*"],
+      "@sparkset/utils/*": ["../../packages/utils/dist/*"],
+      "@sparkset/config/*": ["../../packages/config/dist/*"]
     }
   },
   "include": ["app", "config", "start", "bin", "tests", "adonisrc.ts"],

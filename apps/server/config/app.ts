@@ -7,5 +7,4 @@ export const appKey = new Secret(env.get('APP_KEY'));
 export const http = defineConfig({
   allowMethodSpoofing: false,
   trustProxy: false,
-  forceContentNegotiationTo: 'application/json',
 });

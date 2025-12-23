@@ -3,16 +3,11 @@ import DashboardWidget, { type WidgetConfig } from '../models/dashboard_widget.j
 import Dashboard from '../models/dashboard.js';
 import Chart from '../models/chart.js';
 import Dataset from '../models/dataset.js';
-import { ChartService } from './chart_service.js';
-import { DatasetService } from './dataset_service.js';
 import { toId } from '../utils/validation.js';
 
 @inject()
 export class DashboardWidgetService {
-  constructor(
-    private chartService: ChartService,
-    private datasetService: DatasetService,
-  ) {}
+  constructor() {}
 
   /**
    * 添加 widget

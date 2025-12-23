@@ -1,4 +1,4 @@
-import { buildActionPrompt, VercelAIClient } from '@sparkset/ai';
+import { buildActionPrompt, VercelAIClient, type Logger as AIClientLogger } from '@sparkset/ai';
 import { TableSchema } from '@sparkset/core';
 import { ActionRepository } from '../db/interfaces';
 import type { Action, AIProvider } from '../models/types';
@@ -90,11 +90,7 @@ export class ActionService {
     options: {
       schemas: TableSchema[];
       aiProvider?: AIProvider;
-      logger?: {
-        info: (msg: string, ...args: unknown[]) => void;
-        warn: (msg: string, ...args: unknown[]) => void;
-        error: (msg: string | Error, ...args: unknown[]) => void;
-      };
+      logger?: AIClientLogger;
     },
   ): Promise<GenerateSQLResult> {
     const { schemas, aiProvider, logger } = options;
@@ -326,7 +322,6 @@ export class ActionService {
    */
   private inferParameterDescription(paramName: string, description: string): string | undefined {
     // 尝试从描述中提取参数相关的信息
-    const lowerDesc = description.toLowerCase();
     const lowerName = paramName.toLowerCase();
 
     // 查找描述中与参数相关的部分

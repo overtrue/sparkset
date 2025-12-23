@@ -1,3 +1,5 @@
+import type { ComponentType, ReactNode } from 'react';
+
 /**
  * BI 图表模块前端类型定义
  * 复制自后端，用于前端类型安全
@@ -64,10 +66,12 @@ export interface ChartRenderResult {
 
 export interface ChartConfig {
   [key: string]: {
-    label: string;
-    color?: string;
-    theme?: { light: string; dark: string };
-  };
+    label?: ReactNode;
+    icon?: ComponentType;
+  } & (
+    | { color?: string; theme?: never }
+    | { color?: never; theme: Record<'dark' | 'light', string> }
+  );
 }
 
 export interface ResultSet {

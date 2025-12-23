@@ -2,8 +2,7 @@ import { inject } from '@adonisjs/core';
 import type { Database } from '@adonisjs/lucid/database';
 import Dataset from '../models/dataset.js';
 import { DatasourceService } from './datasource_service.js';
-import { QueryExecutor } from '@sparkset/core';
-import type { ResultSet } from '../types/chart.js';
+import type { ColumnType, ResultSet } from '../types/chart.js';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 
 @inject()
@@ -17,6 +16,7 @@ export class DatasetService {
    * 列表
    */
   async list(userId?: number): Promise<Dataset[]> {
+    void userId;
     const query = Dataset.query();
     // For now, ignore userId filter (no auth)
     return query.orderBy('created_at', 'desc');
@@ -26,6 +26,7 @@ export class DatasetService {
    * 详情
    */
   async get(id: number, userId?: number): Promise<Dataset | null> {
+    void userId;
     const query = Dataset.query().where('id', id);
     // For now, ignore userId filter (no auth)
     return query.first();
@@ -39,7 +40,7 @@ export class DatasetService {
     name: string;
     description?: string;
     querySql: string;
-    schemaJson: Array<{ name: string; type: string }>;
+    schemaJson: { name: string; type: string }[];
     ownerId?: number;
   }): Promise<Dataset> {
     // 计算 schema hash
@@ -65,16 +66,18 @@ export class DatasetService {
       name: string;
       description: string;
       querySql: string;
-      schemaJson: Array<{ name: string; type: string }>;
+      schemaJson: { name: string; type: string }[];
+      schemaHash: string;
     }>,
   ): Promise<Dataset> {
     const dataset = await Dataset.findOrFail(id);
 
+    const updateData = { ...data };
     if (data.schemaJson) {
-      data.schemaHash = this.computeSchemaHash(data.schemaJson);
+      updateData.schemaHash = this.computeSchemaHash(data.schemaJson);
     }
 
-    dataset.merge(data);
+    dataset.merge(updateData);
     await dataset.save();
     return dataset;
   }
@@ -103,7 +106,7 @@ export class DatasetService {
     const client = clientFactory({
       id: datasource.id,
       name: datasource.name,
-      type: datasource.type as any,
+      type: datasource.type,
       host: datasource.host,
       port: datasource.port,
       username: datasource.username,
@@ -126,7 +129,7 @@ export class DatasetService {
       {
         id: datasource.id,
         name: datasource.name,
-        type: datasource.type as any,
+        type: datasource.type,
         host: datasource.host,
         port: datasource.port,
         username: datasource.username,
@@ -151,7 +154,7 @@ export class DatasetService {
   /**
    * 计算 Schema Hash
    */
-  private computeSchemaHash(schema: Array<{ name: string; type: string }>): string {
+  private computeSchemaHash(schema: { name: string; type: string }[]): string {
     const canonical = JSON.stringify(schema.sort((a, b) => a.name.localeCompare(b.name)));
     // 使用简单的 hash（生产环境可使用 crypto）
     let hash = 0;

@@ -16,12 +16,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegendContent,
-} from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 import {
   Table,
   TableBody,
@@ -39,6 +34,19 @@ export interface ChartRendererProps {
   rechartsProps?: Record<string, unknown>;
   className?: string;
 }
+
+const formatTableValue = (value: unknown): string => {
+  if (value == null) {
+    return '-';
+  }
+  if (typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return JSON.stringify(value);
+};
 
 export function ChartRenderer({
   chartType,
@@ -71,11 +79,7 @@ export function ChartRenderer({
             {chartData.map((row, idx) => (
               <TableRow key={idx}>
                 {columns.map((col) => (
-                  <TableCell key={col}>
-                    {typeof row[col] === 'number'
-                      ? (row[col] as number).toLocaleString()
-                      : String(row[col] ?? '-')}
-                  </TableCell>
+                  <TableCell key={col}>{formatTableValue(row[col])}</TableCell>
                 ))}
               </TableRow>
             ))}
@@ -88,8 +92,9 @@ export function ChartRenderer({
   // Render pie chart
   if (chartType === 'pie') {
     // Extract pie-specific props from rechartsProps
-    const { pieConfig, data, margin, showLegend, ...restProps } = rechartsProps as any;
-    const pieProps = pieConfig || {};
+    const { pieConfig, data, margin, ...restProps } = rechartsProps;
+    const pieProps = (pieConfig as Record<string, unknown>) || {};
+    const typedMargin = margin as Record<string, number> | undefined;
 
     // Determine data and config keys
     const chartDataArray = (data || chartData) as Record<string, unknown>[];
@@ -100,11 +105,14 @@ export function ChartRenderer({
 
     // Try to find the name key from data (any field that's not the value key)
     const dataKeys = chartDataArray.length > 0 ? Object.keys(chartDataArray[0]) : [];
-    const nameKey = pieProps.nameKey || dataKeys.find((k) => k !== valueKey) || 'name';
+    const nameKey =
+      (typeof pieProps.nameKey === 'string' ? pieProps.nameKey : undefined) ||
+      dataKeys.find((k) => k !== valueKey) ||
+      'name';
 
     // Enrich data with fill colors from config (following shadcn/ui pattern)
     const enrichedData = chartDataArray.map((entry, index) => {
-      const entryName = entry[nameKey];
+      const entryName = entry[nameKey as keyof typeof entry];
       const configKey = configKeys.find((k) => config[k].label === entryName);
 
       // Get color from config.color, fallback to CSS variables
@@ -125,13 +133,13 @@ export function ChartRenderer({
 
     // Build legend payload from enriched data
     const legendPayload = enrichedData.map((entry) => ({
-      value: entry[nameKey],
+      value: String((entry as Record<string, unknown>)[nameKey as string]),
       color: entry.fill,
     }));
 
     return (
       <ChartContainer config={config} className={className}>
-        <PieChart data={enrichedData} margin={margin} {...restProps}>
+        <PieChart data={enrichedData} margin={typedMargin} {...restProps}>
           <Tooltip content={<ChartTooltipContent hideLabel />} />
           <Legend
             content={() => (
@@ -142,7 +150,7 @@ export function ChartRenderer({
                       className="h-2 w-2 shrink-0 rounded-[2px]"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="text-muted-foreground">{item.value}</span>
+                    <span className="text-muted-foreground">{String(item.value)}</span>
                   </div>
                 ))}
               </div>
@@ -150,14 +158,14 @@ export function ChartRenderer({
           />
           <Pie
             data={enrichedData}
-            dataKey={pieProps.dataKey || valueKey}
-            nameKey={pieProps.nameKey || nameKey}
-            innerRadius={pieProps.innerRadius ?? 60}
-            outerRadius={pieProps.outerRadius ?? 80}
-            paddingAngle={pieProps.paddingAngle ?? 5}
+            dataKey={(pieProps.dataKey as string | undefined) || valueKey}
+            nameKey={nameKey}
+            innerRadius={(pieProps.innerRadius as number | undefined) ?? 60}
+            outerRadius={(pieProps.outerRadius as number | undefined) ?? 80}
+            paddingAngle={(pieProps.paddingAngle as number | undefined) ?? 5}
             cx="50%"
             cy="50%"
-            isAnimationActive={pieProps.isAnimationActive ?? true}
+            isAnimationActive={(pieProps.isAnimationActive as boolean | undefined) ?? true}
           />
         </PieChart>
       </ChartContainer>
@@ -177,7 +185,7 @@ export function ChartRenderer({
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip content={<ChartTooltipContent />} />
           <Legend content={<ChartLegendContent />} />
-          {yKeys.map((key, idx) => (
+          {yKeys.map((key) => (
             <Line
               key={key}
               type="monotone"
@@ -198,7 +206,7 @@ export function ChartRenderer({
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip content={<ChartTooltipContent />} />
           <Legend content={<ChartLegendContent />} />
-          {yKeys.map((key, idx) => (
+          {yKeys.map((key) => (
             <Bar
               key={key}
               dataKey={key}
@@ -216,7 +224,7 @@ export function ChartRenderer({
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip content={<ChartTooltipContent />} />
           <Legend content={<ChartLegendContent />} />
-          {yKeys.map((key, idx) => (
+          {yKeys.map((key) => (
             <Area
               key={key}
               type="monotone"
