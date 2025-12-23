@@ -16,19 +16,28 @@ export class DatasetService {
   /**
    * 列表
    */
-  async list(userId?: number): Promise<Dataset[]> {
-    const query = Dataset.query();
+  async list(userId?: number): Promise<(Dataset & { datasourceName: string })[]> {
+    const query = Dataset.query().preload('datasource');
     // For now, ignore userId filter (no auth)
-    return query.orderBy('created_at', 'desc');
+    const datasets = await query.orderBy('created_at', 'desc');
+    return datasets.map((dataset) => ({
+      ...dataset.serialize(),
+      datasourceName: dataset.datasource?.name || '',
+    }));
   }
 
   /**
    * 详情
    */
-  async get(id: number, userId?: number): Promise<Dataset | null> {
-    const query = Dataset.query().where('id', id);
+  async get(id: number, userId?: number): Promise<(Dataset & { datasourceName: string }) | null> {
+    const query = Dataset.query().where('id', id).preload('datasource');
     // For now, ignore userId filter (no auth)
-    return query.first();
+    const dataset = await query.first();
+    if (!dataset) return null;
+    return {
+      ...dataset.serialize(),
+      datasourceName: dataset.datasource?.name || '',
+    };
   }
 
   /**

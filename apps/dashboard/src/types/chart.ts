@@ -1,11 +1,12 @@
 /**
- * BI 图表模块前端类型定义
- * 复制自后端，用于前端类型安全
+ * BI Chart Module Frontend Type Definitions
+ * Copied from backend for frontend type safety
  */
 
 export interface Dataset {
   id: number;
   datasourceId: number;
+  datasourceName: string;
   name: string;
   description?: string;
   querySql: string;
@@ -57,7 +58,7 @@ export interface ChartSpec {
 export interface ChartRenderResult {
   chartType: ChartSpec['chartType'];
   data: unknown[];
-  config: ChartConfig;
+  config: Record<string, { label: string; color?: string }>;
   rechartsProps: Record<string, unknown>;
   warnings?: string[];
 }

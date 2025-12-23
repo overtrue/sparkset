@@ -38,6 +38,6 @@ export default class Dataset extends BaseModel {
   declare updatedAt: DateTime;
 
   // 关联关系
-  @belongsTo(() => DataSource)
+  @belongsTo(() => DataSource, { foreignKey: 'datasourceId' })
   declare datasource: BelongsTo<typeof DataSource>;
 }
