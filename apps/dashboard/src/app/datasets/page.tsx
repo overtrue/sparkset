@@ -92,7 +92,7 @@ export default function DatasetsPage() {
         return (
           <Button
             variant="link"
-            className="h-auto p-0 text-foreground font-medium"
+            className="h-auto p-0 text-primary font-medium"
             onClick={() => router.push(`/datasets/${dataset.id}`)}
           >
             {row.getValue('name')}
@@ -105,15 +105,26 @@ export default function DatasetsPage() {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title="描述" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue('description') || '-'}</span>
+        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
       ),
       size: 250,
     },
     {
-      accessorKey: 'datasourceId',
-      header: ({ column }) => <DataTableColumnHeader column={column} title="数据源ID" />,
-      cell: ({ row }) => <span className="text-xs">{row.getValue('datasourceId')}</span>,
-      size: 100,
+      accessorKey: 'datasourceName',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="数据源" />,
+      cell: ({ row }) => {
+        const dataset = row.original;
+        return (
+          <Button
+            variant="link"
+            className="h-auto p-0 text-primary font-medium"
+            onClick={() => router.push(`/datasources/${dataset.datasourceId}`)}
+          >
+            {row.getValue('datasourceName')}
+          </Button>
+        );
+      },
+      size: 150,
     },
     {
       accessorKey: 'schemaJson',
@@ -128,9 +139,7 @@ export default function DatasetsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title="创建时间" />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-xs">
-          {formatDate(row.getValue('createdAt'))}
-        </span>
+        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
       ),
       size: 160,
     },

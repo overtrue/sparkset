@@ -55,11 +55,6 @@ export default function ChartsPage() {
     }
   };
 
-  const getDatasetName = (datasetId: number) => {
-    const dataset = datasets.find((d) => d.id === datasetId);
-    return dataset?.name || '未知数据集';
-  };
-
   const getChartIcon = (chartType: Chart['chartType']) => {
     const props = { className: 'h-4 w-4' };
     switch (chartType) {
@@ -143,7 +138,7 @@ export default function ChartsPage() {
             {getChartIcon(chart.chartType)}
             <Button
               variant="link"
-              className="h-auto p-0 text-foreground font-medium"
+              className="h-auto p-0 text-primary font-medium"
               onClick={() => router.push(`/charts/${chart.id}`)}
             >
               {row.getValue('title')}
@@ -165,18 +160,26 @@ export default function ChartsPage() {
     {
       accessorKey: 'datasetId',
       header: ({ column }) => <DataTableColumnHeader column={column} title="数据集" />,
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
-          {getDatasetName(row.getValue('datasetId'))}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const datasetId = row.getValue('datasetId') as number;
+        const dataset = datasets.find((d) => d.id === datasetId);
+        return (
+          <Button
+            variant="link"
+            className="h-auto p-0 text-primary font-medium truncate max-w-[150px] block text-left"
+            onClick={() => router.push(`/datasets/${datasetId}`)}
+          >
+            {dataset?.name || '未知数据集'}
+          </Button>
+        );
+      },
       size: 150,
     },
     {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title="描述" />,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">{row.getValue('description') || '-'}</span>
+        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
       ),
       size: 200,
     },
@@ -184,9 +187,7 @@ export default function ChartsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title="创建时间" />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-xs">
-          {formatDate(row.getValue('createdAt'))}
-        </span>
+        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
       ),
       size: 160,
     },

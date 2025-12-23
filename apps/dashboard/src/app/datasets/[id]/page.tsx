@@ -317,8 +317,14 @@ export default function DatasetDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">数据源ID:</span>
-                <span className="font-medium">{dataset.datasourceId}</span>
+                <span className="text-muted-foreground">数据源:</span>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-primary font-medium"
+                  onClick={() => router.push(`/datasources/${dataset.datasourceId}`)}
+                >
+                  {dataset.datasourceName}
+                </Button>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Schema Hash:</span>
