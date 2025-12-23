@@ -139,7 +139,7 @@ const QueryForm = ({
               >
                 {loading ? (
                   <>
-                    <RiRefreshLine className="mr-1.5 h-4 w-4 animate-spin" />
+                    <RiRefreshLine className="h-4 w-4 animate-spin" />
                     {t('Querying')}
                   </>
                 ) : (

@@ -60,7 +60,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
       <div className="flex items-center justify-between">
         <Label>{t('Input Parameters')}</Label>
         <Button type="button" variant="outline" size="sm" onClick={addParameter}>
-          <RiAddLine className="mr-2 h-4 w-4" />
+          <RiAddLine className="h-4 w-4" />
           {t('Add Parameter')}
         </Button>
       </div>

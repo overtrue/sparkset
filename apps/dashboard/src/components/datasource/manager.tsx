@@ -326,9 +326,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         accessorKey: 'lastSyncAt',
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Synced')} />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {formatDate(row.getValue('lastSyncAt'))}
-          </span>
+          <span className="text-muted-foreground">{formatDate(row.getValue('lastSyncAt'))}</span>
         ),
         size: 180,
       },

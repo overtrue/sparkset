@@ -143,9 +143,7 @@ export default function DatasetsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {formatDate(row.getValue('createdAt'))}
-        </span>
+        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
       ),
       size: 180,
     },
@@ -187,7 +185,7 @@ export default function DatasetsPage() {
           description={t('Manage your query result datasets')}
           action={
             <Button onClick={handleCreateNew} disabled>
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('New Dataset')}
             </Button>
           }
@@ -205,7 +203,7 @@ export default function DatasetsPage() {
           description={t('Manage your query result datasets')}
           action={
             <Button onClick={handleCreateNew}>
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('New Dataset')}
             </Button>
           }
@@ -219,7 +217,7 @@ export default function DatasetsPage() {
             {t('From Query page, execute SQL query and save result as dataset to create charts')}
           </p>
           <Button onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4 mr-2" />
+            <RiAddLine className="h-4 w-4" />
             {t('Create your first dataset')}
           </Button>
         </div>
@@ -234,7 +232,7 @@ export default function DatasetsPage() {
         description={t('Manage your query result datasets')}
         action={
           <Button onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4 mr-2" />
+            <RiAddLine className="h-4 w-4" />
             {t('New Dataset')}
           </Button>
         }

@@ -172,7 +172,7 @@ export function SaveChartDialog({
                 {t('Cancel')}
               </Button>
               <Button onClick={handleCreateDataset} disabled={loading}>
-                {loading && <RiLoader4Line className="h-4 w-4 mr-2 animate-spin" />}
+                {loading && <RiLoader4Line className="h-4 w-4 animate-spin" />}
                 {t('Create Dataset')}
               </Button>
             </div>
@@ -215,7 +215,7 @@ export function SaveChartDialog({
                 {t('Back')}
               </Button>
               <Button onClick={handleCreateChart} disabled={loading}>
-                {loading && <RiLoader4Line className="h-4 w-4 mr-2 animate-spin" />}
+                {loading && <RiLoader4Line className="h-4 w-4 animate-spin" />}
                 {t('Create Chart')}
               </Button>
             </div>

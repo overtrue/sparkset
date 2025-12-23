@@ -106,12 +106,12 @@ export function ChartFormWrapper({
               disabled={isSaving || !isFormValid}
               title={!isFormValid ? t('Please fill in complete chart configuration') : ''}
             >
-              <RiSaveLine className="h-4 w-4 mr-2" />
+              <RiSaveLine className="h-4 w-4" />
               {isSaving ? t('Saving') : t('Save')}
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href={backLink}>
-                <RiArrowLeftLine className="h-4 w-4 mr-2" />
+                <RiArrowLeftLine className="h-4 w-4" />
                 {backLabel}
               </Link>
             </Button>

@@ -50,7 +50,7 @@ export default function NewDashboardPage() {
         description={t('Create a new data visualization dashboard')}
         action={
           <Button variant="outline" onClick={() => router.back()}>
-            <RiArrowLeftLine className="h-4 w-4 mr-2" />
+            <RiArrowLeftLine className="h-4 w-4" />
             {t('Back')}
           </Button>
         }

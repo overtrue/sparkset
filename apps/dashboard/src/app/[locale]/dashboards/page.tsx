@@ -110,9 +110,7 @@ export default function DashboardsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {formatDate(row.getValue('createdAt'))}
-        </span>
+        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
       ),
       size: 180,
     },
@@ -149,7 +147,7 @@ export default function DashboardsPage() {
           description={t('Create and manage data visualization dashboards')}
           action={
             <Button disabled>
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('New Dashboard')}
             </Button>
           }
@@ -167,7 +165,7 @@ export default function DashboardsPage() {
           description={t('Create and manage data visualization dashboards')}
           action={
             <Button onClick={() => router.push('/dashboards/new')}>
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('New Dashboard')}
             </Button>
           }
@@ -181,7 +179,7 @@ export default function DashboardsPage() {
             {t('Create your first dashboard to start visualizing data')}
           </p>
           <Button onClick={() => router.push('/dashboards/new')}>
-            <RiAddLine className="h-4 w-4 mr-2" />
+            <RiAddLine className="h-4 w-4" />
             {t('Create Dashboard')}
           </Button>
         </div>
@@ -196,7 +194,7 @@ export default function DashboardsPage() {
         description={t('Create and manage data visualization dashboards')}
         action={
           <Button onClick={() => router.push('/dashboards/new')}>
-            <RiAddLine className="h-4 w-4 mr-2" />
+            <RiAddLine className="h-4 w-4" />
             {t('New Dashboard')}
           </Button>
         }

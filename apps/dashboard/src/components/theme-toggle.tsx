@@ -54,15 +54,15 @@ export function ThemeToggle() {
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup value={theme || 'system'} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light">
-            <RiSunFoggyLine className="mr-2 h-4 w-4" />
+            <RiSunFoggyLine className="h-4 w-4" />
             <span>{t('Light')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
-            <RiMoonLine className="mr-2 h-4 w-4" />
+            <RiMoonLine className="h-4 w-4" />
             <span>{t('Dark')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
-            <RiComputerLine className="mr-2 h-4 w-4" />
+            <RiComputerLine className="h-4 w-4" />
             <span>{t('System')}</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>

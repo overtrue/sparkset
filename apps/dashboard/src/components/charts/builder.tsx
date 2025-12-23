@@ -579,7 +579,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                           onClick={addYField}
                           className="w-full"
                         >
-                          <RiAddLine className="h-4 w-4 mr-2" />
+                          <RiAddLine className="h-4 w-4" />
                           {t('Add Y-Axis Field')}
                         </Button>
                       </div>
@@ -688,7 +688,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 onClick={generatePreview}
                 disabled={isPreviewLoading}
               >
-                <RiPlayLine className="h-4 w-4 mr-2" />
+                <RiPlayLine className="h-4 w-4" />
                 {isPreviewLoading ? t('Executing…') : t('Generate Preview')}
               </Button>
             </CardHeader>
@@ -723,7 +723,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   disabled={isSubmitting}
                   className="flex-1"
                 >
-                  <RiMagicLine className="h-4 w-4 mr-2" />
+                  <RiMagicLine className="h-4 w-4" />
                   {isSubmitting ? t('Saving…') : t('Save Chart')}
                 </Button>
               </div>

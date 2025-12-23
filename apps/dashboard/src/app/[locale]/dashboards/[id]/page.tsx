@@ -211,11 +211,11 @@ export default function DashboardDetailPage() {
         action={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.back()}>
-              <RiArrowLeftLine className="h-4 w-4 mr-2" />
+              <RiArrowLeftLine className="h-4 w-4" />
               {t('Back')}
             </Button>
             <Button onClick={() => setAddWidgetOpen(true)}>
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('Add Widget')}
             </Button>
           </div>

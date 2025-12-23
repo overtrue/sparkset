@@ -292,7 +292,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/">
-            <RiArrowLeftLine className="mr-2 h-4 w-4" />
+            <RiArrowLeftLine className="h-4 w-4" />
             {t('Back to list')}
           </Link>
         </Button>
@@ -312,7 +312,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 onClick={handleOpenEditDialog}
                 disabled={syncing || deleting || generating}
               >
-                <RiEditLine className="mr-2 h-4 w-4" />
+                <RiEditLine className="h-4 w-4" />
                 {t('Edit')}
               </Button>
               <Button
@@ -321,7 +321,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 onClick={handleSync}
                 disabled={syncing || deleting || generating}
               >
-                <RiRefreshLine className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                <RiRefreshLine className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? t('Syncing') : t('Sync')}
               </Button>
               <Button
@@ -330,7 +330,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 onClick={handleDelete}
                 disabled={syncing || deleting || generating}
               >
-                <RiDeleteBinLine className="mr-2 h-4 w-4" />
+                <RiDeleteBinLine className="h-4 w-4" />
                 {deleting ? t('Deleting') : t('Delete')}
               </Button>
             </div>
@@ -386,7 +386,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               onClick={handleGenerateSemantic}
               disabled={syncing || deleting || generating}
             >
-              <RiSparkling2Line className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
+              <RiSparkling2Line className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
               {generating ? t('Generating') : t('Add Semantic Description')}
             </Button>
           </div>
@@ -482,7 +482,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                               </div>
                               <div className="flex gap-2">
                                 <Button size="sm" onClick={handleSaveTable} disabled={saving}>
-                                  <RiSave3Line className="mr-2 h-4 w-4" />
+                                  <RiSave3Line className="h-4 w-4" />
                                   {t('Save')}
                                 </Button>
                                 <Button
@@ -491,7 +491,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                   onClick={handleCancelTable}
                                   disabled={saving}
                                 >
-                                  <RiCloseLine className="mr-2 h-4 w-4" />
+                                  <RiCloseLine className="h-4 w-4" />
                                   {t('Cancel')}
                                 </Button>
                               </div>

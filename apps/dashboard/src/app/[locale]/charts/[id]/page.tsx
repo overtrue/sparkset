@@ -189,7 +189,7 @@ export default function ChartDetailPage({ params }: Props) {
           <CardContent>
             <Button asChild>
               <Link href="/charts">
-                <RiArrowLeftLine className="h-4 w-4 mr-2" />
+                <RiArrowLeftLine className="h-4 w-4" />
                 {t('Back to list')}
               </Link>
             </Button>
@@ -215,24 +215,24 @@ export default function ChartDetailPage({ params }: Props) {
           <div className="flex gap-2">
             <Button variant="outline" asChild>
               <Link href="/charts">
-                <RiArrowLeftLine className="h-4 w-4 mr-2" />
+                <RiArrowLeftLine className="h-4 w-4" />
                 {t('Back')}
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href={`/charts/${id}/edit`}>
-                <RiEditLine className="h-4 w-4 mr-2" />
+                <RiEditLine className="h-4 w-4" />
                 {t('Edit')}
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/charts/new" className="flex items-center">
-                <RiRefreshLine className="h-4 w-4 mr-2" />
+                <RiRefreshLine className="h-4 w-4" />
                 {t('Create from this')}
               </Link>
             </Button>
             <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-              <RiDeleteBin2Line className="h-4 w-4 mr-2" />
+              <RiDeleteBin2Line className="h-4 w-4" />
               {t('Delete')}
             </Button>
           </div>

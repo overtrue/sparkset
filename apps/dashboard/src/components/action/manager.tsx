@@ -362,9 +362,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         accessorFn: (row) => row.updatedAt || row.createdAt,
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Updated')} />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {formatDate(row.getValue('updatedAt'))}
-          </span>
+          <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
         ),
         size: 180,
       },
@@ -419,7 +417,11 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         enableRowSelection
         onDeleteSelected={handleDeleteSelected}
         deleteConfirmTitle={t('Delete Action')}
-        deleteConfirmDescription={(count) => t('Are you sure to delete the selected {count} Action(s)? This action cannot be undone', { count })}
+        deleteConfirmDescription={(count) =>
+          t('Are you sure to delete the selected {count} Action(s)? This action cannot be undone', {
+            count,
+          })
+        }
         emptyMessage={t('No Actions yet, click Create New in the top right')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
@@ -513,12 +515,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                       >
                         {generatingSQL ? (
                           <>
-                            <RiLoader4Line className="mr-2 h-3 w-3 animate-spin" />
+                            <RiLoader4Line className="h-3 w-3 animate-spin" />
                             {t('Generating')}
                           </>
                         ) : (
                           <>
-                            <RiSparkling2Line className="mr-2 h-3 w-3" />
+                            <RiSparkling2Line className="h-3 w-3" />
                             {t('AI Generate')}
                           </>
                         )}
@@ -611,7 +613,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                   setExecutionError(null);
                 }}
               >
-                <RiCloseLine className="mr-2 h-4 w-4" />
+                <RiCloseLine className="h-4 w-4" />
                 {t('Clear')}
               </Button>
             </div>

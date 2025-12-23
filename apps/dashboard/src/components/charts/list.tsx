@@ -191,14 +191,14 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
             <CardFooter className="pt-3 gap-2">
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/charts/${chart.id}`}>
-                  <RiEyeLine className="h-4 w-4 mr-1" />
+                  <RiEyeLine className="h-4 w-4" />
                   {t('View')}
                 </Link>
               </Button>
 
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/charts/${chart.id}/edit`}>
-                  <RiEditLine className="h-4 w-4 mr-1" />
+                  <RiEditLine className="h-4 w-4" />
                   {t('Edit')}
                 </Link>
               </Button>
@@ -209,7 +209,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
                 className="flex-1"
                 onClick={() => handleDeleteClick(chart)}
               >
-                <RiDeleteBin2Line className="h-4 w-4 mr-1" />
+                <RiDeleteBin2Line className="h-4 w-4" />
                 {t('Delete')}
               </Button>
             </CardFooter>

@@ -194,7 +194,7 @@ export default function DatasetDetailPage() {
         action={
           <div className="flex gap-2">
             <Button size="sm" onClick={handleSave} disabled={!hasChanges() || saving}>
-              <RiSaveLine className="h-4 w-4 mr-2" />
+              <RiSaveLine className="h-4 w-4" />
               {saving ? t('Saving…') : t('Save')}
             </Button>
             <Button
@@ -203,15 +203,15 @@ export default function DatasetDetailPage() {
               onClick={handleSaveAndQuery}
               disabled={!hasChanges() || saving}
             >
-              <RiSaveLine className="h-4 w-4 mr-2" />
+              <RiSaveLine className="h-4 w-4" />
               {saving ? t('Saving…') : t('Save and Query')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => router.push('/datasets')}>
-              <RiArrowLeftLine className="h-4 w-4 mr-2" />
+              <RiArrowLeftLine className="h-4 w-4" />
               {t('Back')}
             </Button>
             <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
-              <RiDeleteBinLine className="h-4 w-4 mr-2" />
+              <RiDeleteBinLine className="h-4 w-4" />
               {t('Delete')}
             </Button>
           </div>
@@ -253,9 +253,9 @@ export default function DatasetDetailPage() {
               <div className="flex gap-2 mt-4">
                 <Button size="sm" onClick={handleExecuteQuery} disabled={queryLoading}>
                   {queryLoading ? (
-                    <RiPlayLine className="h-4 w-4 mr-2 animate-spin" />
+                    <RiPlayLine className="h-4 w-4 animate-spin" />
                   ) : (
-                    <RiPlayLine className="h-4 w-4 mr-2" />
+                    <RiPlayLine className="h-4 w-4" />
                   )}
                   {queryLoading ? t('Executing…') : t('Execute Query')}
                 </Button>
@@ -264,7 +264,7 @@ export default function DatasetDetailPage() {
                   size="sm"
                   onClick={() => router.push(`/charts/new?datasetId=${dataset.id}`)}
                 >
-                  <RiAddLine className="h-4 w-4 mr-2" />
+                  <RiAddLine className="h-4 w-4" />
                   {t('Create Chart')}
                 </Button>
               </div>

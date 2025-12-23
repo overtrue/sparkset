@@ -267,9 +267,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         accessorKey: 'type',
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {getProviderLabel(row.getValue('type'))}
-          </span>
+          <span className="text-muted-foreground">{getProviderLabel(row.getValue('type'))}</span>
         ),
         size: 140,
       },
@@ -279,9 +277,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
           <DataTableColumnHeader column={column} title={t('Default Model')} />
         ),
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {row.getValue('defaultModel') || '-'}
-          </span>
+          <span className="text-muted-foreground">{row.getValue('defaultModel') || '-'}</span>
         ),
         size: 140,
       },
@@ -306,9 +302,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         accessorKey: 'updatedAt',
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Updated At')} />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {formatDate(row.getValue('updatedAt'))}
-          </span>
+          <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
         ),
         size: 180,
       },

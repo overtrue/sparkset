@@ -188,9 +188,7 @@ export default function ChartsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {formatDate(row.getValue('createdAt'))}
-        </span>
+        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
       ),
       size: 180,
     },
@@ -238,7 +236,7 @@ export default function ChartsPage() {
           action={
             <Button asChild disabled>
               <Link href="/charts/new">
-                <RiAddLine className="h-4 w-4 mr-2" />
+                <RiAddLine className="h-4 w-4" />
                 {t('Create Chart')}
               </Link>
             </Button>
@@ -258,7 +256,7 @@ export default function ChartsPage() {
           action={
             <Button asChild>
               <Link href="/query">
-                <RiAddLine className="h-4 w-4 mr-2" />
+                <RiAddLine className="h-4 w-4" />
                 {t('Go to create dataset')}
               </Link>
             </Button>
@@ -275,7 +273,7 @@ export default function ChartsPage() {
           <CardContent>
             <Button asChild>
               <Link href="/query">
-                <RiAddLine className="h-4 w-4 mr-2" />
+                <RiAddLine className="h-4 w-4" />
                 {t('Execute query and create dataset')}
               </Link>
             </Button>
@@ -294,7 +292,7 @@ export default function ChartsPage() {
           action={
             <Button asChild>
               <Link href="/charts/new">
-                <RiAddLine className="h-4 w-4 mr-2" />
+                <RiAddLine className="h-4 w-4" />
                 {t('Create Chart')}
               </Link>
             </Button>
@@ -311,7 +309,7 @@ export default function ChartsPage() {
           </p>
           <Button asChild>
             <Link href="/charts/new">
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('Create Chart')}
             </Link>
           </Button>
@@ -328,7 +326,7 @@ export default function ChartsPage() {
         action={
           <Button asChild>
             <Link href="/charts/new">
-              <RiAddLine className="h-4 w-4 mr-2" />
+              <RiAddLine className="h-4 w-4" />
               {t('Create Chart')}
             </Link>
           </Button>

@@ -57,12 +57,12 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
-                <RiRefreshLine className="mr-2 h-4 w-4" />
+                <RiRefreshLine className="h-4 w-4" />
                 {t('Refresh')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleEditChart}>
-              <RiEditLine className="mr-2 h-4 w-4" />
+              <RiEditLine className="h-4 w-4" />
               {t('Edit Chart')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -72,12 +72,12 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
-                <RiRefreshLine className="mr-2 h-4 w-4" />
+                <RiRefreshLine className="h-4 w-4" />
                 {t('Refresh')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleViewDataset}>
-              <RiDatabaseLine className="mr-2 h-4 w-4" />
+              <RiDatabaseLine className="h-4 w-4" />
               {t('View Details')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -87,7 +87,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onEdit && (
               <DropdownMenuItem onClick={onEdit}>
-                <RiEditLine className="mr-2 h-4 w-4" />
+                <RiEditLine className="h-4 w-4" />
                 {t('Edit')}
               </DropdownMenuItem>
             )}
@@ -96,7 +96,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
         )}
         {onRemove && (
           <DropdownMenuItem onClick={onRemove} className="text-destructive">
-            <RiDeleteBinLine className="mr-2 h-4 w-4" />
+            <RiDeleteBinLine className="h-4 w-4" />
             {t('Remove')}
           </DropdownMenuItem>
         )}

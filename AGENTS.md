@@ -268,7 +268,7 @@ When multiple valid approaches exist, choose based on:
    - `()`, `{}`, `[]`, `<>` must all be closed
 
 3. **Template strings**: When using backticks with variables:
-   - `` t(`text ${variable}`) `` - correct
+   - ``t(`text ${variable}`)`` - correct
    - `t('text ${variable}')` - wrong (won't interpolate)
 
 4. **JSON format**: JSON files must be valid
@@ -277,11 +277,13 @@ When multiple valid approaches exist, choose based on:
    - Valid JSON structure
 
 **If you're unsure about syntax**:
+
 - Test the change in isolation first
 - Use a linter or syntax checker
 - Ask for clarification rather than risking errors
 
 **Example of what NOT to do**:
+
 ```tsx
 // ❌ Wrong - syntax error
 t('Are you sure to delete "{name}"?', { name: 'test' })
@@ -300,6 +302,7 @@ t('text', {
 ```
 
 **Example of correct approach**:
+
 ```tsx
 // ✅ Correct
 t(`Are you sure to delete '{name}'?`, { name: 'test' })
@@ -450,6 +453,13 @@ t('text', {
   - Use consistent spacing scale (Tailwind's spacing tokens)
   - Group related elements together with appropriate spacing
   - Use cards/sections to separate distinct content areas
+- **Icon Button Spacing**:
+  - **DO NOT add `mr-*` classes to icons inside Button, DropdownMenuItem, or DropdownMenuRadioItem components**
+  - These components already use `gap-2` to control spacing between icons and text
+  - Adding `mr-*` classes creates excessive spacing and breaks visual consistency
+  - ✅ **Correct**: `<Button><RiIcon className="h-4 w-4" />Text</Button>` (Button handles spacing via `gap-2`)
+  - ❌ **Wrong**: `<Button><RiIcon className="h-4 w-4 mr-2" />Text</Button>` (redundant margin creates double spacing)
+  - **Exception**: Icons used outside these components (standalone icons, custom layouts) may still need `mr-*` classes
 - **Card Usage Guidelines**:
   - **Avoid excessive Card nesting**: Don't nest Cards inside Cards - this creates visual clutter and excessive padding
   - **Use Cards sparingly**: Cards should be used for distinct, self-contained content sections, not for every UI element
@@ -578,6 +588,7 @@ Before committing i18n changes:
 3. **Why**: This avoids escaping issues and makes the code cleaner
 
 **Example**:
+
 ```tsx
 // Language file
 {
