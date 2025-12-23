@@ -1,4 +1,4 @@
-import { AIClient, buildPrompt } from '@sparkset/ai';
+import { AIClient, buildPrompt } from '../ai';
 import { TableSchema } from '../db/types';
 import { PlannedQuery, SqlSnippet } from './types';
 

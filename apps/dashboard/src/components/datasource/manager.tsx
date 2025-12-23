@@ -10,6 +10,7 @@ import {
   RiRefreshLine,
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -65,6 +66,7 @@ interface DatasourceManagerProps {
 }
 
 export default function DatasourceManager({ initial }: DatasourceManagerProps) {
+  const t = useTranslations();
   const [datasources, setDatasources] = useState(initial);
   const [form, setForm] = useState<CreateDatasourceInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -156,12 +158,12 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       setTestResult(result);
       if (result.success) {
         setIsVerified(true);
-        toast.success('连通性验证通过');
+        toast.success(t('Connection verified'));
       } else {
         setIsVerified(false);
       }
     } catch (err) {
-      const errorMsg = (err as Error)?.message ?? '连通性验证失败';
+      const errorMsg = (err as Error)?.message ?? t('Connection verification failed');
       setTestResult({ success: false, message: errorMsg });
       toast.error(errorMsg);
     } finally {
@@ -181,15 +183,15 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         }
         const updated = await updateDatasource(editingId, updateData);
         setDatasources((prev) => prev.map((ds) => (ds.id === editingId ? updated : ds)));
-        toast.success('数据源更新成功');
+        toast.success(t('Datasource updated successfully'));
       } else {
         const created = await createDatasource(form);
         setDatasources((prev: DatasourceDTO[]) => [...prev, created]);
-        toast.success('数据源创建成功');
+        toast.success(t('Datasource created successfully'));
       }
       handleCloseDialog();
     } catch (err) {
-      toast.error((err as Error)?.message ?? '操作失败');
+      toast.error((err as Error)?.message ?? t('Operation failed'));
     } finally {
       setSubmitting(false);
     }
@@ -237,9 +239,9 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
           ds.id === id ? { ...ds, lastSyncAt: res.lastSyncAt } : ds,
         ),
       );
-      toast.success('同步成功');
+      toast.success(t('Sync successful'));
     } catch (err) {
-      toast.error((err as Error)?.message ?? '同步失败');
+      toast.error((err as Error)?.message ?? t('Sync failed'));
     } finally {
       setActionId(null);
     }
@@ -258,11 +260,11 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       setDatasources((prev: DatasourceDTO[]) =>
         prev.filter((ds: DatasourceDTO) => ds.id !== deletingId),
       );
-      toast.success('数据源已删除');
+      toast.success(t('Datasource deleted'));
       setConfirmOpen(false);
       setDeletingId(null);
     } catch (err) {
-      toast.error((err as Error)?.message ?? '删除失败');
+      toast.error((err as Error)?.message ?? t('Delete failed'));
     } finally {
       setDeleting(false);
     }
@@ -273,18 +275,18 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       try {
         await removeDatasource(row.id);
       } catch (err) {
-        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+        toast.error(`${t('Delete failed')}: ${row.name} - ${(err as Error)?.message}`);
       }
     }
     setDatasources((prev) => prev.filter((ds) => !rows.some((r) => r.id === ds.id)));
-    toast.success(`成功删除 ${rows.length} 个数据源`);
+    toast.success(t('Successfully deleted {count} datasource(s)', { count: rows.length }));
   };
 
   const columns: ColumnDef<DatasourceDTO>[] = useMemo(
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
         cell: ({ row }) => (
           <Link
             href={`/datasources/${row.original.id}`}
@@ -297,7 +299,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       },
       {
         accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
         cell: ({ row }) => (
           <Badge variant="outline" className="uppercase text-xs">
             {row.getValue('type')}
@@ -312,53 +314,53 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         cell: ({ row }) => (
           <span className="text-muted-foreground">{`${row.original.host}:${row.original.port}`}</span>
         ),
-        size: 160,
+        size: 180,
       },
       {
         accessorKey: 'database',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="数据库" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Database')} />,
         cell: ({ row }) => <span>{row.getValue('database')}</span>,
         size: 140,
       },
       {
         accessorKey: 'lastSyncAt',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="最近同步" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Synced')} />,
         cell: ({ row }) => (
           <span className="text-muted-foreground text-xs">
             {formatDate(row.getValue('lastSyncAt'))}
           </span>
         ),
-        size: 160,
+        size: 180,
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">操作</span>,
+        header: () => <span className="sr-only">{t('Actions')}</span>,
         cell: ({ row }) => {
           const ds = row.original;
           const isLoading = actionId === ds.id;
 
           const actions: RowAction[] = [
             {
-              label: '查看详情',
+              label: t('View Details'),
               icon: <RiEyeLine className="h-4 w-4" />,
               onClick: () => {
                 window.location.href = `/datasources/${ds.id}`;
               },
             },
             {
-              label: '编辑',
+              label: t('Edit'),
               icon: <RiEdit2Line className="h-4 w-4" />,
               onClick: () => handleOpenDialog(ds),
               disabled: isLoading,
             },
             {
-              label: isLoading ? '同步中...' : '同步',
+              label: isLoading ? t('Syncing') : t('Sync'),
               icon: <RiRefreshLine className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />,
               onClick: () => handleSync(ds.id),
               disabled: isLoading,
             },
             {
-              label: '删除',
+              label: t('Delete'),
               icon: <RiDeleteBin2Line className="h-4 w-4" />,
               onClick: () => handleRemoveClick(ds.id),
               variant: 'destructive',
@@ -380,18 +382,21 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         columns={columns}
         data={datasources}
         searchKey="name"
-        searchPlaceholder="搜索数据源..."
+        searchPlaceholder={t('Search datasource')}
         enableRowSelection
         onDeleteSelected={handleDeleteSelected}
-        deleteConfirmTitle="删除数据源"
+        deleteConfirmTitle={t('Delete Datasource')}
         deleteConfirmDescription={(count) =>
-          `确定要删除选中的 ${count} 个数据源吗？此操作不可撤销。`
+          t(
+            'Are you sure to delete the selected {count} datasource(s)? This action cannot be undone',
+            { count },
+          )
         }
-        emptyMessage="暂无数据源，点击右上角添加"
+        emptyMessage={t('No datasources yet, click the button above to add')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <RiAddLine className="h-4 w-4" />
-            添加数据源
+            {t('Add Datasource')}
           </Button>
         }
       />
@@ -399,31 +404,35 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingId ? '编辑数据源' : '添加数据源'}</DialogTitle>
+            <DialogTitle>{editingId ? t('Edit Datasource') : t('Add Datasource')}</DialogTitle>
             <DialogDescription>
               {editingId
-                ? '修改数据源配置信息，修改后建议重新验证连接'
-                : '填写以下信息并验证连接后，即可创建数据源'}
+                ? t(
+                    'Modify datasource configuration, verify connection after modification is recommended',
+                  )
+                : t(
+                    'Fill in the information below and verify the connection to create a datasource',
+                  )}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">名称</Label>
+                <Label htmlFor="name">{t('Name')}</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={onChange('name')}
-                  placeholder="如 production-mysql"
+                  placeholder={t('eg production-mysql')}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="type">类型</Label>
+                  <Label htmlFor="type">{t('Type')}</Label>
                   <Select value={form.type} onValueChange={(value) => onChange('type')(value)}>
                     <SelectTrigger id="type">
-                      <SelectValue placeholder="选择数据库类型" />
+                      <SelectValue placeholder={t('Select database type')} />
                     </SelectTrigger>
                     <SelectContent>
                       {DATABASE_TYPES.map((dbType) => (
@@ -435,7 +444,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="port">端口</Label>
+                  <Label htmlFor="port">{t('Port')}</Label>
                   <Input
                     id="port"
                     type="number"
@@ -458,7 +467,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="database">数据库名</Label>
+                  <Label htmlFor="database">{t('Database Name')}</Label>
                   <Input
                     id="database"
                     value={form.database}
@@ -470,7 +479,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="username">用户名</Label>
+                  <Label htmlFor="username">{t('Username')}</Label>
                   <Input
                     id="username"
                     value={form.username}
@@ -480,15 +489,23 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">
-                    密码{' '}
-                    {editingId && <span className="text-muted-foreground">(留空则不修改)</span>}
+                    {t('Password')}{' '}
+                    {editingId && (
+                      <span className="text-muted-foreground">
+                        {t('(Leave empty to keep unchanged)')}
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id="password"
                     type="password"
                     value={form.password}
                     onChange={onChange('password')}
-                    placeholder={editingId ? '留空则不修改' : '留空则使用无密码连接'}
+                    placeholder={
+                      editingId
+                        ? t('Leave empty to keep unchanged')
+                        : t('Leave empty for passwordless connection')
+                    }
                   />
                 </div>
               </div>
@@ -500,19 +517,21 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                     {testing && (
                       <>
                         <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
-                        <span className="text-blue-600">正在验证数据库连接...</span>
+                        <span className="text-blue-600">{t('Verifying database connection')}</span>
                       </>
                     )}
                     {testResult?.success && !testing && (
                       <>
                         <RiCheckboxCircleLine className="h-4 w-4 text-green-500" />
-                        <span className="text-green-600">连接验证成功</span>
+                        <span className="text-green-600">
+                          {t('Connection verified successfully')}
+                        </span>
                       </>
                     )}
                     {testResult?.success === false && !testing && (
                       <>
                         <RiCloseCircleLine className="h-4 w-4 text-red-500" />
-                        <span className="text-red-600">连接验证失败</span>
+                        <span className="text-red-600">{t('Connection verification failed')}</span>
                       </>
                     )}
                   </div>
@@ -521,7 +540,9 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                   )}
                   {editingId && testResult?.success === false && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      提示：请检查数据库配置，包括主机名、端口、用户名和密码
+                      {t(
+                        'Tip: Please check the database configuration including host, port, username and password',
+                      )}
                     </p>
                   )}
                 </div>
@@ -539,13 +560,9 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                       onClick={handleTestConnection}
                       disabled={!canTest || testing}
                       className="w-full sm:w-auto"
-                      title={
-                        editingId && !form.password
-                          ? '测试时将使用存储的密码'
-                          : '验证数据库连接是否正常'
-                      }
+                      title={t('Verify Connection')}
                     >
-                      {testing ? '验证中...' : '验证连通性'}
+                      {testing ? t('Verifying') : t('Verify Connection')}
                     </Button>
                     <Button
                       type="button"
@@ -553,7 +570,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                       onClick={handleCloseDialog}
                       className="w-full sm:w-auto"
                     >
-                      取消
+                      {t('Cancel')}
                     </Button>
                   </>
                 ) : (
@@ -562,11 +579,11 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                     <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                       {submitting
                         ? editingId
-                          ? '更新中...'
-                          : '创建中...'
+                          ? t('Updating')
+                          : t('Creating')
                         : editingId
-                          ? '保存'
-                          : '添加'}
+                          ? t('Save')
+                          : t('Add')}
                     </Button>
                     <Button
                       type="button"
@@ -574,7 +591,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
                       onClick={handleCloseDialog}
                       className="w-full sm:w-auto"
                     >
-                      取消
+                      {t('Cancel')}
                     </Button>
                   </>
                 )}
@@ -587,10 +604,10 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="删除数据源"
-        description="确定要删除该数据源吗？此操作不可撤销。"
-        confirmText="删除"
-        cancelText="取消"
+        title={t('Delete Datasource')}
+        description={t('Are you sure to delete this datasource? This action cannot be undone')}
+        confirmText={t('Delete')}
+        cancelText={t('Cancel')}
         onConfirm={handleConfirmDelete}
         loading={deleting}
       />

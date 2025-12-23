@@ -9,6 +9,10 @@ export type {
   TableSchema,
 } from './db/types';
 
+// Export AI types and utilities
+export type { AIClient, ModelCallOptions, PromptOptions } from './ai';
+export { buildPrompt } from './ai';
+
 // Export query executor
 export { QueryExecutor } from './query/executor';
 export type { ExecutorDeps } from './query/executor';

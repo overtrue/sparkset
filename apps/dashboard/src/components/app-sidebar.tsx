@@ -13,20 +13,21 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import {
+  RiBarChartLine,
   RiBookOpenLine,
+  RiDashboardLine,
   RiDatabase2Line,
+  RiDatabaseLine,
+  RiFlashlightLine,
   RiGithubLine,
   RiHeart2Line,
   RiPlayLine,
   RiSparkling2Line,
-  RiFlashlightLine,
-  RiBarChartLine,
-  RiDatabaseLine,
-  RiDashboardLine,
 } from '@remixicon/react';
-import type { ComponentType } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ComponentType } from 'react';
 import * as React from 'react';
 import { SearchForm } from './search-form';
 
@@ -42,46 +43,47 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-const menuGroups: MenuGroup[] = [
-  {
-    label: '功能模块',
-    items: [
-      { title: '查询', url: '/query', icon: RiPlayLine },
-      { title: '数据集', url: '/datasets', icon: RiDatabaseLine },
-      { title: '图表', url: '/charts', icon: RiBarChartLine },
-      { title: '仪表盘', url: '/dashboards', icon: RiDashboardLine },
-      { title: 'Actions', url: '/actions', icon: RiFlashlightLine },
-      { title: '数据源', url: '/', icon: RiDatabase2Line },
-      { title: 'AI 配置', url: '/ai-providers', icon: RiSparkling2Line },
-    ],
-  },
-  {
-    label: '其他',
-    items: [
-      {
-        title: '代码仓库',
-        url: 'https://github.com/overtrue/sparkset',
-        icon: RiGithubLine,
-        external: true,
-      },
-      {
-        title: '使用文档',
-        url: 'https://github.com/overtrue/sparkset',
-        icon: RiBookOpenLine,
-        external: true,
-      },
-      {
-        title: '打赏支持',
-        url: 'https://github.com/sponsors/overtrue',
-        icon: RiHeart2Line,
-        external: true,
-      },
-    ],
-  },
-];
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const t = useTranslations();
+
+  const menuGroups: MenuGroup[] = [
+    {
+      label: t('Features'),
+      items: [
+        { title: t('Query'), url: '/query', icon: RiPlayLine },
+        { title: t('Datasets'), url: '/datasets', icon: RiDatabaseLine },
+        { title: t('Charts'), url: '/charts', icon: RiBarChartLine },
+        { title: t('Dashboards'), url: '/dashboards', icon: RiDashboardLine },
+        { title: t('Actions'), url: '/actions', icon: RiFlashlightLine },
+        { title: t('Datasources'), url: '/', icon: RiDatabase2Line },
+        { title: t('AI Providers'), url: '/ai-providers', icon: RiSparkling2Line },
+      ],
+    },
+    {
+      label: t('Others'),
+      items: [
+        {
+          title: t('Repository'),
+          url: 'https://github.com/overtrue/sparkset',
+          icon: RiGithubLine,
+          external: true,
+        },
+        {
+          title: t('Documentation'),
+          url: 'https://github.com/overtrue/sparkset',
+          icon: RiBookOpenLine,
+          external: true,
+        },
+        {
+          title: t('Sponsor'),
+          url: 'https://github.com/sponsors/overtrue',
+          icon: RiHeart2Line,
+          external: true,
+        },
+      ],
+    },
+  ];
 
   return (
     <Sidebar {...props}>

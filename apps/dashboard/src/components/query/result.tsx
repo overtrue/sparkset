@@ -1,5 +1,6 @@
 'use client';
 import { RiBarChartLine, RiFileTextLine, RiSave3Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import { SaveActionDialog } from '@/components/action/save-dialog';
 import { SaveChartDialog } from '@/components/charts/save-dialog';
@@ -18,6 +19,7 @@ interface QueryResultProps {
 }
 
 export function QueryResult({ result, datasourceId, question }: QueryResultProps) {
+  const t = useTranslations();
   const [sqlDrawerOpen, setSqlDrawerOpen] = useState(false);
   const [schemaDrawerOpen, setSchemaDrawerOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -31,10 +33,11 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center gap-2 shrink-0">
                 <RiFileTextLine className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">查询结果</span>
+                <span className="font-semibold text-sm">{t('Query Result')}</span>
               </div>
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {result.rows.length} 行{result.summary && ` · ${result.summary}`}
+                {t('{count} rows', { count: result.rows.length })}
+                {result.summary && ` · ${result.summary}`}
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -45,7 +48,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 onClick={() => setSaveDialogOpen(true)}
               >
                 <RiSave3Line className="h-3.5 w-3.5" />
-                保存为 Action
+                {t('Save as Action')}
               </Button>
               <Button
                 variant="outline"
@@ -54,7 +57,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 onClick={() => setSaveChartDialogOpen(true)}
               >
                 <RiBarChartLine className="h-3.5 w-3.5" />
-                保存为图表
+                {t('Save as Chart')}
               </Button>
               <SqlViewer sql={result.sql} open={sqlDrawerOpen} onOpenChange={setSqlDrawerOpen} />
               <SchemaDrawer

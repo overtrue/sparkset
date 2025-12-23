@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import * as React from 'react';
-import { PageHeader } from '@/components/page-header';
 import { ChartBuilderClient } from '@/components/charts/builder-client';
-import { RiArrowLeftLine, RiSaveLine } from '@remixicon/react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Dataset, ChartSpec } from '@/types/chart';
+import type { ChartSpec, Dataset } from '@/types/chart';
+import { RiArrowLeftLine, RiSaveLine } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import * as React from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface ChartFormWrapperProps {
   // Mode: create or edit
@@ -48,7 +49,7 @@ export function ChartFormWrapper({
         await builderHandleRef.current.submitForm();
       } catch (error) {
         // Error is already handled in the builder
-        console.error('保存失败:', error);
+        console.error('Save failed:', error);
       } finally {
         setIsSaving(false);
       }
@@ -67,6 +68,8 @@ export function ChartFormWrapper({
   // Update form validity state periodically
   // Since refs don't trigger re-renders, we poll the validity state
   const formValidityRef = useRef(false);
+  const t = useTranslations();
+
   React.useEffect(() => {
     const interval = setInterval(() => {
       if (builderHandleRef.current) {
@@ -81,10 +84,13 @@ export function ChartFormWrapper({
     return () => clearInterval(interval);
   }, []);
 
-  const title = mode === 'create' ? '创建图表' : '编辑图表';
-  const description = mode === 'create' ? '基于数据集配置并创建可视化图表' : '修改图表配置';
+  const title = mode === 'create' ? t('Create Chart') : t('Edit Chart');
+  const description =
+    mode === 'create'
+      ? t('Create a new data visualization chart')
+      : t('Modify chart configuration');
   const backLink = mode === 'create' ? '/charts' : `/charts/${chartId}`;
-  const backLabel = mode === 'create' ? '返回列表' : '返回详情';
+  const backLabel = mode === 'create' ? t('Back to list') : t('Back to details');
 
   return (
     <div className="space-y-6">
@@ -98,10 +104,10 @@ export function ChartFormWrapper({
               size="sm"
               onClick={handleSave}
               disabled={isSaving || !isFormValid}
-              title={!isFormValid ? '请填写完整的图表配置' : ''}
+              title={!isFormValid ? t('Please fill in complete chart configuration') : ''}
             >
               <RiSaveLine className="h-4 w-4 mr-2" />
-              {isSaving ? '保存中...' : '保存'}
+              {isSaving ? t('Saving') : t('Save')}
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href={backLink}>

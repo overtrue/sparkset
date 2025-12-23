@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,15 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { datasetsApi } from '@/lib/api/datasets';
 import { chartsApi } from '@/lib/api/charts';
+import { datasetsApi } from '@/lib/api/datasets';
+import { RiArrowRightLine, RiLoader4Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { RiLoader4Line, RiArrowRightLine } from '@remixicon/react';
-import Link from 'next/link';
 
 interface SaveChartDialogProps {
   open: boolean;
@@ -36,6 +36,7 @@ export function SaveChartDialog({
   rows,
   defaultName,
 }: SaveChartDialogProps) {
+  const t = useTranslations();
   const router = useRouter();
   const [step, setStep] = useState<'create-dataset' | 'create-chart'>('create-dataset');
   const [loading, setLoading] = useState(false);
@@ -51,11 +52,11 @@ export function SaveChartDialog({
 
   const handleCreateDataset = async () => {
     if (!datasetName.trim()) {
-      toast.error('请输入数据集名称');
+      toast.error(t('Please enter dataset name'));
       return;
     }
     if (!datasourceId) {
-      toast.error('缺少数据源信息');
+      toast.error(t('Missing datasource information'));
       return;
     }
 
@@ -75,9 +76,9 @@ export function SaveChartDialog({
 
       setCreatedDatasetId(dataset.id);
       setStep('create-chart');
-      toast.success('数据集创建成功');
+      toast.success(t('Dataset created successfully'));
     } catch (error) {
-      toast.error('创建数据集失败');
+      toast.error(t('Failed to create dataset'));
     } finally {
       setLoading(false);
     }
@@ -85,11 +86,11 @@ export function SaveChartDialog({
 
   const handleCreateChart = async () => {
     if (!chartTitle.trim()) {
-      toast.error('请输入图表标题');
+      toast.error(t('Please enter chart title'));
       return;
     }
     if (!createdDatasetId) {
-      toast.error('缺少数据集信息');
+      toast.error(t('Missing dataset information'));
       return;
     }
 
@@ -107,11 +108,11 @@ export function SaveChartDialog({
         spec: spec,
       });
 
-      toast.success('图表创建成功');
+      toast.success(t('Chart created successfully'));
       onOpenChange(false);
       router.push('/charts');
     } catch (error) {
-      toast.error('创建图表失败');
+      toast.error(t('Failed to create chart'));
     } finally {
       setLoading(false);
     }
@@ -136,25 +137,25 @@ export function SaveChartDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>保存为图表</DialogTitle>
-          <DialogDescription>将查询结果保存为可复用的图表</DialogDescription>
+          <DialogTitle>{t('Save as Chart')}</DialogTitle>
+          <DialogDescription>{t('Save query result as a reusable chart')}</DialogDescription>
         </DialogHeader>
 
         {step === 'create-dataset' ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>数据集名称</Label>
+              <Label>{t('Dataset Name')}</Label>
               <Input
-                placeholder="例如：过去30天销售数据"
+                placeholder={t('eg: Last 30 days sales data')}
                 value={datasetName}
                 onChange={(e) => setDatasetName(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>描述（可选）</Label>
+              <Label>{t('Description (optional)')}</Label>
               <Textarea
-                placeholder="描述这个数据集的用途"
+                placeholder={t('Describe the purpose of this dataset')}
                 value={datasetDescription}
                 onChange={(e) => setDatasetDescription(e.target.value)}
                 rows={3}
@@ -162,43 +163,43 @@ export function SaveChartDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>SQL 查询</Label>
+              <Label>{t('SQL Query')}</Label>
               <Textarea value={sql} rows={4} readOnly className="font-mono text-xs" />
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                取消
+                {t('Cancel')}
               </Button>
               <Button onClick={handleCreateDataset} disabled={loading}>
                 {loading && <RiLoader4Line className="h-4 w-4 mr-2 animate-spin" />}
-                创建数据集
+                {t('Create Dataset')}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">步骤 1:</span>
-              <span>数据集 "{datasetName}" 已创建</span>
+              <span className="font-medium text-foreground">{t('Step 1:')}</span>
+              <span>{t('Dataset "{name}" created', { name: datasetName })}</span>
               <RiArrowRightLine className="h-4 w-4" />
-              <span className="font-medium text-foreground">步骤 2:</span>
-              <span>创建图表</span>
+              <span className="font-medium text-foreground">{t('Step 2:')}</span>
+              <span>{t('Create Chart')}</span>
             </div>
 
             <div className="space-y-2">
-              <Label>图表标题</Label>
+              <Label>{t('Chart Title')}</Label>
               <Input
-                placeholder="例如：地区销售趋势"
+                placeholder={t('eg: Regional Sales Trend')}
                 value={chartTitle}
                 onChange={(e) => setChartTitle(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>描述（可选）</Label>
+              <Label>{t('Description (optional)')}</Label>
               <Textarea
-                placeholder="描述这个图表展示的内容"
+                placeholder={t('Describe what this chart shows')}
                 value={chartDescription}
                 onChange={(e) => setChartDescription(e.target.value)}
                 rows={3}
@@ -211,11 +212,11 @@ export function SaveChartDialog({
                 onClick={() => setStep('create-dataset')}
                 disabled={loading}
               >
-                返回上一步
+                {t('Back')}
               </Button>
               <Button onClick={handleCreateChart} disabled={loading}>
                 {loading && <RiLoader4Line className="h-4 w-4 mr-2 animate-spin" />}
-                创建图表
+                {t('Create Chart')}
               </Button>
             </div>
           </div>

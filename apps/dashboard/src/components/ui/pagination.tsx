@@ -3,6 +3,22 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { buttonVariants, type Button } from '@/components/ui/button';
 
+interface PaginationLabels {
+  previous?: string;
+  next?: string;
+  morePages?: string;
+  goToPreviousPage?: string;
+  goToNextPage?: string;
+}
+
+const defaultLabels: PaginationLabels = {
+  previous: 'Previous',
+  next: 'Next',
+  morePages: 'More pages',
+  goToPreviousPage: 'Go to previous page',
+  goToNextPage: 'Go to next page',
+};
+
 function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   return (
     <nav
@@ -52,35 +68,50 @@ function PaginationLink({ className, isActive, size = 'icon', ...props }: Pagina
   );
 }
 
-function PaginationPrevious({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+type PaginationPreviousProps = React.ComponentProps<typeof PaginationLink> & {
+  labels?: Pick<PaginationLabels, 'previous' | 'goToPreviousPage'>;
+};
+
+function PaginationPrevious({ className, labels, ...props }: PaginationPreviousProps) {
+  const mergedLabels = { ...defaultLabels, ...labels };
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={mergedLabels.goToPreviousPage}
       size="default"
       className={cn('gap-1 px-2.5 sm:pl-2.5', className)}
       {...props}
     >
       <RiArrowLeftSLine />
-      <span className="hidden sm:block">Previous</span>
+      <span className="hidden sm:block">{mergedLabels.previous}</span>
     </PaginationLink>
   );
 }
 
-function PaginationNext({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+type PaginationNextProps = React.ComponentProps<typeof PaginationLink> & {
+  labels?: Pick<PaginationLabels, 'next' | 'goToNextPage'>;
+};
+
+function PaginationNext({ className, labels, ...props }: PaginationNextProps) {
+  const mergedLabels = { ...defaultLabels, ...labels };
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={mergedLabels.goToNextPage}
       size="default"
       className={cn('gap-1 px-2.5 sm:pr-2.5', className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className="hidden sm:block">{mergedLabels.next}</span>
       <RiArrowRightSLine />
     </PaginationLink>
   );
 }
 
-function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'>) {
+type PaginationEllipsisProps = React.ComponentProps<'span'> & {
+  labels?: Pick<PaginationLabels, 'morePages'>;
+};
+
+function PaginationEllipsis({ className, labels, ...props }: PaginationEllipsisProps) {
+  const mergedLabels = { ...defaultLabels, ...labels };
   return (
     <span
       aria-hidden
@@ -89,7 +120,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'
       {...props}
     >
       <RiMore2Line className="size-4" />
-      <span className="sr-only">More pages</span>
+      <span className="sr-only">{mergedLabels.morePages}</span>
     </span>
   );
 }

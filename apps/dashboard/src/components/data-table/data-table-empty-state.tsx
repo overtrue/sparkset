@@ -1,5 +1,6 @@
 'use client';
 import { RiAddLine, RiDatabase2Line, RiFlashlightLine, RiSearch2Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import {
   Empty,
@@ -14,55 +15,38 @@ interface DataTableEmptyStateProps {
   icon?: React.ReactNode;
 }
 
-export function DataTableEmptyState({ message = '暂无数据', icon }: DataTableEmptyStateProps) {
-  let primaryText = message;
+export function DataTableEmptyState({ message, icon }: DataTableEmptyStateProps) {
+  const t = useTranslations();
+  const displayMessage = message || t('No data');
+  let primaryText = displayMessage;
   let instructionText = '';
   let selectedIcon = icon;
 
-  // Pattern: "暂无 X，点击右上角 Y"
-  // Examples: "暂无 Action，点击右上角新建", "暂无数据源，点击右上角添加"
-  const match = message.match(/暂无(.+?)[，,]\s*点击右上角(.+)/);
-  if (match) {
-    const itemType = match[1].trim();
-    const action = match[2].trim();
-    primaryText = `暂无${itemType}`;
-    instructionText = `点击右上角 "${action}"`;
-
-    // Auto-select appropriate icon based on item type
-    if (!selectedIcon) {
-      if (itemType.includes('Action') || itemType.includes('Provider')) {
-        selectedIcon = <RiFlashlightLine className="h-6 w-6 text-yellow-500" />;
-      } else if (itemType.includes('数据源')) {
-        selectedIcon = <RiDatabase2Line className="h-6 w-6 text-blue-500" />;
-      } else if (itemType.includes('数据')) {
-        selectedIcon = <RiDatabase2Line className="h-6 w-6 text-gray-500" />;
-      } else {
-        selectedIcon = <RiAddLine className="h-6 w-6 text-primary" />;
-      }
-    }
-  }
-  // Pattern: "无匹配结果" - Search results
-  else if (message.includes('无匹配结果')) {
-    primaryText = '未找到匹配结果';
-    instructionText = '尝试更换搜索词或清除过滤器';
+  // Pattern: Check if it's a search result empty state
+  if (displayMessage.includes(t('No matching results'))) {
+    primaryText = t('No matching results');
+    instructionText = t('Try different keywords or clear filters');
     selectedIcon = selectedIcon || <RiSearch2Line className="h-6 w-6 text-purple-500" />;
   }
-  // Pattern: "暂无数据" - Generic empty
-  else if (message === '暂无数据') {
-    primaryText = '暂无数据';
-    instructionText = '点击右上角按钮开始';
+  // Pattern: Check for click instruction patterns
+  else if (displayMessage.includes(t('Click "{action}" above'))) {
+    selectedIcon = selectedIcon || <RiAddLine className="h-6 w-6 text-primary" />;
+  }
+  // Pattern: Generic empty - No data
+  else if (displayMessage === t('No data')) {
+    primaryText = t('No data');
+    instructionText = t('Click the button above to get started');
     selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6" />;
   }
-  // Fallback for any other message
+  // Check for specific item types
+  else if (displayMessage.includes('Action') || displayMessage.includes('Provider')) {
+    selectedIcon = selectedIcon || <RiFlashlightLine className="h-6 w-6 text-yellow-500" />;
+  } else if (displayMessage.includes(t('Datasource')) || displayMessage.includes('datasource')) {
+    selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6 text-blue-500" />;
+  }
+  // Fallback
   else {
     selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6" />;
-    // If message contains action instruction, extract it
-    if (message.includes('点击')) {
-      const actionMatch = message.match(/点击(.+)/);
-      if (actionMatch) {
-        instructionText = `点击${actionMatch[1]}`;
-      }
-    }
   }
 
   return (

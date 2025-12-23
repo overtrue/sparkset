@@ -73,10 +73,10 @@ function parseDatabaseError(error: unknown): Error {
   const errorString = String(error);
 
   // MySQL 错误代码映射
-  const errorPatterns: Array<{
+  const errorPatterns: {
     pattern: RegExp;
     message: (match: RegExpMatchArray) => string;
-  }> = [
+  }[] = [
     {
       pattern: /Table ['"`]([^'"`]+)['"`] doesn't exist/i,
       message: (match) => `表 "${match[1]}" 不存在`,

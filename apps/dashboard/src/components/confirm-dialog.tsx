@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,14 +27,19 @@ export interface ConfirmDialogProps {
 export function ConfirmDialog({
   open,
   onOpenChange,
-  title = '确认操作',
+  title,
   description,
-  confirmText = '确认',
-  cancelText = '取消',
+  confirmText,
+  cancelText,
   onConfirm,
   loading = false,
   variant = 'destructive',
 }: ConfirmDialogProps) {
+  const t = useTranslations();
+  const displayTitle = title ?? t('Confirm Action');
+  const displayConfirmText = confirmText ?? t('Confirm');
+  const displayCancelText = cancelText ?? t('Cancel');
+
   const handleConfirm = async () => {
     if (loading) return;
     await onConfirm();
@@ -43,11 +49,11 @@ export function ConfirmDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogTitle>{displayTitle}</AlertDialogTitle>
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{displayCancelText}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
@@ -57,7 +63,7 @@ export function ConfirmDialog({
                 : undefined
             }
           >
-            {loading ? '处理中...' : confirmText}
+            {loading ? t('Processing') : displayConfirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

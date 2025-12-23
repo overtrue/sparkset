@@ -107,7 +107,7 @@ export default function DatasetsPage() {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
+        <span className="text-xs text-muted-foreground">{row.getValue('description') || '-'}</span>
       ),
       size: 250,
     },
@@ -119,7 +119,7 @@ export default function DatasetsPage() {
         return (
           <Button
             variant="link"
-            className="h-auto p-0 text-primary font-medium"
+            className="h-auto p-0 text-foreground font-medium text-xs hover:text-primary"
             onClick={() => router.push(`/datasources/${dataset.datasourceId}`)}
           >
             {row.getValue('datasourceName')}
@@ -133,7 +133,9 @@ export default function DatasetsPage() {
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Field Count')} />,
       cell: ({ row }) => {
         const schema = row.getValue('schemaJson');
-        return <Badge variant="secondary">{t('{count} fields', { count: schema.length })}</Badge>;
+        return (
+          <Badge variant="secondary">{t('{count} fields', { count: schema?.length ?? 0 })}</Badge>
+        );
       },
       size: 100,
     },
@@ -141,7 +143,9 @@ export default function DatasetsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
+        <span className="text-muted-foreground text-xs">
+          {formatDate(row.getValue('createdAt'))}
+        </span>
       ),
       size: 180,
     },
@@ -246,7 +250,7 @@ export default function DatasetsPage() {
         deleteConfirmTitle={t('Delete Dataset')}
         deleteConfirmDescription={(count) =>
           t(
-            'Are you sure to delete the selected {count} dataset(s)? This action cannot be undone',
+            'Are you sure to delete the selected {count} dataset(s)? This action cannot be undone.',
             { count },
           )
         }
@@ -257,7 +261,7 @@ export default function DatasetsPage() {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title={t('Delete Dataset')}
-        description={t('Are you sure to delete \"{name}\"? This cannot be undone', {
+        description={t('Are you sure to delete \"{name}\"? This cannot be undone.', {
           name: datasetToDelete?.name || '',
         })}
         onConfirm={confirmDelete}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { DashboardWidget } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 
 interface EditTitleDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface EditTitleDialogProps {
 }
 
 export function EditTitleDialog({ open, onOpenChange, widget, onSave }: EditTitleDialogProps) {
+  const t = useTranslations();
   const [title, setTitle] = useState('');
 
   useEffect(() => {
@@ -46,28 +48,28 @@ export function EditTitleDialog({ open, onOpenChange, widget, onSave }: EditTitl
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>编辑 Widget 标题</DialogTitle>
+          <DialogTitle>{t('Edit Widget Title')}</DialogTitle>
           <DialogDescription>
-            留空则使用默认标题（来源对象的标题），或手动输入自定义标题
+            {t("Leave empty to use default title (source object's title), or enter a custom title")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>标题</Label>
+            <Label>{t('Title')}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="留空则使用默认标题"
+              placeholder={t('Leave empty to use default title')}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('Cancel')}
           </Button>
-          <Button onClick={handleSave}>保存</Button>
+          <Button onClick={handleSave}>{t('Save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

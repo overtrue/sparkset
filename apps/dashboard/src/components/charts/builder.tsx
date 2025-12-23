@@ -1,13 +1,11 @@
 'use client';
 
-import * as React from 'react';
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { ChartRenderer } from './renderer';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { ChartConfig } from '@/components/ui/chart';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -16,32 +14,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { datasetsApi } from '@/lib/api/datasets';
-import type { Dataset, ChartSpec } from '@/types/chart';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSpec, Dataset } from '@/types/chart';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { RiAddLine, RiDeleteBinLine, RiMagicLine, RiPlayLine } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
+import * as React from 'react';
+import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { z } from 'zod';
+import { ChartRenderer } from './renderer';
 
 // Form validation schema
 const formSchema = z.object({
-  datasetId: z.number().min(1, '请选择数据集'),
-  title: z.string().min(1, '请输入图表标题').max(128, '图表标题不能超过128个字符'),
+  datasetId: z.number().min(1, 'Please select a dataset'),
+  title: z
+    .string()
+    .min(1, 'Please enter chart title')
+    .max(128, 'Chart title cannot exceed 128 characters'),
   description: z.string().optional(),
   chartType: z.enum(['line', 'bar', 'area', 'pie', 'table']),
-  xField: z.string().min(1, '请选择X轴字段'),
+  xField: z.string().min(1, 'Please select X-Axis field'),
   yFields: z
     .array(
       z.object({
-        field: z.string().min(1, '字段名不能为空'),
+        field: z.string().min(1, 'Field name cannot be empty'),
         agg: z.enum(['sum', 'avg', 'min', 'max', 'count']),
         label: z.string().optional(),
         color: z.string().optional(),
       }),
     )
-    .min(1, '至少需要一个Y轴字段'),
+    .min(1, 'At least one Y-Axis field is required'),
   showLegend: z.boolean().optional(),
   showTooltip: z.boolean().optional(),
   showGrid: z.boolean().optional(),
@@ -91,6 +95,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     },
     ref,
   ) {
+    const t = useTranslations();
     const formRef = React.useRef<HTMLFormElement>(null);
     const [previewData, setPreviewData] = React.useState<unknown[]>([]);
     const [previewConfig, setPreviewConfig] = React.useState<ChartConfig>({});
@@ -104,7 +109,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       setValue,
       formState: { errors, isSubmitting, isValid },
     } = useForm<FormData>({
-      mode: 'onChange', // 实时验证
+      mode: 'onChange', // Real-time validation
       resolver: zodResolver(formSchema),
       defaultValues: {
         datasetId: initialDatasetId || 0,
@@ -196,11 +201,11 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
             spec,
           });
         } catch (error) {
-          toast.error('保存失败');
+          toast.error(t('Save failed'));
           console.error(error);
         }
       },
-      [onSave],
+      [onSave, t],
     );
 
     // Expose form submission to parent
@@ -227,7 +232,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   const error = errors[fieldName as keyof typeof errors];
                   if (error) {
                     if (typeof error === 'object' && 'message' in error && error.message) {
-                      errorMessages.push(error.message as string);
+                      errorMessages.push(error.message);
                     } else if (Array.isArray(error)) {
                       // Handle array fields like yFields
                       error.forEach((item, index) => {
@@ -240,11 +245,11 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 });
 
                 if (errorMessages.length > 0) {
-                  toast.error(`请完善表单信息: ${errorMessages.join(', ')}`);
+                  toast.error(`${t('Please complete the form')}: ${errorMessages.join(', ')}`);
                 } else {
-                  toast.error('请填写完整的图表配置');
+                  toast.error(t('Please complete the chart configuration'));
                 }
-                reject(new Error('表单验证失败'));
+                reject(new Error(t('Form validation failed')));
               },
             )();
           });
@@ -305,7 +310,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
       // Validate
       if (!formData.datasetId || !formData.xField || formData.yFields.length === 0) {
-        toast.error('请填写完整的图表配置');
+        toast.error(t('Please complete the chart configuration'));
         return;
       }
 
@@ -321,9 +326,9 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
         setPreviewData(transformedData);
         setPreviewConfig(config);
-        toast.success('预览已更新');
+        toast.success(t('Preview updated'));
       } catch (error) {
-        toast.error('生成预览失败');
+        toast.error(t('Failed to generate preview'));
         console.error(error);
       } finally {
         setIsPreviewLoading(false);
@@ -336,14 +341,16 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>图表配置</CardTitle>
-              <CardDescription>设置图表的数据源和显示选项</CardDescription>
+              <CardTitle>{t('Chart Configuration')}</CardTitle>
+              <CardDescription>
+                {t('Configure chart data source and display options')}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Dataset Selection */}
                 <div className="space-y-2">
-                  <Label>数据集</Label>
+                  <Label>{t('Dataset')}</Label>
                   <Controller
                     name="datasetId"
                     control={control}
@@ -353,7 +360,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                         onValueChange={(val) => field.onChange(Number(val))}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="选择数据集" />
+                          <SelectValue placeholder={t('Select dataset')} />
                         </SelectTrigger>
                         <SelectContent>
                           {datasets.map((dataset) => (
@@ -372,13 +379,17 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* Title & Description */}
                 <div className="space-y-2">
-                  <Label>图表标题</Label>
+                  <Label>{t('Chart Title')}</Label>
                   <Controller
                     name="title"
                     control={control}
                     render={({ field }) => (
                       <div className="space-y-1">
-                        <Input {...field} placeholder="例如：销售趋势分析" maxLength={128} />
+                        <Input
+                          {...field}
+                          placeholder={t('eg: Sales Trend Analysis')}
+                          maxLength={128}
+                        />
                         <div className="flex justify-between items-center">
                           {errors.title && (
                             <p className="text-sm text-destructive">{errors.title.message}</p>
@@ -393,33 +404,37 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 </div>
 
                 <div className="space-y-2">
-                  <Label>描述（可选）</Label>
+                  <Label>{t('Description (optional)')}</Label>
                   <Controller
                     name="description"
                     control={control}
                     render={({ field }) => (
-                      <Textarea {...field} placeholder="描述图表内容" rows={2} />
+                      <Textarea
+                        {...field}
+                        placeholder={t('Describe what this chart shows')}
+                        rows={2}
+                      />
                     )}
                   />
                 </div>
 
                 {/* Chart Type */}
                 <div className="space-y-2">
-                  <Label>图表类型</Label>
+                  <Label>{t('Chart Type')}</Label>
                   <Controller
                     name="chartType"
                     control={control}
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="选择图表类型" />
+                          <SelectValue placeholder={t('Select chart type')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="line">折线图</SelectItem>
-                          <SelectItem value="bar">柱状图</SelectItem>
-                          <SelectItem value="area">面积图</SelectItem>
-                          <SelectItem value="pie">饼图</SelectItem>
-                          <SelectItem value="table">表格</SelectItem>
+                          <SelectItem value="line">{t('Line Chart')}</SelectItem>
+                          <SelectItem value="bar">{t('Bar Chart')}</SelectItem>
+                          <SelectItem value="area">{t('Area Chart')}</SelectItem>
+                          <SelectItem value="pie">{t('Pie Chart')}</SelectItem>
+                          <SelectItem value="table">{t('Table')}</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -429,7 +444,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 {/* Dataset Schema - Show when dataset selected */}
                 {selectedDataset && (
                   <div className="space-y-2 p-3 bg-muted rounded-md">
-                    <Label className="text-xs text-muted-foreground">可用字段</Label>
+                    <Label className="text-xs text-muted-foreground">{t('Available Fields')}</Label>
                     <div className="flex flex-wrap gap-1">
                       {selectedDataset.schemaJson.map((field) => (
                         <Badge key={field.name} variant="secondary" className="text-xs">
@@ -442,14 +457,14 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* X Field */}
                 <div className="space-y-2">
-                  <Label>X轴字段</Label>
+                  <Label>{t('X-Axis Field')}</Label>
                   <Controller
                     name="xField"
                     control={control}
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="选择X轴字段" />
+                          <SelectValue placeholder={t('Select X-Axis field')} />
                         </SelectTrigger>
                         <SelectContent>
                           {selectedDataset?.schemaJson.map((f) => (
@@ -468,7 +483,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* Y Fields */}
                 <div className="space-y-2">
-                  <Label>Y轴字段</Label>
+                  <Label>{t('Y-Axis Field')}</Label>
                   <Controller
                     name="yFields"
                     control={control}
@@ -487,7 +502,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                                   }}
                                   className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
                                 >
-                                  <option value="">选择字段</option>
+                                  <option value="">{t('Select field')}</option>
                                   {selectedDataset?.schemaJson
                                     .filter((f) => f.type === 'quantitative')
                                     .map((f) => (
@@ -509,17 +524,17 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                                   }}
                                   className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
                                 >
-                                  <option value="sum">求和</option>
-                                  <option value="avg">平均</option>
-                                  <option value="min">最小</option>
-                                  <option value="max">最大</option>
-                                  <option value="count">计数</option>
+                                  <option value="sum">{t('Sum')}</option>
+                                  <option value="avg">{t('Average')}</option>
+                                  <option value="min">{t('Min')}</option>
+                                  <option value="max">{t('Max')}</option>
+                                  <option value="count">{t('Count')}</option>
                                 </select>
                               </div>
 
                               <div className="grid grid-cols-2 gap-2">
                                 <Input
-                                  placeholder="标签（可选）"
+                                  placeholder={t('Label (optional)')}
                                   value={yField.label || ''}
                                   onChange={(e) => {
                                     const updated = [...field.value];
@@ -565,7 +580,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                           className="w-full"
                         >
                           <RiAddLine className="h-4 w-4 mr-2" />
-                          添加Y轴字段
+                          {t('Add Y-Axis Field')}
                         </Button>
                       </div>
                     )}
@@ -577,7 +592,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* Style Options */}
                 <div className="space-y-3 pt-2 border-t">
-                  <Label>样式选项</Label>
+                  <Label>{t('Style Options')}</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Controller
                       name="showLegend"
@@ -585,7 +600,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       render={({ field }) => (
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          显示图例
+                          {t('Show Legend')}
                         </label>
                       )}
                     />
@@ -596,7 +611,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       render={({ field }) => (
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          显示提示
+                          {t('Show Tooltip')}
                         </label>
                       )}
                     />
@@ -607,7 +622,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       render={({ field }) => (
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          显示网格
+                          {t('Show Grid')}
                         </label>
                       )}
                     />
@@ -618,7 +633,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       render={({ field }) => (
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          堆叠模式
+                          {t('Stacked Mode')}
                         </label>
                       )}
                     />
@@ -629,14 +644,14 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       render={({ field }) => (
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          平滑曲线
+                          {t('Smooth Curve')}
                         </label>
                       )}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>宽高比 (0.5 - 3)</Label>
+                    <Label>{t('Aspect Ratio (0,5 - 3)')}</Label>
                     <Controller
                       name="aspectRatio"
                       control={control}
@@ -663,8 +678,8 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div>
-                <CardTitle>实时预览</CardTitle>
-                <CardDescription>查看图表效果</CardDescription>
+                <CardTitle>{t('Live Preview')}</CardTitle>
+                <CardDescription>{t('View chart effect')}</CardDescription>
               </div>
               <Button
                 type="button"
@@ -674,7 +689,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 disabled={isPreviewLoading}
               >
                 <RiPlayLine className="h-4 w-4 mr-2" />
-                {isPreviewLoading ? '执行中...' : '执行预览'}
+                {isPreviewLoading ? t('Executing…') : t('Generate Preview')}
               </Button>
             </CardHeader>
             <CardContent>
@@ -689,7 +704,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 <div className="flex items-center justify-center h-[350px] border-2 border-dashed rounded-lg text-muted-foreground">
                   <div className="text-center">
                     <RiMagicLine className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>配置图表并生成预览</p>
+                    <p>{t('Configure chart and generate preview')}</p>
                   </div>
                 </div>
               )}
@@ -709,7 +724,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   className="flex-1"
                 >
                   <RiMagicLine className="h-4 w-4 mr-2" />
-                  {isSubmitting ? '保存中...' : '保存图表'}
+                  {isSubmitting ? t('Saving…') : t('Save Chart')}
                 </Button>
               </div>
             )}

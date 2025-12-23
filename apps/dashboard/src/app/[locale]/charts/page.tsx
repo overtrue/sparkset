@@ -167,7 +167,7 @@ export default function ChartsPage() {
         return (
           <Button
             variant="link"
-            className="h-auto p-0 text-primary font-medium truncate max-w-[150px] block text-left"
+            className="h-auto p-0 text-primary truncate max-w-[150px] block text-left"
             onClick={() => router.push(`/datasets/${datasetId}`)}
           >
             {dataset?.name || t('Unknown Dataset')}
@@ -188,7 +188,9 @@ export default function ChartsPage() {
       accessorKey: 'createdAt',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
+        <span className="text-muted-foreground text-xs">
+          {formatDate(row.getValue('createdAt'))}
+        </span>
       ),
       size: 180,
     },
@@ -342,7 +344,7 @@ export default function ChartsPage() {
         onDeleteSelected={handleDeleteSelected}
         deleteConfirmTitle={t('Delete Chart')}
         deleteConfirmDescription={(count) =>
-          t('Are you sure to delete the selected {count} chart(s)? This action cannot be undone', {
+          t('Are you sure to delete the selected {count} chart(s)? This action cannot be undone.', {
             count,
           })
         }
@@ -353,7 +355,7 @@ export default function ChartsPage() {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title={t('Delete Chart')}
-        description={t('Are you sure to delete chart "{title}"? This action cannot be undone', {
+        description={t('Are you sure to delete chart \"{title}\"? This action cannot be undone.', {
           title: chartToDelete?.title || '',
         })}
         onConfirm={confirmDelete}

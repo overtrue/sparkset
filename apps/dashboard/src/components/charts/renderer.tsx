@@ -1,27 +1,7 @@
 'use client';
 
-import * as React from 'react';
-import {
-  LineChart,
-  BarChart,
-  AreaChart,
-  PieChart,
-  Line,
-  Bar,
-  Area,
-  Pie,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegendContent,
-} from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart';
+import { ChartContainer, ChartLegendContent, ChartTooltipContent } from '@/components/ui/chart';
 import {
   Table,
   TableBody,
@@ -30,7 +10,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ChartConfig } from '@/components/ui/chart';
+import { useTranslations } from 'next-intl';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 export interface ChartRendererProps {
   chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
@@ -48,11 +43,12 @@ export function ChartRenderer({
   className,
 }: ChartRendererProps) {
   const chartData = data as Record<string, unknown>[];
+  const t = useTranslations();
 
   // Render table
   if (chartType === 'table') {
     if (!chartData || chartData.length === 0) {
-      return <div className="text-muted-foreground text-sm p-4">暂无数据</div>;
+      return <div className="text-muted-foreground text-sm p-4">{t('No data')}</div>;
     }
 
     const columns = Object.keys(chartData[0] || {});
@@ -73,7 +69,7 @@ export function ChartRenderer({
                 {columns.map((col) => (
                   <TableCell key={col}>
                     {typeof row[col] === 'number'
-                      ? (row[col] as number).toLocaleString()
+                      ? row[col].toLocaleString()
                       : String(row[col] ?? '-')}
                   </TableCell>
                 ))}
@@ -125,7 +121,7 @@ export function ChartRenderer({
 
     // Build legend payload from enriched data
     const legendPayload = enrichedData.map((entry) => ({
-      value: entry[nameKey],
+      value: entry[nameKey as keyof typeof entry],
       color: entry.fill,
     }));
 

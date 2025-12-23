@@ -1,4 +1,4 @@
-import { testAIProviderConnection } from '@sparkset/ai';
+import { testAIProviderConnection } from '../ai/index.js';
 import { AIProviderRepository } from '../db/interfaces';
 import type { AIProvider } from '../models/types';
 import { toId } from '../utils/validation.js';

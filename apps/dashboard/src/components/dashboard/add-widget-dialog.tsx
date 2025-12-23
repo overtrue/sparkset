@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -9,26 +10,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { chartsApi } from '@/lib/api/charts';
 import { datasetsApi } from '@/lib/api/datasets';
 import type { Chart, Dataset } from '@/types/chart';
 import type {
-  WidgetType,
   ChartWidgetConfig,
   DatasetWidgetConfig,
   TextWidgetConfig,
+  WidgetType,
 } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface AddWidgetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (
-    widgets: Array<{
+    widgets: {
       title: string;
       type: WidgetType;
       x: number;
@@ -36,11 +37,12 @@ interface AddWidgetDialogProps {
       w: number;
       h: number;
       config: ChartWidgetConfig | DatasetWidgetConfig | TextWidgetConfig;
-    }>,
+    }[],
   ) => void;
 }
 
 export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogProps) {
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<WidgetType>('chart');
   const [selectedChartIds, setSelectedChartIds] = useState<Set<number>>(new Set());
   const [selectedDatasetIds, setSelectedDatasetIds] = useState<Set<number>>(new Set());
@@ -71,7 +73,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
       setCharts(chartsResult.items);
       setDatasets(datasetsResult.items);
     } catch (error) {
-      toast.error('加载数据失败');
+      toast.error(t('Failed to load data'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
   };
 
   const handleSubmit = () => {
-    const widgets: Array<{
+    const widgets: {
       title: string;
       type: WidgetType;
       x: number;
@@ -110,7 +112,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
       w: number;
       h: number;
       config: ChartWidgetConfig | DatasetWidgetConfig | TextWidgetConfig;
-    }> = [];
+    }[] = [];
 
     // 默认尺寸：图表和数据集使用较大的尺寸，文本使用较小的尺寸
     // rowHeight 是 16px，所以 h: 12 = 192px, h: 6 = 96px
@@ -160,7 +162,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
     }
 
     if (widgets.length === 0) {
-      toast.error('请至少选择一个项目');
+      toast.error(t('Please select at least one item'));
       return;
     }
 
@@ -175,8 +177,10 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>添加 Widget</DialogTitle>
-          <DialogDescription>选择要添加的 Widget（支持多选）</DialogDescription>
+          <DialogTitle>{t('Add Widget')}</DialogTitle>
+          <DialogDescription>
+            {t('Select widget(s) to add (multiple selection supported)')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
@@ -186,16 +190,16 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
             className="flex-1 flex flex-col min-h-0"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="chart">图表</TabsTrigger>
-              <TabsTrigger value="dataset">数据集</TabsTrigger>
-              <TabsTrigger value="text">文本</TabsTrigger>
+              <TabsTrigger value="chart">{t('Chart')}</TabsTrigger>
+              <TabsTrigger value="dataset">{t('Datasets')}</TabsTrigger>
+              <TabsTrigger value="text">{t('Text')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="chart" className="flex-1 overflow-auto mt-4">
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+                <div className="text-center py-8 text-muted-foreground">{t('Loading')}</div>
               ) : charts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">暂无图表</div>
+                <div className="text-center py-8 text-muted-foreground">{t('No Charts')}</div>
               ) : (
                 <div className="space-y-2">
                   {charts.map((chart) => (
@@ -223,9 +227,9 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
             <TabsContent value="dataset" className="flex-1 overflow-auto mt-4">
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">加载中...</div>
+                <div className="text-center py-8 text-muted-foreground">{t('Loading')}</div>
               ) : datasets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">暂无数据集</div>
+                <div className="text-center py-8 text-muted-foreground">{t('No Datasets')}</div>
               ) : (
                 <div className="space-y-2">
                   {datasets.map((dataset) => (
@@ -253,11 +257,13 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
             <TabsContent value="text" className="flex-1 overflow-auto mt-4">
               <div className="space-y-2">
-                <div className="text-sm text-muted-foreground mb-2">内容（支持 Markdown）</div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  {t('Content (Markdown supported)')}
+                </div>
                 <Textarea
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
-                  placeholder="输入文本内容，支持 Markdown 格式"
+                  placeholder={t('Enter text content, Markdown format supported')}
                   className="min-h-[200px]"
                 />
               </div>
@@ -267,10 +273,11 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('Cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!hasSelection}>
-            添加 ({selectedChartIds.size + selectedDatasetIds.size + (textContent.trim() ? 1 : 0)})
+            {t('Add')} (
+            {selectedChartIds.size + selectedDatasetIds.size + (textContent.trim() ? 1 : 0)})
           </Button>
         </DialogFooter>
       </DialogContent>

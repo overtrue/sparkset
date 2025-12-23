@@ -1,4 +1,4 @@
-import { buildActionPrompt, VercelAIClient } from '@sparkset/ai';
+import { buildActionPrompt, VercelAIClient } from '../ai/index.js';
 import { TableSchema } from '@sparkset/core';
 import { ActionRepository } from '../db/interfaces';
 import type { Action, AIProvider } from '../models/types';

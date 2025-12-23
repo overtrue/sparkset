@@ -2,14 +2,15 @@
 
 import {
   RiArrowLeftLine,
-  RiEditLine,
+  RiCloseLine,
+  RiDeleteBinLine,
   RiEdit2Line,
+  RiEditLine,
   RiRefreshLine,
   RiSave3Line,
   RiSparkling2Line,
-  RiDeleteBinLine,
-  RiCloseLine,
 } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ChangeEvent, useMemo, useState } from 'react';
@@ -83,6 +84,7 @@ const defaultForm: CreateDatasourceInput = {
 };
 
 export default function DatasourceDetail({ initial }: { initial: DatasourceDetailDTO }) {
+  const t = useTranslations();
   const router = useRouter();
   const [datasource, setDatasource] = useState(initial);
   const [editingTable, setEditingTable] = useState<EditingTableState | null>(null);
@@ -133,10 +135,10 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         ),
       }));
       setEditingTable(null);
-      setMessage('保存成功');
+      setMessage(t('Saved successfully'));
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
-      setMessage((err as Error)?.message ?? '保存失败');
+      setMessage((err as Error)?.message ?? t('Save failed'));
     } finally {
       setSaving(false);
     }
@@ -180,10 +182,10 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         })),
       }));
       setEditingColumn(null);
-      setMessage('保存成功');
+      setMessage(t('Saved successfully'));
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
-      setMessage((err as Error)?.message ?? '保存失败');
+      setMessage((err as Error)?.message ?? t('Save failed'));
     } finally {
       setSaving(false);
     }
@@ -201,9 +203,9 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       // 重新获取详情数据以更新表结构
       const updated = await fetchDatasourceDetail(datasource.id);
       setDatasource(updated);
-      toast.success('同步成功');
+      toast.success(t('Sync successful'));
     } catch (err) {
-      toast.error((err as Error)?.message ?? '同步失败');
+      toast.error((err as Error)?.message ?? t('Sync failed'));
     } finally {
       setSyncing(false);
     }
@@ -216,9 +218,9 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       await generateSemanticDescriptions(datasource.id);
       const updated = await fetchDatasourceDetail(datasource.id);
       setDatasource(updated);
-      toast.success('语义描述生成完成');
+      toast.success(t('Semantic description generated'));
     } catch (err) {
-      toast.error((err as Error)?.message ?? '生成失败');
+      toast.error((err as Error)?.message ?? t('Generation failed'));
     } finally {
       setGenerating(false);
     }
@@ -262,24 +264,25 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       }
       const updated = await updateDatasource(datasource.id, updateData);
       setDatasource((prev) => ({ ...prev, ...updated }));
-      toast.success('数据源更新成功');
+      toast.success(t('Datasource updated successfully'));
       handleCloseEditDialog();
     } catch (err) {
-      toast.error((err as Error)?.message ?? '更新失败');
+      toast.error((err as Error)?.message ?? t('Update failed'));
     } finally {
       setEditSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!globalThis.confirm('确定要删除该数据源吗？删除后无法恢复。')) return;
+    if (!globalThis.confirm(t('Are you sure to delete this datasource? This cannot be recovered')))
+      return;
     setDeleting(true);
     try {
       await removeDatasource(datasource.id);
-      toast.success('数据源已删除');
+      toast.success(t('Datasource deleted'));
       router.push('/');
     } catch (err) {
-      toast.error((err as Error)?.message ?? '删除失败');
+      toast.error((err as Error)?.message ?? t('Delete failed'));
       setDeleting(false);
     }
   };
@@ -290,7 +293,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         <Button variant="ghost" size="sm" asChild>
           <Link href="/">
             <RiArrowLeftLine className="mr-2 h-4 w-4" />
-            返回列表
+            {t('Back to list')}
           </Link>
         </Button>
       </div>
@@ -299,8 +302,8 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>数据源信息</CardTitle>
-              <CardDescription>数据源的基础连接信息</CardDescription>
+              <CardTitle>{t('Datasource Info')}</CardTitle>
+              <CardDescription>{t('Basic connection information')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -310,7 +313,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 disabled={syncing || deleting || generating}
               >
                 <RiEditLine className="mr-2 h-4 w-4" />
-                编辑
+                {t('Edit')}
               </Button>
               <Button
                 variant="outline"
@@ -319,7 +322,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 disabled={syncing || deleting || generating}
               >
                 <RiRefreshLine className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? '同步中...' : '同步'}
+                {syncing ? t('Syncing') : t('Sync')}
               </Button>
               <Button
                 variant="outline"
@@ -328,7 +331,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 disabled={syncing || deleting || generating}
               >
                 <RiDeleteBinLine className="mr-2 h-4 w-4" />
-                {deleting ? '删除中...' : '删除'}
+                {deleting ? t('Deleting') : t('Delete')}
               </Button>
             </div>
           </div>
@@ -336,27 +339,27 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label className="text-muted-foreground">名称</Label>
+              <Label className="text-muted-foreground">{t('Name')}</Label>
               <p className="text-sm font-medium">{datasource.name}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">类型</Label>
+              <Label className="text-muted-foreground">{t('Type')}</Label>
               <p className="text-sm font-medium uppercase">{datasource.type}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">Host</Label>
+              <Label className="text-muted-foreground">{t('Host')}</Label>
               <p className="text-sm font-medium">{`${datasource.host}:${datasource.port}`}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">数据库</Label>
+              <Label className="text-muted-foreground">{t('Database')}</Label>
               <p className="text-sm font-medium">{datasource.database}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">用户名</Label>
+              <Label className="text-muted-foreground">{t('Username')}</Label>
               <p className="text-sm font-medium">{datasource.username}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">最近同步</Label>
+              <Label className="text-muted-foreground">{t('Last Synced')}</Label>
               <p className="text-sm font-medium text-muted-foreground">
                 {formatDate(datasource.lastSyncAt)}
               </p>
@@ -369,10 +372,12 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>结构信息</CardTitle>
+              <CardTitle>{t('Schema Information')}</CardTitle>
               <CardDescription>
-                共 {datasource.tables.length} 个表，可编辑表注释和语义描述以帮助 AI
-                更好地理解数据结构
+                {t(
+                  '{count} tables - edit comments and semantic descriptions to help AI understand the data structure better',
+                  { count: datasource.tables.length },
+                )}
               </CardDescription>
             </div>
             <Button
@@ -382,7 +387,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               disabled={syncing || deleting || generating}
             >
               <RiSparkling2Line className={`mr-2 h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? '生成中...' : '补充语义描述'}
+              {generating ? t('Generating') : t('Add Semantic Description')}
             </Button>
           </div>
         </CardHeader>
@@ -401,7 +406,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
 
           {datasource.tables.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              暂无结构信息，请先同步数据源
+              {t('No schema info, please sync the datasource first')}
             </p>
           ) : (
             <Accordion type="single" collapsible className="w-full">
@@ -418,7 +423,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{table.columns.length} 列</span>
+                        <span>{t('{count} columns', { count: table.columns.length })}</span>
                         <div
                           className={cn(
                             buttonVariants({ variant: 'ghost', size: 'sm' }),
@@ -441,7 +446,9 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                           <CardContent className="pt-6">
                             <div className="space-y-4">
                               <div>
-                                <Label htmlFor={`table-comment-${table.id}`}>表注释</Label>
+                                <Label htmlFor={`table-comment-${table.id}`}>
+                                  {t('Table Comment')}
+                                </Label>
                                 <Input
                                   id={`table-comment-${table.id}`}
                                   value={editingTable.tableComment}
@@ -451,11 +458,13 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                       tableComment: e.target.value,
                                     })
                                   }
-                                  placeholder="数据库表注释"
+                                  placeholder={t('Database table comment')}
                                 />
                               </div>
                               <div>
-                                <Label htmlFor={`table-semantic-${table.id}`}>语义描述</Label>
+                                <Label htmlFor={`table-semantic-${table.id}`}>
+                                  {t('Semantic Description')}
+                                </Label>
                                 <Textarea
                                   id={`table-semantic-${table.id}`}
                                   value={editingTable.semanticDescription}
@@ -465,14 +474,16 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                       semanticDescription: e.target.value,
                                     })
                                   }
-                                  placeholder="用于 AI 理解表的业务含义和用途"
+                                  placeholder={t(
+                                    "Used for AI to understand the table's business meaning and purpose",
+                                  )}
                                   rows={3}
                                 />
                               </div>
                               <div className="flex gap-2">
                                 <Button size="sm" onClick={handleSaveTable} disabled={saving}>
                                   <RiSave3Line className="mr-2 h-4 w-4" />
-                                  保存
+                                  {t('Save')}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -481,7 +492,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                   disabled={saving}
                                 >
                                   <RiCloseLine className="mr-2 h-4 w-4" />
-                                  取消
+                                  {t('Cancel')}
                                 </Button>
                               </div>
                             </div>
@@ -491,13 +502,17 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                         <div className="space-y-2">
                           {table.tableComment && (
                             <div>
-                              <Label className="text-xs text-muted-foreground">表注释</Label>
+                              <Label className="text-xs text-muted-foreground">
+                                {t('Table Comment')}
+                              </Label>
                               <p className="text-sm">{table.tableComment}</p>
                             </div>
                           )}
                           {table.semanticDescription && (
                             <div>
-                              <Label className="text-xs text-muted-foreground">语义描述</Label>
+                              <Label className="text-xs text-muted-foreground">
+                                {t('Semantic Description')}
+                              </Label>
                               <p className="text-sm">{table.semanticDescription}</p>
                             </div>
                           )}
@@ -508,11 +523,11 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                         <Table>
                           <TableHeader>
                             <TableRow className="hover:bg-transparent">
-                              <TableHead>列名</TableHead>
-                              <TableHead>类型</TableHead>
-                              <TableHead>注释</TableHead>
-                              <TableHead>语义描述</TableHead>
-                              <TableHead className="text-right">操作</TableHead>
+                              <TableHead>{t('Column Name')}</TableHead>
+                              <TableHead>{t('Type')}</TableHead>
+                              <TableHead>{t('Comment')}</TableHead>
+                              <TableHead>{t('Semantic Description')}</TableHead>
+                              <TableHead className="text-right">{t('Actions')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableSpacer />
@@ -534,7 +549,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                           columnComment: e.target.value,
                                         })
                                       }
-                                      placeholder="列注释"
+                                      placeholder={t('Column Comment')}
                                       className="h-8"
                                     />
                                   ) : (
@@ -554,7 +569,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                                           semanticDescription: e.target.value,
                                         })
                                       }
-                                      placeholder="语义描述"
+                                      placeholder={t('Semantic Description')}
                                       rows={2}
                                       className="min-w-[200px]"
                                     />
@@ -613,28 +628,28 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>编辑数据源</DialogTitle>
-            <DialogDescription>修改数据源配置信息</DialogDescription>
+            <DialogTitle>{t('Edit Datasource')}</DialogTitle>
+            <DialogDescription>{t('Modify datasource configuration')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">名称</Label>
+                <Label htmlFor="edit-name">{t('Name')}</Label>
                 <Input
                   id="edit-name"
                   value={editForm.name}
                   onChange={onEditFormChange('name')}
-                  placeholder="如 production-mysql"
+                  placeholder={t('eg production-mysql')}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-type">类型</Label>
+                  <Label htmlFor="edit-type">{t('Type')}</Label>
                   <Input id="edit-type" value={editForm.type} readOnly />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-port">端口</Label>
+                  <Label htmlFor="edit-port">{t('Port')}</Label>
                   <Input
                     id="edit-port"
                     type="number"
@@ -657,7 +672,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-database">数据库名</Label>
+                  <Label htmlFor="edit-database">{t('Database Name')}</Label>
                   <Input
                     id="edit-database"
                     value={editForm.database}
@@ -669,7 +684,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-username">用户名</Label>
+                  <Label htmlFor="edit-username">{t('Username')}</Label>
                   <Input
                     id="edit-username"
                     value={editForm.username}
@@ -679,24 +694,27 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-password">
-                    密码 <span className="text-muted-foreground">(留空则不修改)</span>
+                    {t('Password')}{' '}
+                    <span className="text-muted-foreground">
+                      {t('(Leave empty to keep unchanged)')}
+                    </span>
                   </Label>
                   <Input
                     id="edit-password"
                     type="password"
                     value={editForm.password}
                     onChange={onEditFormChange('password')}
-                    placeholder="留空则不修改"
+                    placeholder={t('Leave empty to keep unchanged')}
                   />
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseEditDialog}>
-                取消
+                {t('Cancel')}
               </Button>
               <Button type="submit" disabled={!canSubmitEdit || editSubmitting}>
-                {editSubmitting ? '更新中...' : '更新'}
+                {editSubmitting ? t('Updating') : t('Update')}
               </Button>
             </DialogFooter>
           </form>

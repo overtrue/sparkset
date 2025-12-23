@@ -325,13 +325,7 @@ export default function DatasetDetailPage() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Datasource')}:</span>
-                <Button
-                  variant="link"
-                  className="h-auto p-0 text-primary font-medium"
-                  onClick={() => router.push(`/datasources/${dataset.datasourceId}`)}
-                >
-                  {dataset.datasourceName}
-                </Button>
+                <span className="font-medium">{dataset.datasourceName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Schema Hash')}:</span>
@@ -354,7 +348,7 @@ export default function DatasetDetailPage() {
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title={t('Delete Dataset')}
-        description={t('Are you sure to delete "{name}"? This cannot be undone', {
+        description={t('Are you sure to delete "{name}"? This cannot be undone.', {
           name: dataset.name,
         })}
         onConfirm={handleDelete}

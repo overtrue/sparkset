@@ -1,4 +1,4 @@
-import { AIClient, VercelAIClient } from '@sparkset/ai';
+import { AIClient, VercelAIClient } from '../ai/index.js';
 import { DBClient, DataSourceConfig, QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
 import { ActionService } from '../services/action_service';

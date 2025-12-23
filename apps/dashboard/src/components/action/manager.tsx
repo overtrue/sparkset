@@ -1,15 +1,16 @@
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
 import {
+  RiAddLine,
+  RiCloseLine,
+  RiDeleteBinLine,
   RiEditLine,
   RiLoader4Line,
   RiPlayLine,
-  RiAddLine,
   RiSparkling2Line,
-  RiDeleteBinLine,
-  RiCloseLine,
 } from '@remixicon/react';
+import { ColumnDef } from '@tanstack/react-table';
+import { useTranslations } from 'next-intl';
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -72,6 +73,7 @@ interface ActionManagerProps {
 }
 
 export default function ActionManager({ initial }: ActionManagerProps) {
+  const t = useTranslations();
   const [actions, setActions] = useState(initial);
   const [form, setForm] = useState<CreateActionInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -175,7 +177,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     try {
       JSON.parse(payloadText);
     } catch {
-      toast.error('Payload 格式不正确，请输入有效的 JSON');
+      toast.error(t('Invalid Payload format, please enter valid JSON'));
       return;
     }
 
@@ -193,15 +195,15 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         };
         const updated = await updateAction(updateData);
         setActions((prev) => prev.map((a) => (a.id === editingId ? updated : a)));
-        toast.success('Action 更新成功');
+        toast.success(t('Action updated successfully'));
       } else {
         const created = await createAction(form);
         setActions((prev) => [...prev, created]);
-        toast.success('Action 创建成功');
+        toast.success(t('Action created successfully'));
       }
       handleCloseDialog();
     } catch (err) {
-      toast.error((err as Error)?.message ?? '操作失败');
+      toast.error((err as Error)?.message ?? t('Operation failed'));
     } finally {
       setSubmitting(false);
     }
@@ -213,11 +215,11 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     try {
       await deleteAction(deletingId);
       setActions((prev) => prev.filter((a) => a.id !== deletingId));
-      toast.success('已删除');
+      toast.success(t('Deleted'));
       setDeleteDialogOpen(false);
       setDeletingId(null);
     } catch (err) {
-      toast.error((err as Error)?.message ?? '删除失败');
+      toast.error((err as Error)?.message ?? t('Delete failed'));
     } finally {
       setDeleting(false);
     }
@@ -228,11 +230,16 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       try {
         await deleteAction(row.id);
       } catch (err) {
-        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+        toast.error(
+          t('Delete {name} failed: {message}', {
+            name: row.name,
+            message: (err as Error)?.message,
+          }),
+        );
       }
     }
     setActions((prev) => prev.filter((a) => !rows.some((r) => r.id === a.id)));
-    toast.success(`成功删除 ${rows.length} 个 Action`);
+    toast.success(t('Successfully deleted {count} Actions', { count: rows.length }));
   };
 
   const handleExecuteClick = (id: number) => {
@@ -254,7 +261,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       const res = await executeAction(id, parameters);
       setExecutionResult(res);
     } catch (err) {
-      setExecutionError((err as Error)?.message ?? '执行失败');
+      setExecutionError((err as Error)?.message ?? t('Execution failed'));
     } finally {
       setExecutingId(null);
       setPendingExecuteId(null);
@@ -271,12 +278,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
 
   const handleGenerateSQL = async () => {
     if (!form.name.trim()) {
-      toast.error('请先输入 Action 名称');
+      toast.error(t('Please enter Action name first'));
       return;
     }
 
     if (!selectedDatasourceId) {
-      toast.error('请先选择数据源');
+      toast.error(t('Please select a datasource first'));
       return;
     }
 
@@ -300,11 +307,15 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       }));
       setPayloadText(JSON.stringify(newPayload, null, 2));
 
-      toast.success('SQL 生成成功');
+      toast.success(t('SQL generated successfully'));
     } catch (err) {
-      // 错误已经在后端返回了适当的 HTTP 状态码，这里直接显示错误消息
+      // Error already returned appropriate HTTP status code from backend, display error message directly
       const errorMessage =
-        err instanceof Error ? err.message : '生成 SQL 失败，请检查数据源配置和 Schema 信息';
+        err instanceof Error
+          ? err.message
+          : t(
+              'Failed to generate SQL, please check datasource configuration and Schema information',
+            );
       toast.error(errorMessage);
     } finally {
       setGeneratingSQL(false);
@@ -324,13 +335,13 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
         cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
         size: 180,
       },
       {
         accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
         cell: ({ row }) => (
           <Badge variant="outline" className="uppercase text-xs">
             {row.getValue('type')}
@@ -340,7 +351,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       },
       {
         accessorKey: 'description',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="描述" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
         ),
@@ -349,17 +360,17 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       {
         id: 'updatedAt',
         accessorFn: (row) => row.updatedAt || row.createdAt,
-        header: ({ column }) => <DataTableColumnHeader column={column} title="最近更新" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Updated')} />,
         cell: ({ row }) => (
           <span className="text-muted-foreground text-xs">
             {formatDate(row.getValue('updatedAt'))}
           </span>
         ),
-        size: 160,
+        size: 180,
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">操作</span>,
+        header: () => <span className="sr-only">{t('Actions')}</span>,
         cell: ({ row }) => {
           const action = row.original;
           const isExecuting = executingId === action.id;
@@ -367,19 +378,19 @@ export default function ActionManager({ initial }: ActionManagerProps) {
 
           const rowActions: RowAction[] = [
             {
-              label: isExecuting ? '执行中...' : '执行',
+              label: isExecuting ? t('Executing') : t('Execute'),
               icon: <RiPlayLine className={`h-4 w-4 ${isExecuting ? 'animate-spin' : ''}`} />,
               onClick: () => handleExecuteClick(action.id),
               disabled: isExecuting,
             },
             {
-              label: '编辑',
+              label: t('Edit'),
               icon: <RiEditLine className="h-4 w-4" />,
               onClick: () => handleOpenDialog(action),
               disabled: isDeleting,
             },
             {
-              label: '删除',
+              label: t('Delete'),
               icon: <RiDeleteBinLine className="h-4 w-4" />,
               onClick: () => {
                 setDeletingId(action.id);
@@ -404,18 +415,16 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         columns={columns}
         data={actions}
         searchKey="name"
-        searchPlaceholder="搜索 Action..."
+        searchPlaceholder={t('Search Actions')}
         enableRowSelection
         onDeleteSelected={handleDeleteSelected}
-        deleteConfirmTitle="删除 Action"
-        deleteConfirmDescription={(count) =>
-          `确定要删除选中的 ${count} 个 Action 吗？此操作不可撤销。`
-        }
-        emptyMessage="暂无 Action，点击右上角新建"
+        deleteConfirmTitle={t('Delete Action')}
+        deleteConfirmDescription={(count) => t('confirmDeleteSelectedActions', { count })}
+        emptyMessage={t('No Actions yet, click Create New in the top right')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <RiAddLine className="h-4 w-4" />
-            新建 Action
+            {t('Create Action')}
           </Button>
         }
       />
@@ -424,9 +433,11 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? '编辑 Action' : '新建 Action'}</DialogTitle>
+            <DialogTitle>{editingId ? t('Edit Action') : t('Create Action')}</DialogTitle>
             <DialogDescription>
-              {editingId ? '修改 Action 信息' : '填写以下信息以创建新的 Action'}
+              {editingId
+                ? t('Modify Action information')
+                : t('Fill in the information to create a new Action')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -434,32 +445,32 @@ export default function ActionManager({ initial }: ActionManagerProps) {
               {/* 左侧：基本信息 */}
               <div className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">名称 *</Label>
+                  <Label htmlFor="name">{t('Name')} *</Label>
                   <Input
                     id="name"
                     value={form.name}
                     onChange={onChange('name')}
-                    placeholder="如：查询用户列表"
+                    placeholder={t('eg: Query user list')}
                     required
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="description">描述</Label>
+                  <Label htmlFor="description">{t('Description')}</Label>
                   <Textarea
                     id="description"
                     value={form.description}
                     onChange={onChange('description')}
-                    placeholder="输入 Action 描述（可选）"
+                    placeholder={t('Enter Action description (optional)')}
                     rows={2}
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="type">类型 *</Label>
+                  <Label htmlFor="type">{t('Type')} *</Label>
                   <Select value={form.type} onValueChange={(value) => onChange('type')(value)}>
                     <SelectTrigger id="type">
-                      <SelectValue placeholder="选择类型" />
+                      <SelectValue placeholder={t('Select type')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sql">SQL</SelectItem>
@@ -471,7 +482,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
 
                 {form.type === 'sql' && (
                   <div className="grid gap-2">
-                    <Label>数据源 *</Label>
+                    <Label>{t('Datasource')} *</Label>
                     <DatasourceSelector
                       datasources={datasources}
                       value={selectedDatasourceId}
@@ -487,7 +498,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                       Payload (JSON) *
                       {form.type === 'sql' && (
                         <span className="text-xs text-muted-foreground ml-2">
-                          格式: {`{"sql": "SELECT * FROM table"}`}
+                          {t('Format')}: {`{"sql": "SELECT * FROM table"}`}
                         </span>
                       )}
                     </Label>
@@ -503,12 +514,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                         {generatingSQL ? (
                           <>
                             <RiLoader4Line className="mr-2 h-3 w-3 animate-spin" />
-                            生成中...
+                            {t('Generating')}
                           </>
                         ) : (
                           <>
                             <RiSparkling2Line className="mr-2 h-3 w-3" />
-                            AI 生成
+                            {t('AI Generate')}
                           </>
                         )}
                       </Button>
@@ -545,10 +556,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 onClick={handleCloseDialog}
                 disabled={submitting}
               >
-                取消
+                {t('Cancel')}
               </Button>
               <Button type="submit" disabled={submitting || !canSubmit}>
-                {submitting ? '保存中...' : editingId ? '更新' : '创建'}
+                {submitting ? t('Saving') : editingId ? t('Update') : t('Create')}
               </Button>
             </DialogFooter>
           </form>
@@ -559,10 +570,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="确认删除"
-        description="确定要删除该 Action 吗？此操作不可撤销。"
-        confirmText="删除"
-        cancelText="取消"
+        title={t('Confirm Delete')}
+        description={t('confirmDeleteAction')}
+        confirmText={t('Delete')}
+        cancelText={t('Cancel')}
         onConfirm={handleConfirmDelete}
         loading={deleting}
       />
@@ -591,7 +602,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         <Card className="shadow-none mt-4">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>执行结果</CardTitle>
+              <CardTitle>{t('Execution Result')}</CardTitle>
               <Button
                 size="sm"
                 variant="ghost"
@@ -601,7 +612,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 }}
               >
                 <RiCloseLine className="mr-2 h-4 w-4" />
-                清除
+                {t('Clear')}
               </Button>
             </div>
           </CardHeader>

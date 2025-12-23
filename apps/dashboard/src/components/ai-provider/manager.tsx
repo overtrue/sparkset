@@ -8,10 +8,10 @@ import {
   RiDeleteBin2Line,
   RiEdit2Line,
   RiLoader4Line,
-  RiRefreshLine,
   RiStarLine,
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
+import { useTranslations } from 'next-intl';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -19,11 +19,11 @@ import { AI_PROVIDER_TYPES, getProviderLabel } from '../../lib/aiProviderTypes';
 import {
   type AIProviderDTO,
   type CreateAIProviderInput,
+  type TestConnectionResult,
   createAIProvider,
   removeAIProvider,
   setDefaultAIProvider,
   testAIProviderConnectionByConfig,
-  type TestConnectionResult,
   updateAIProvider,
 } from '../../lib/api';
 import { ConfirmDialog } from '../confirm-dialog';
@@ -65,6 +65,7 @@ interface AIProviderManagerProps {
 }
 
 export default function AIProviderManager({ initial }: AIProviderManagerProps) {
+  const t = useTranslations();
   const [providers, setProviders] = useState(initial);
   const [form, setForm] = useState<CreateAIProviderInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -164,12 +165,12 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       setTestResult(result);
       if (result.success) {
         setIsVerified(true);
-        toast.success('连通性验证通过');
+        toast.success(t('Connection verified successfully'));
       } else {
         setIsVerified(false);
       }
     } catch (err) {
-      const errorMsg = (err as Error)?.message ?? '连通性验证失败';
+      const errorMsg = (err as Error)?.message ?? t('Connection verification failed');
       setTestResult({ success: false, message: errorMsg });
       toast.error(errorMsg);
     } finally {
@@ -189,15 +190,15 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         }
         const updated = await updateAIProvider(editingId, updateData);
         setProviders((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
-        toast.success('Provider 更新成功');
+        toast.success(t('Provider updated successfully'));
       } else {
         const created = await createAIProvider(form);
         setProviders((prev) => [...prev, created]);
-        toast.success('Provider 创建成功');
+        toast.success(t('Provider created successfully'));
       }
       handleCloseDialog();
     } catch (err) {
-      toast.error((err as Error)?.message ?? '操作失败');
+      toast.error((err as Error)?.message ?? t('Operation failed'));
     } finally {
       setSubmitting(false);
     }
@@ -213,9 +214,9 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
           isDefault: p.id === id,
         })),
       );
-      toast.success('默认 Provider 设置成功');
+      toast.success(t('Default Provider set successfully'));
     } catch (err) {
-      toast.error((err as Error)?.message ?? '设置失败');
+      toast.error((err as Error)?.message ?? t('Setting failed'));
     } finally {
       setActionId(null);
     }
@@ -232,11 +233,11 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     try {
       await removeAIProvider(deletingId);
       setProviders((prev) => prev.filter((p) => p.id !== deletingId));
-      toast.success('已删除');
+      toast.success(t('Deleted'));
       setConfirmOpen(false);
       setDeletingId(null);
     } catch (err) {
-      toast.error((err as Error)?.message ?? '删除失败');
+      toast.error((err as Error)?.message ?? t('Delete failed'));
     } finally {
       setDeleting(false);
     }
@@ -247,24 +248,24 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       try {
         await removeAIProvider(row.id);
       } catch (err) {
-        toast.error(`删除 ${row.name} 失败: ${(err as Error)?.message}`);
+        toast.error(`${t('Delete failed')}: ${row.name} - ${(err as Error)?.message}`);
       }
     }
     setProviders((prev) => prev.filter((p) => !rows.some((r) => r.id === p.id)));
-    toast.success(`成功删除 ${rows.length} 个 Provider`);
+    toast.success(t('Successfully deleted {count} provider(s)', { count: rows.length }));
   };
 
   const columns: ColumnDef<AIProviderDTO>[] = useMemo(
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="名称" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
         cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
-        size: 160,
+        size: 180,
       },
       {
         accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="类型" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
             {getProviderLabel(row.getValue('type'))}
@@ -274,7 +275,9 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       },
       {
         accessorKey: 'defaultModel',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="默认模型" />,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t('Default Model')} />
+        ),
         cell: ({ row }) => (
           <span className="text-muted-foreground text-xs">
             {row.getValue('defaultModel') || '-'}
@@ -284,34 +287,34 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       },
       {
         accessorKey: 'isDefault',
-        header: '状态',
+        header: t('Status'),
         cell: ({ row }) =>
           row.getValue('isDefault') ? (
             <Badge variant="default" className="gap-1">
               <RiStarLine className="h-3 w-3 fill-current" />
-              默认
+              {t('Default')}
             </Badge>
           ) : (
             <Badge variant="outline" className="gap-1">
               <RiCheckLine className="h-3 w-3" />
-              已配置
+              {t('Configured')}
             </Badge>
           ),
         size: 100,
       },
       {
         accessorKey: 'updatedAt',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="更新时间" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Updated At')} />,
         cell: ({ row }) => (
           <span className="text-muted-foreground text-xs">
             {formatDate(row.getValue('updatedAt'))}
           </span>
         ),
-        size: 160,
+        size: 180,
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">操作</span>,
+        header: () => <span className="sr-only">{t('Actions')}</span>,
         cell: ({ row }) => {
           const provider = row.original;
           const isLoading = actionId === provider.id;
@@ -320,7 +323,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
           if (!provider.isDefault) {
             actions.push({
-              label: '设为默认',
+              label: t('Set as Default'),
               icon: <RiStarLine className="h-4 w-4" />,
               onClick: () => handleSetDefault(provider.id),
               disabled: isLoading,
@@ -329,13 +332,13 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
           actions.push(
             {
-              label: '编辑',
+              label: t('Edit'),
               icon: <RiEdit2Line className="h-4 w-4" />,
               onClick: () => handleOpenDialog(provider),
               disabled: isLoading,
             },
             {
-              label: '删除',
+              label: t('Delete'),
               icon: <RiDeleteBin2Line className="h-4 w-4" />,
               onClick: () => handleRemoveClick(provider.id),
               variant: 'destructive',
@@ -357,18 +360,21 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         columns={columns}
         data={providers}
         searchKey="name"
-        searchPlaceholder="搜索 Provider..."
+        searchPlaceholder={t('Search Provider')}
         enableRowSelection
         onDeleteSelected={handleDeleteSelected}
-        deleteConfirmTitle="删除 Provider"
+        deleteConfirmTitle={t('Delete Provider')}
         deleteConfirmDescription={(count) =>
-          `确定要删除选中的 ${count} 个 Provider 吗？此操作不可撤销。`
+          t(
+            'Are you sure to delete the selected {count} provider(s)? This action cannot be undone',
+            { count },
+          )
         }
-        emptyMessage="暂无 Provider，点击右上角添加"
+        emptyMessage={t('No providers yet, click the button above to add')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
             <RiAddLine className="h-4 w-4" />
-            添加 Provider
+            {t('Add Provider')}
           </Button>
         }
       />
@@ -376,27 +382,29 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingId ? '编辑 Provider' : '添加 Provider'}</DialogTitle>
+            <DialogTitle>{editingId ? t('Edit Provider') : t('Add Provider')}</DialogTitle>
             <DialogDescription>
               {editingId
-                ? '修改 Provider 配置信息，修改后建议重新验证连接'
-                : '填写以下信息并验证连接后，即可创建 Provider'}
+                ? t(
+                    'Modify provider configuration, verify connection after modification is recommended',
+                  )
+                : t('Fill in the information below and verify the connection to create a provider')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">名称</Label>
+                <Label htmlFor="name">{t('Name')}</Label>
                 <Input
                   id="name"
                   value={form.name}
                   onChange={onChange('name')}
-                  placeholder="如 my-openai"
+                  placeholder={t('eg my-openai')}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="type">Provider 类型</Label>
+                <Label htmlFor="type">{t('Provider Type')}</Label>
                 <Popover open={providerSelectOpen} onOpenChange={setProviderSelectOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -409,16 +417,16 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       {form.type ? (
                         <span className="text-sm font-medium">{getProviderLabel(form.type)}</span>
                       ) : (
-                        <span className="text-muted-foreground">选择 Provider 类型</span>
+                        <span className="text-muted-foreground">{t('Select Provider Type')}</span>
                       )}
                       <RiArrowDownSLine className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="start">
                     <Command className="h-[350px]">
-                      <CommandInput placeholder="搜索 Provider..." />
+                      <CommandInput placeholder={t('Search Provider')} />
                       <CommandList>
-                        <CommandEmpty>未找到匹配的 Provider</CommandEmpty>
+                        <CommandEmpty>{t('No matching Provider found')}</CommandEmpty>
                         <CommandGroup>
                           {AI_PROVIDER_TYPES.map((providerType) => (
                             <CommandItem
@@ -445,19 +453,23 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
               <div className="grid gap-2">
                 <Label htmlFor="apiKey">
                   API Key{' '}
-                  {editingId && <span className="text-muted-foreground">(留空则不修改)</span>}
+                  {editingId && (
+                    <span className="text-muted-foreground">
+                      {t('(Leave empty to keep unchanged)')}
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="apiKey"
                   type="password"
                   value={form.apiKey}
                   onChange={onChange('apiKey')}
-                  placeholder={editingId ? '留空则不修改' : 'sk-...'}
+                  placeholder={editingId ? t('Leave empty to keep unchanged') : 'sk-...'}
                   required={!editingId}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="baseURL">Base URL (可选)</Label>
+                <Label htmlFor="baseURL">{t('Base URL (optional)')}</Label>
                 <Input
                   id="baseURL"
                   value={form.baseURL}
@@ -466,7 +478,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="defaultModel">默认模型 (可选)</Label>
+                <Label htmlFor="defaultModel">{t('Default Model (optional)')}</Label>
                 <Input
                   id="defaultModel"
                   value={form.defaultModel}
@@ -482,19 +494,21 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                     {testing && (
                       <>
                         <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
-                        <span className="text-blue-600">正在验证 Provider 连接...</span>
+                        <span className="text-blue-600">{t('Verifying Provider connection')}</span>
                       </>
                     )}
                     {testResult?.success && !testing && (
                       <>
                         <RiCheckboxCircleLine className="h-4 w-4 text-green-500" />
-                        <span className="text-green-600">连接验证成功</span>
+                        <span className="text-green-600">
+                          {t('Connection verified successfully')}
+                        </span>
                       </>
                     )}
                     {testResult?.success === false && !testing && (
                       <>
                         <RiCloseCircleLine className="h-4 w-4 text-red-500" />
-                        <span className="text-red-600">连接验证失败</span>
+                        <span className="text-red-600">{t('Connection verification failed')}</span>
                       </>
                     )}
                   </div>
@@ -503,7 +517,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                   )}
                   {editingId && testResult?.success === false && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      提示：请检查 API Key、Base URL 和 Provider 类型配置
+                      {t('Tip: Please check the API Key, Base URL and Provider type configuration')}
                     </p>
                   )}
                 </div>
@@ -522,7 +536,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       disabled={!canTest || testing}
                       className="w-full sm:w-auto"
                     >
-                      {testing ? '验证中...' : '验证连通性'}
+                      {testing ? t('Verifying') : t('Verify Connection')}
                     </Button>
                     <Button
                       type="button"
@@ -530,7 +544,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       onClick={handleCloseDialog}
                       className="w-full sm:w-auto"
                     >
-                      取消
+                      {t('Cancel')}
                     </Button>
                   </>
                 ) : (
@@ -539,11 +553,11 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                     <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                       {submitting
                         ? editingId
-                          ? '更新中...'
-                          : '创建中...'
+                          ? t('Updating')
+                          : t('Creating')
                         : editingId
-                          ? '保存'
-                          : '添加'}
+                          ? t('Save')
+                          : t('Add')}
                     </Button>
                     <Button
                       type="button"
@@ -551,7 +565,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       onClick={handleCloseDialog}
                       className="w-full sm:w-auto"
                     >
-                      取消
+                      {t('Cancel')}
                     </Button>
                   </>
                 )}
@@ -564,10 +578,10 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="删除 Provider"
-        description="确定要删除该 Provider 吗？此操作不可撤销。"
-        confirmText="删除"
-        cancelText="取消"
+        title={t('Delete Provider')}
+        description={t('Are you sure to delete this Provider? This action cannot be undone')}
+        confirmText={t('Delete')}
+        cancelText={t('Cancel')}
         onConfirm={handleConfirmDelete}
         loading={deleting}
       />

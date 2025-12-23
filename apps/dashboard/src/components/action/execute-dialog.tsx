@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { type ActionInputSchema } from '../../lib/api';
 import { Button } from '../ui/button';
@@ -30,6 +31,7 @@ export function ExecuteDialog({
   onExecute,
   executing = false,
 }: ExecuteDialogProps) {
+  const t = useTranslations();
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
     inputSchema.parameters.forEach((param) => {
@@ -54,13 +56,15 @@ export function ExecuteDialog({
       const value = formData[param.name];
       if (param.required) {
         if (value === undefined || value === null || value === '') {
-          newErrors[param.name] = `${param.label || param.name} 是必填项`;
+          newErrors[param.name] = t('{field} is required', { field: param.label || param.name });
         }
       }
       if (param.type === 'number' && value !== '' && value !== undefined && value !== null) {
         const numValue = Number(value);
         if (Number.isNaN(numValue)) {
-          newErrors[param.name] = `${param.label || param.name} 必须是数字`;
+          newErrors[param.name] = t('{field} must be a number', {
+            field: param.label || param.name,
+          });
         }
       }
     });
@@ -133,8 +137,8 @@ export function ExecuteDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>执行 Action</DialogTitle>
-            <DialogDescription>请填写以下参数以执行 Action</DialogDescription>
+            <DialogTitle>{t('Execute Action')}</DialogTitle>
+            <DialogDescription>{t('Fill in the parameters to execute Action')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -160,7 +164,7 @@ export function ExecuteDialog({
                       htmlFor={param.name}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {formData[param.name] ? '是' : '否'}
+                      {formData[param.name] ? t('Yes') : t('No')}
                     </label>
                   </div>
                 ) : param.type === 'number' ? (
@@ -197,10 +201,10 @@ export function ExecuteDialog({
               onClick={() => handleOpenChange(false)}
               disabled={executing}
             >
-              取消
+              {t('Cancel')}
             </Button>
             <Button type="submit" disabled={executing}>
-              {executing ? '执行中...' : '执行'}
+              {executing ? t('Executing') : t('Execute')}
             </Button>
           </DialogFooter>
         </form>

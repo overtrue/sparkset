@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +8,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import type { DashboardWidget } from '@/types/dashboard';
 import {
+  RiDatabaseLine,
+  RiDeleteBinLine,
+  RiEditLine,
   RiMore2Line,
   RiRefreshLine,
-  RiEditLine,
-  RiDeleteBinLine,
-  RiBarChartLine,
-  RiDatabaseLine,
-  RiFileTextLine,
 } from '@remixicon/react';
-import type { DashboardWidget } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 interface WidgetMenuProps {
   widget: DashboardWidget;
@@ -29,6 +28,7 @@ interface WidgetMenuProps {
 
 export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuProps) {
   const router = useRouter();
+  const t = useTranslations();
 
   const handleEditChart = () => {
     if (widget.type === 'chart') {
@@ -49,7 +49,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <RiMore2Line className="h-4 w-4" />
-          <span className="sr-only">Widget 菜单</span>
+          <span className="sr-only">{t('Widget Menu')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -58,12 +58,12 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
                 <RiRefreshLine className="mr-2 h-4 w-4" />
-                刷新
+                {t('Refresh')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleEditChart}>
               <RiEditLine className="mr-2 h-4 w-4" />
-              编辑图表
+              {t('Edit Chart')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
@@ -73,12 +73,12 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
                 <RiRefreshLine className="mr-2 h-4 w-4" />
-                刷新
+                {t('Refresh')}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleViewDataset}>
               <RiDatabaseLine className="mr-2 h-4 w-4" />
-              查看详情
+              {t('View Details')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
@@ -88,7 +88,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
             {onEdit && (
               <DropdownMenuItem onClick={onEdit}>
                 <RiEditLine className="mr-2 h-4 w-4" />
-                编辑
+                {t('Edit')}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -97,7 +97,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
         {onRemove && (
           <DropdownMenuItem onClick={onRemove} className="text-destructive">
             <RiDeleteBinLine className="mr-2 h-4 w-4" />
-            移除
+            {t('Remove')}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

@@ -1,5 +1,6 @@
 'use client';
 import { RiArrowDownSLine, RiCheckLine } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export function DatasourceSelector({
   className,
   triggerClassName,
 }: DatasourceSelectorProps) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const selectedDatasource = datasources.find((ds) => ds.id === value);
 
@@ -53,7 +55,7 @@ export function DatasourceSelector({
   return (
     <div className={`flex items-center gap-1.5 ${className ?? ''}`}>
       <Label htmlFor="datasource" className="text-xs text-muted-foreground whitespace-nowrap">
-        数据源
+        {t('Datasource')}
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -68,15 +70,15 @@ export function DatasourceSelector({
               triggerClassName,
             )}
           >
-            {selectedDatasource ? selectedDatasource.name : '选择数据源'}
+            {selectedDatasource ? selectedDatasource.name : t('Select datasource')}
             <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="搜索数据源..." />
+            <CommandInput placeholder={t('Search datasource')} />
             <CommandList>
-              <CommandEmpty>未找到匹配的数据源</CommandEmpty>
+              <CommandEmpty>{t('No datasource found')}</CommandEmpty>
               <CommandGroup>
                 {datasources.map((ds) => (
                   <CommandItem
@@ -96,7 +98,7 @@ export function DatasourceSelector({
                     />
                     <span className="flex-1">{ds.name}</span>
                     {ds.isDefault && (
-                      <span className="ml-2 text-xs text-muted-foreground">默认</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{t('(Default)')}</span>
                     )}
                   </CommandItem>
                 ))}

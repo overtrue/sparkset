@@ -2,6 +2,7 @@
 
 import { RiComputerLine, RiMoonLine, RiSunFoggyLine } from '@remixicon/react';
 import { useTheme } from 'next-themes';
+import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import {
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const t = useTranslations();
 
   // 避免 SSR 不匹配问题
   React.useEffect(() => {
@@ -46,22 +48,22 @@ export function ThemeToggle() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
           {getIcon()}
-          <span className="sr-only">切换主题</span>
+          <span className="sr-only">{t('Toggle Theme')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup value={theme || 'system'} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light">
             <RiSunFoggyLine className="mr-2 h-4 w-4" />
-            <span>亮色</span>
+            <span>{t('Light')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
             <RiMoonLine className="mr-2 h-4 w-4" />
-            <span>暗色</span>
+            <span>{t('Dark')}</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
             <RiComputerLine className="mr-2 h-4 w-4" />
-            <span>跟随系统</span>
+            <span>{t('System')}</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

@@ -8,6 +8,7 @@ import {
   RiRefreshLine,
   RiTimeLine,
 } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +37,7 @@ interface HistoryDrawerProps {
   onRerun?: (question: string) => void;
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, t: ReturnType<typeof useTranslations>): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -44,10 +45,10 @@ function formatDate(dateString: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return '刚刚';
-  if (diffMins < 60) return `${diffMins} 分钟前`;
-  if (diffHours < 24) return `${diffHours} 小时前`;
-  if (diffDays < 7) return `${diffDays} 天前`;
+  if (diffMins < 1) return t('Just now');
+  if (diffMins < 60) return t('{n} minutes ago', { n: diffMins });
+  if (diffHours < 24) return t('{n} hours ago', { n: diffHours });
+  if (diffDays < 7) return t('{n} days ago', { n: diffDays });
 
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -56,11 +57,14 @@ function formatDate(dateString: string): string {
   });
 }
 
-function getConversationTitle(conversation: ConversationDTO): string {
+function getConversationTitle(
+  conversation: ConversationDTO,
+  t: ReturnType<typeof useTranslations>,
+): string {
   if (conversation.title) {
     return conversation.title;
   }
-  return `会话 ${conversation.id}`;
+  return t('Conversation {id}', { id: conversation.id });
 }
 
 function isQueryResponse(obj: unknown): obj is QueryResponse {
@@ -89,9 +93,10 @@ function getResultRowCount(metadata: unknown): number | null {
 interface MessageListProps {
   messages: MessageDTO[];
   onRerun?: (question: string) => void;
+  t: ReturnType<typeof useTranslations>;
 }
 
-function MessageList({ messages, onRerun }: MessageListProps) {
+function MessageList({ messages, onRerun, t }: MessageListProps) {
   const items: React.ReactNode[] = [];
 
   for (let i = 0; i < messages.length; i++) {
@@ -111,7 +116,7 @@ function MessageList({ messages, onRerun }: MessageListProps) {
           <div key={message.id} className="flex items-center gap-3 py-2 px-0">
             <RiCheckboxCircleLine className="h-3.5 w-3.5 text-green-500 shrink-0" />
             <span className="text-xs text-muted-foreground whitespace-nowrap flex-1">
-              {rowCount === 0 ? '无数据' : `返回 ${rowCount} 行数据`}
+              {rowCount === 0 ? t('No Data') : t('Returned {count} rows', { count: rowCount })}
             </span>
             {onRerun && (
               <button
@@ -121,10 +126,10 @@ function MessageList({ messages, onRerun }: MessageListProps) {
                   onRerun(message.content);
                 }}
                 className="shrink-0 flex items-center gap-1.5 px-2 py-1 text-xs text-primary hover:bg-primary/10 rounded-md transition-colors"
-                title="重新执行"
+                title={t('Re-run')}
               >
                 <RiPlayLine className="h-3.5 w-3.5" />
-                重新执行
+                {t('Re-run')}
               </button>
             )}
           </div>,
@@ -137,6 +142,7 @@ function MessageList({ messages, onRerun }: MessageListProps) {
 }
 
 export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryDrawerProps) {
+  const t = useTranslations();
   // 内部管理打开状态（支持 uncontrolled 模式）
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open ?? internalOpen;
@@ -157,7 +163,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
       const res = await fetchConversations();
       setConversations(res);
     } catch (err) {
-      setError((err as Error)?.message ?? '加载会话历史失败');
+      setError((err as Error)?.message ?? t('Failed to load conversation history'));
     } finally {
       setLoading(false);
     }
@@ -200,7 +206,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
   const defaultTrigger = (
     <Button variant="outline" size="sm" className="gap-2">
       <RiTimeLine className="h-4 w-4" />
-      会话历史
+      {t('Conversation History')}
     </Button>
   );
 
@@ -213,9 +219,11 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
             <div>
               <SheetTitle className="flex items-center gap-2">
                 <RiTimeLine className="h-5 w-5" />
-                会话历史
+                {t('Conversation History')}
               </SheetTitle>
-              <SheetDescription className="mt-2">查看之前的查询会话记录</SheetDescription>
+              <SheetDescription className="mt-2">
+                {t('View previous query sessions')}
+              </SheetDescription>
             </div>
             <Button
               size="sm"
@@ -247,8 +255,10 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
           ) : conversations.length === 0 ? (
             <div className="py-12 text-center">
               <RiChat3Line className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground">暂无会话记录</p>
-              <p className="text-xs text-muted-foreground mt-1">执行查询后会自动保存会话</p>
+              <p className="text-sm text-muted-foreground">{t('No conversation history')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('Conversations are saved automatically after queries')}
+              </p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -278,15 +288,15 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-medium text-sm text-foreground truncate flex-1">
-                            {getConversationTitle(conversation)}
+                            {getConversationTitle(conversation, t)}
                           </span>
                           {detail && (
                             <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                              {detail.messages.length} 条
+                              {t('{count} messages', { count: detail.messages.length })}
                             </span>
                           )}
                           <span className="text-[10px] text-muted-foreground/70">
-                            {formatDate(conversation.createdAt)}
+                            {formatDate(conversation.createdAt, t)}
                           </span>
                         </div>
                       </div>
@@ -297,11 +307,12 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
                       <div className="px-3 pb-3 pt-2">
                         {isLoadingDetail ? (
                           <div className="py-4 text-center text-xs text-muted-foreground">
-                            加载中...
+                            {t('Loading')}...
                           </div>
                         ) : detail?.messages?.length ? (
                           <MessageList
                             messages={detail.messages}
+                            t={t}
                             onRerun={
                               onRerun
                                 ? (question) => {
@@ -313,7 +324,9 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
                           />
                         ) : (
                           <div className="py-4 text-center text-xs text-muted-foreground">
-                            {detail ? '该会话暂无消息' : '加载失败，请重试'}
+                            {detail
+                              ? t('No messages in this conversation')
+                              : t('Failed to load, please retry')}
                           </div>
                         )}
                       </div>

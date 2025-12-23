@@ -13,7 +13,6 @@
     "paths": {
       "@/*": ["./src/*"],
       "@sparkset/core/*": ["../../packages/core/src/*"],
-      "@sparkset/ai/*": ["../../packages/ai/src/*"],
       "@sparkset/utils/*": ["../../packages/utils/src/*"],
       "@sparkset/config/*": ["../../packages/config/src/*"]
     }

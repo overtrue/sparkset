@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { DashboardWidget, TextWidgetConfig } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 
 interface EditDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ interface EditDialogProps {
 }
 
 export function EditDialog({ open, onOpenChange, widget, onSave }: EditDialogProps) {
+  const t = useTranslations();
   const [content, setContent] = useState('');
 
   useEffect(() => {
@@ -48,17 +50,17 @@ export function EditDialog({ open, onOpenChange, widget, onSave }: EditDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>编辑文本 Widget</DialogTitle>
-          <DialogDescription>编辑文本内容，支持 Markdown 格式</DialogDescription>
+          <DialogTitle>{t('Edit Text Widget')}</DialogTitle>
+          <DialogDescription>{t('Edit text content, Markdown format supported')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>内容（支持 Markdown）</Label>
+            <Label>{t('Content (Markdown supported)')}</Label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="输入文本内容，支持 Markdown 格式"
+              placeholder={t('Enter text content, Markdown format supported')}
               rows={15}
             />
           </div>
@@ -66,9 +68,9 @@ export function EditDialog({ open, onOpenChange, widget, onSave }: EditDialogPro
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t('Cancel')}
           </Button>
-          <Button onClick={handleSave}>保存</Button>
+          <Button onClick={handleSave}>{t('Save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

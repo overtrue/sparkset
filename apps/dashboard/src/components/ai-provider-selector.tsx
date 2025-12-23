@@ -1,5 +1,6 @@
 'use client';
 import { RiArrowDownSLine, RiCheckLine } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ export function AiProviderSelector({
   className,
   triggerClassName,
 }: AiProviderSelectorProps) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const selectedProvider = providers.find((p) => p.id === value);
 
@@ -64,16 +66,16 @@ export function AiProviderSelector({
             )}
           >
             {selectedProvider
-              ? `${selectedProvider.name}${selectedProvider.isDefault ? ' (默认)' : ''}`
-              : '选择 AI Provider'}
+              ? `${selectedProvider.name}${selectedProvider.isDefault ? ` ${t('(Default)')}` : ''}`
+              : t('Select AI Provider')}
             <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[240px] p-0" align="start">
           <Command>
-            <CommandInput placeholder="搜索 AI Provider..." />
+            <CommandInput placeholder={t('Search AI Provider')} />
             <CommandList>
-              <CommandEmpty>未找到匹配的 AI Provider</CommandEmpty>
+              <CommandEmpty>{t('No AI Provider found')}</CommandEmpty>
               <CommandGroup>
                 {providers.map((provider) => (
                   <CommandItem
@@ -94,7 +96,7 @@ export function AiProviderSelector({
                     <span>
                       {provider.name}
                       {provider.isDefault && (
-                        <span className="ml-1 text-xs text-muted-foreground">(默认)</span>
+                        <span className="ml-1 text-xs text-muted-foreground">{t('(Default)')}</span>
                       )}
                     </span>
                   </CommandItem>

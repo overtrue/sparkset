@@ -1,6 +1,6 @@
 'use client';
 import { RiCodeSSlashLine, RiAlignJustify, RiAlignLeft } from '@remixicon/react';
-
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { format } from 'sql-formatter';
 import { CodeViewer } from '@/components/code-viewer';
@@ -22,6 +22,7 @@ interface SqlViewerProps {
 }
 
 export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) {
+  const t = useTranslations();
   const [isMultiLine, setIsMultiLine] = useState(true);
 
   const formattedSql = useMemo(() => {
@@ -48,7 +49,7 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
   const defaultTrigger = (
     <Button variant="outline" size="sm" className="gap-2">
       <RiCodeSSlashLine className="h-4 w-4" />
-      查看 SQL
+      {t('View SQL')}
     </Button>
   );
 
@@ -61,26 +62,28 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
             <div>
               <SheetTitle className="flex items-center gap-2">
                 <RiCodeSSlashLine className="h-5 w-5" />
-                SQL 语句
+                {t('SQL Statement')}
               </SheetTitle>
-              <SheetDescription className="mt-2">AI 生成的 SQL 查询语句</SheetDescription>
+              <SheetDescription className="mt-2">
+                {t('AI-generated SQL query statement')}
+              </SheetDescription>
             </div>
             <Button
               size="sm"
               variant={isMultiLine ? 'default' : 'ghost'}
               className="gap-2"
               onClick={() => setIsMultiLine(!isMultiLine)}
-              title={isMultiLine ? '切换到单行模式' : '切换到多行模式'}
+              title={isMultiLine ? t('Switch to single line mode') : t('Switch to multi-line mode')}
             >
               {isMultiLine ? (
                 <>
                   <RiAlignJustify className="h-4 w-4" />
-                  多行
+                  {t('Multi-line')}
                 </>
               ) : (
                 <>
                   <RiAlignLeft className="h-4 w-4" />
-                  单行
+                  {t('Single line')}
                 </>
               )}
             </Button>

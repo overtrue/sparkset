@@ -51,10 +51,10 @@ export interface AIConfig {
   /** Provider 配置列表 */
   providers: AIProviderConfig[];
   /** Fallback 模型列表（按优先级排序） */
-  fallbackModels?: Array<{
+  fallbackModels?: {
     model: string;
     provider: string;
-  }>;
+  }[];
 }
 
 /**

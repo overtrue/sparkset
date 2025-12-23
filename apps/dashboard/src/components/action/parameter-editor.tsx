@@ -1,6 +1,7 @@
 'use client';
 
-import { RiSubtractLine, RiAddLine } from '@remixicon/react';
+import { RiAddLine, RiSubtractLine } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { type ActionInputSchema, type ParameterDefinition } from '../../lib/api';
 import { cn } from '../../lib/utils';
@@ -18,6 +19,7 @@ interface ParameterEditorProps {
 }
 
 export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
+  const t = useTranslations();
   const [parameters, setParameters] = useState<ParameterDefinition[]>(value?.parameters || []);
 
   // 同步外部 value 的变化
@@ -56,16 +58,18 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label>输入参数定义</Label>
+        <Label>{t('Input Parameters')}</Label>
         <Button type="button" variant="outline" size="sm" onClick={addParameter}>
           <RiAddLine className="mr-2 h-4 w-4" />
-          添加参数
+          {t('Add Parameter')}
         </Button>
       </div>
 
       {parameters.length === 0 ? (
         <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          暂无参数定义。如果 Action 需要输入参数，请点击"添加参数"按钮。
+          {t(
+            'No parameters defined. If Action needs input parameters, click Add Parameter button.',
+          )}
         </div>
       ) : (
         <Accordion type="single" collapsible className="w-full flex flex-col gap-2">
@@ -75,7 +79,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                 <div className="flex items-center justify-between w-full pr-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      {param.label || param.name || `参数 #${index + 1}`}
+                      {param.label || param.name || t('Parameter #{index}', { index: index + 1 })}
                     </span>
                     <span className="text-xs text-muted-foreground">({param.type})</span>
                     {param.required && <span className="text-xs text-destructive">*</span>}
@@ -99,20 +103,20 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor={`param-name-${index}`} className="text-xs">
-                        参数名称 *
+                        {t('Parameter Name')} *
                       </Label>
                       <Input
                         id={`param-name-${index}`}
                         value={param.name}
                         onChange={(e) => updateParameter(index, { name: e.target.value })}
-                        placeholder="如：limit"
+                        placeholder={t('e.g.: limit')}
                         className="h-8"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor={`param-type-${index}`} className="text-xs">
-                        类型 *
+                        {t('Type')} *
                       </Label>
                       <Select
                         value={param.type}
@@ -136,7 +140,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor={`param-label-${index}`} className="text-xs">
-                      显示标签
+                      {t('Display Label')}
                     </Label>
                     <Input
                       id={`param-label-${index}`}
@@ -144,14 +148,14 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                       onChange={(e) =>
                         updateParameter(index, { label: e.target.value || undefined })
                       }
-                      placeholder="如：数量限制（可选，默认使用参数名称）"
+                      placeholder={t('e.g.: Quantity limit (optional, defaults to parameter name)')}
                       className="h-8"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`param-description-${index}`} className="text-xs">
-                      描述
+                      {t('Description')}
                     </Label>
                     <Textarea
                       id={`param-description-${index}`}
@@ -159,7 +163,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                       onChange={(e) =>
                         updateParameter(index, { description: e.target.value || undefined })
                       }
-                      placeholder="参数说明（可选）"
+                      placeholder={t('Parameter description (optional)')}
                       rows={2}
                       className="text-sm"
                     />
@@ -168,7 +172,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor={`param-default-${index}`} className="text-xs">
-                        默认值
+                        {t('Default Value')}
                       </Label>
                       {param.type === 'boolean' ? (
                         <Select
@@ -180,10 +184,10 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                           }
                         >
                           <SelectTrigger id={`param-default-${index}`} className="h-8">
-                            <SelectValue placeholder="无默认值" />
+                            <SelectValue placeholder={t('No default value')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">无默认值</SelectItem>
+                            <SelectItem value="">{t('No default value')}</SelectItem>
                             <SelectItem value="true">true</SelectItem>
                             <SelectItem value="false">false</SelectItem>
                           </SelectContent>
@@ -203,14 +207,14 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                               updateParameter(index, { default: value });
                             }
                           }}
-                          placeholder="默认值（可选）"
+                          placeholder={t('Default value (optional)')}
                           className="h-8"
                         />
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs">必填</Label>
+                      <Label className="text-xs">{t('Required')}</Label>
                       <div className="flex items-center space-x-2 pt-2">
                         <Checkbox
                           id={`param-required-${index}`}
@@ -223,7 +227,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                           htmlFor={`param-required-${index}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
-                          此参数为必填项
+                          {t('This parameter is required')}
                         </label>
                       </div>
                     </div>

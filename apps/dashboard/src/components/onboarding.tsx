@@ -7,6 +7,7 @@ import {
   RiDatabase2Line,
   RiSparkling2Line,
 } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
 import { Button } from './ui/button';
@@ -27,19 +28,20 @@ interface TodoItem {
 }
 
 export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps) {
+  const t = useTranslations();
   const todos: TodoItem[] = [
     {
       id: 'datasource',
-      title: '配置数据源',
-      description: '添加数据库连接，同步表结构信息',
+      title: t('Configure Datasource'),
+      description: t('Add database connection and sync schema'),
       completed: datasourceCount > 0,
       href: '/',
       icon: RiDatabase2Line,
     },
     {
       id: 'ai-provider',
-      title: '配置 AI Provider',
-      description: '设置 AI 服务提供商，用于智能查询和语义理解',
+      title: t('Configure AI Provider'),
+      description: t('Set up AI service provider for intelligent queries'),
       completed: aiProviderCount > 0,
       href: '/ai-providers',
       icon: RiSparkling2Line,
@@ -60,8 +62,10 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-semibold tracking-tight">欢迎使用 Sparkset</h1>
-          <p className="text-muted-foreground text-lg">完成以下步骤以开始使用 AI 运营助手</p>
+          <h1 className="text-4xl font-semibold tracking-tight">{t('Welcome to Sparkset')}</h1>
+          <p className="text-muted-foreground text-lg">
+            {t('Complete the following steps to get started')}
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -95,12 +99,12 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
                       {todo.completed ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <RiCheckboxBlankCircleLine className="h-4 w-4 fill-primary text-primary" />
-                          <span>已完成</span>
+                          <span>{t('Completed')}</span>
                         </div>
                       ) : (
                         <Button asChild variant="default">
                           <Link href={todo.href}>
-                            去配置
+                            {t('Configure')}
                             <RiArrowRightLine className="h-4 w-4" />
                           </Link>
                         </Button>
@@ -115,13 +119,16 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
 
         <div className="text-center space-y-4">
           <div className="text-sm text-muted-foreground">
-            进度：{completedCount} / {totalCount} 已完成
+            {t('Progress: {completedCount} / {totalCount} completed', {
+              completedCount,
+              totalCount,
+            })}
           </div>
           {allCompleted && (
             <div className="space-y-2">
-              <p className="text-muted-foreground">所有配置已完成！</p>
+              <p className="text-muted-foreground">{t('All configurations completed!')}</p>
               <Button asChild size="lg">
-                <Link href="/query">开始使用</Link>
+                <Link href="/query">{t('Get Started')}</Link>
               </Button>
             </div>
           )}

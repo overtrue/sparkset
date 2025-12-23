@@ -1,8 +1,8 @@
 'use client';
 
-import * as React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -11,21 +11,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ConfirmDialog } from '@/components/confirm-dialog';
 import { chartsApi } from '@/lib/api/charts';
 import type { Chart, Dataset } from '@/types/chart';
 import {
-  RiEyeLine,
-  RiEditLine,
-  RiDeleteBin2Line,
   RiAddLine,
   RiBarChartLine,
+  RiDeleteBin2Line,
+  RiEditLine,
+  RiEyeLine,
   RiLineChartLine,
   RiPieChartLine,
   RiTableLine,
 } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
 import { toast } from 'sonner';
 
 interface ChartListProps {
@@ -34,16 +35,17 @@ interface ChartListProps {
   onRefresh?: () => void;
 }
 
-// 兼容旧接口的图表列表组件，供仍然引用 `@/components/charts/list` 的代码使用。
+// Chart list component compatible with old interface, for code still referencing `@/components/charts/list`.
 export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
   const router = useRouter();
+  const t = useTranslations();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [chartToDelete, setChartToDelete] = React.useState<Chart | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const getDatasetName = (datasetId: number) => {
     const dataset = datasets.find((d) => d.id === datasetId);
-    return dataset?.name || '未知数据集';
+    return dataset?.name || t('Unknown Dataset');
   };
 
   const getChartIcon = (chartType: Chart['chartType']) => {
@@ -92,12 +94,12 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
     try {
       setIsDeleting(true);
       await chartsApi.delete(chartToDelete.id);
-      toast.success('图表已删除');
+      toast.success(t('Chart deleted'));
       setDeleteDialogOpen(false);
       setChartToDelete(null);
       onRefresh?.();
     } catch (error) {
-      toast.error('删除失败');
+      toast.error(t('Delete failed'));
       console.error(error);
     } finally {
       setIsDeleting(false);
@@ -116,13 +118,15 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
           <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
             <RiBarChartLine className="h-8 w-8 text-muted-foreground" />
           </div>
-          <CardTitle>暂无图表</CardTitle>
-          <CardDescription>创建您的第一个图表来开始数据可视化之旅</CardDescription>
+          <CardTitle>{t('No Charts')}</CardTitle>
+          <CardDescription>
+            {t('Create your first chart to start visualizing data')}
+          </CardDescription>
           <div>
             <Button asChild>
               <Link href="/charts/new">
                 <RiAddLine className="h-4 w-4 mr-2" />
-                创建图表
+                {t('Create Chart')}
               </Link>
             </Button>
           </div>
@@ -135,13 +139,13 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">图表列表</h2>
-          <p className="text-muted-foreground">共 {charts.length} 个图表</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t('Chart List')}</h2>
+          <p className="text-muted-foreground">{t('{count} charts', { count: charts.length })}</p>
         </div>
         <Button asChild>
           <Link href="/charts/new">
             <RiAddLine className="h-4 w-4 mr-2" />
-            新建图表
+            {t('New Chart')}
           </Link>
         </Button>
       </div>
@@ -166,7 +170,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
 
             <CardContent className="flex-1 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">数据集：</span>
+                <span className="text-muted-foreground">{t('Dataset:')}</span>
                 <span
                   className="font-medium truncate max-w-[150px]"
                   title={getDatasetName(chart.datasetId)}
@@ -175,11 +179,11 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">创建时间：</span>
+                <span className="text-muted-foreground">{t('Created at:')}</span>
                 <span>{formatDate(chart.createdAt)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">图表ID：</span>
+                <span className="text-muted-foreground">{t('Chart ID:')}</span>
                 <span className="font-mono">{chart.id}</span>
               </div>
             </CardContent>
@@ -188,14 +192,14 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/charts/${chart.id}`}>
                   <RiEyeLine className="h-4 w-4 mr-1" />
-                  查看
+                  {t('View')}
                 </Link>
               </Button>
 
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/charts/${chart.id}/edit`}>
                   <RiEditLine className="h-4 w-4 mr-1" />
-                  编辑
+                  {t('Edit')}
                 </Link>
               </Button>
 
@@ -206,7 +210,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
                 onClick={() => handleDeleteClick(chart)}
               >
                 <RiDeleteBin2Line className="h-4 w-4 mr-1" />
-                删除
+                {t('Delete')}
               </Button>
             </CardFooter>
           </Card>
@@ -216,13 +220,15 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="删除图表"
+        title={t('Delete Chart')}
         description={
           chartToDelete
-            ? `确定要删除图表 "${chartToDelete.title}" 吗？此操作不可撤销。`
-            : '确定要删除此图表吗？'
+            ? t('Are you sure to delete chart "{title}"? This action cannot be undone.', {
+                title: chartToDelete.title,
+              })
+            : t('Are you sure to delete this chart?')
         }
-        confirmText="删除"
+        confirmText={t('Delete')}
         onConfirm={handleDeleteConfirm}
         loading={isDeleting}
         variant="destructive"

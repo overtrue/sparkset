@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { ChartRenderer } from '@/components/charts/renderer';
-import type { ChartRenderResult } from '@/types/chart';
-import { chartsApi } from '@/lib/api/charts';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { chartsApi } from '@/lib/api/charts';
+import type { ChartRenderResult } from '@/types/chart';
 import type { ChartWidgetConfig } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 
 interface ChartWidgetProps {
   config: ChartWidgetConfig;
@@ -14,6 +15,7 @@ interface ChartWidgetProps {
 }
 
 export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartData, setChartData] = useState<ChartRenderResult | null>(null);
@@ -25,7 +27,7 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
       const result = await chartsApi.render(config.chartId, false);
       setChartData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载图表失败');
+      setError(err instanceof Error ? err.message : t('Failed to load chart'));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
   if (!chartData) {
     return (
       <div className="h-full flex items-center justify-center p-4 text-muted-foreground">
-        暂无数据
+        {t('No data')}
       </div>
     );
   }

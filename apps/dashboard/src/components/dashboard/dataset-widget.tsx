@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { datasetsApi } from '@/lib/api/datasets';
-import type { ResultSet } from '@/types/chart';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -13,7 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { datasetsApi } from '@/lib/api/datasets';
+import type { ResultSet } from '@/types/chart';
 import type { DatasetWidgetConfig } from '@/types/dashboard';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 
 interface DatasetWidgetProps {
   config: DatasetWidgetConfig;
@@ -21,6 +22,7 @@ interface DatasetWidgetProps {
 }
 
 export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
+  const t = useTranslations();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ResultSet | null>(null);
@@ -32,7 +34,7 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
       const result = await datasetsApi.preview(config.datasetId, {});
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载数据集失败');
+      setError(err instanceof Error ? err.message : t('Failed to load dataset'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +66,7 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
   if (!data || !data.rows || data.rows.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-4 text-muted-foreground">
-        暂无数据
+        {t('No data')}
       </div>
     );
   }
@@ -91,7 +93,7 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
               {columns.map((col) => (
                 <TableCell key={col}>
                   {typeof row[col] === 'number'
-                    ? (row[col] as number).toLocaleString()
+                    ? row[col].toLocaleString()
                     : String(row[col] ?? '-')}
                 </TableCell>
               ))}

@@ -1,5 +1,6 @@
 'use client';
 import { RiDatabase2Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
@@ -18,6 +19,7 @@ interface ResultTableProps {
 }
 
 export function ResultTable({ rows }: ResultTableProps) {
+  const t = useTranslations();
   // Generate columns dynamically from data
   const columns: ColumnDef<Record<string, unknown>>[] = useMemo(() => {
     if (rows.length === 0) return [];
@@ -46,9 +48,11 @@ export function ResultTable({ rows }: ResultTableProps) {
               <RiDatabase2Line className="h-8 w-8 text-gray-400" />
             </EmptyMedia>
             <EmptyDescription className="text-base font-semibold text-foreground mt-2">
-              查询成功但无数据返回
+              {t('Query successful but no data returned')}
             </EmptyDescription>
-            <p className="text-muted-foreground text-sm mt-1">数据表中暂无匹配记录</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              {t('No matching records in the table')}
+            </p>
           </EmptyHeader>
           <EmptyContent className="opacity-40">
             <span className="text-xs tracking-widest">•••</span>
@@ -64,8 +68,8 @@ export function ResultTable({ rows }: ResultTableProps) {
       data={rows}
       enableGlobalFilter
       showRecordCount
-      searchPlaceholder="搜索结果..."
-      emptyMessage="无匹配结果"
+      searchPlaceholder={t('Search results')}
+      emptyMessage={t('No matching results found')}
     />
   );
 }

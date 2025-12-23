@@ -1,5 +1,6 @@
 'use client';
 import { RiCloseLine, RiDeleteBin2Line, RiSearch2Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import {
   ColumnDef,
@@ -39,8 +40,8 @@ import {
 } from '@/components/ui/table';
 
 import { cn } from '@/lib/utils';
-import { DataTablePagination } from './data-table-pagination';
 import { DataTableEmptyState } from './data-table-empty-state';
+import { DataTablePagination } from './data-table-pagination';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -62,18 +63,18 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = '搜索...',
+  searchPlaceholder,
   enableRowSelection = false,
   enableGlobalFilter = false,
   showRecordCount = false,
   onDeleteSelected,
-  deleteConfirmTitle = '确认删除',
-  deleteConfirmDescription = (count: number) =>
-    `确定要删除选中的 ${count} 条记录吗？此操作不可撤销。`,
+  deleteConfirmTitle,
+  deleteConfirmDescription,
   toolbar,
-  emptyMessage = '暂无数据',
+  emptyMessage,
   pageSize = 10,
 }: DataTableProps<TData, TValue>) {
+  const t = useTranslations();
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -95,14 +96,14 @@ export function DataTable<TData, TValue>({
                 (table.getIsSomePageRowsSelected() && 'indeterminate')
               }
               onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="全选"
+              aria-label={t('Select All')}
             />
           ),
           cell: ({ row }) => (
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="选择行"
+              aria-label={t('Select Row')}
             />
           ),
           size: 40,
@@ -176,9 +177,9 @@ export function DataTable<TData, TValue>({
                     table.getColumn(searchKey)?.setFilterValue(e.target.value);
                   }
                 }}
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder || t('Search…')}
                 type="text"
-                aria-label={searchPlaceholder}
+                aria-label={searchPlaceholder || t('Search…')}
               />
               <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/40 peer-disabled:opacity-50">
                 <RiSearch2Line className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -186,7 +187,7 @@ export function DataTable<TData, TValue>({
               {Boolean(searchValue) && (
                 <button
                   className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/60 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="清除搜索"
+                  aria-label={t('Clear search')}
                   onClick={() => {
                     if (enableGlobalFilter) {
                       setGlobalFilter('');
@@ -203,11 +204,7 @@ export function DataTable<TData, TValue>({
           )}
           {showRecordCount && (
             <span className="text-sm text-muted-foreground">
-              共{' '}
-              <span className="font-medium text-foreground">
-                {table.getFilteredRowModel().rows.length}
-              </span>{' '}
-              条记录
+              {t('{count} records', { count: table.getFilteredRowModel().rows.length })}
             </span>
           )}
         </div>
@@ -217,7 +214,7 @@ export function DataTable<TData, TValue>({
           {enableRowSelection && selectedRows.length > 0 && onDeleteSelected && (
             <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
               <RiDeleteBin2Line className="-ms-1 opacity-60" size={16} aria-hidden="true" />
-              删除
+              {t('Delete')}
               <span className="-me-1 ms-1 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
                 {selectedRows.length}
               </span>
@@ -260,7 +257,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow className="hover:bg-transparent hover:shadow-none border-none">
               <TableCell colSpan={finalColumns.length} className="h-64 p-8 border-none">
-                <DataTableEmptyState message={emptyMessage} />
+                <DataTableEmptyState message={emptyMessage || t('No data')} />
               </TableCell>
             </TableRow>
           )}
@@ -275,20 +272,25 @@ export function DataTable<TData, TValue>({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{deleteConfirmTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{deleteConfirmTitle || t('Confirm Delete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {typeof deleteConfirmDescription === 'function'
-                ? deleteConfirmDescription(selectedRows.length)
-                : deleteConfirmDescription}
+              {deleteConfirmDescription
+                ? typeof deleteConfirmDescription === 'function'
+                  ? deleteConfirmDescription(selectedRows.length)
+                  : deleteConfirmDescription
+                : t(
+                    'Are you sure to delete the selected {count} datasource(s)? This action cannot be undone.',
+                    { count: selectedRows.length },
+                  )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSelected}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              删除
+              {t('Delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

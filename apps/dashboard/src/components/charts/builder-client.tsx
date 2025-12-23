@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ChartBuilder, type ChartSaveData, type ChartBuilderHandle } from './builder';
 import { chartsApi } from '@/lib/api/charts';
+import type { ChartSpec, Dataset } from '@/types/chart';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import type { Dataset, ChartSpec } from '@/types/chart';
+import { ChartBuilder, type ChartBuilderHandle, type ChartSaveData } from './builder';
 
 interface ChartBuilderClientProps {
   datasets: Dataset[];
@@ -35,6 +36,7 @@ export function ChartBuilderClient({
   onReady,
   showActions = false,
 }: ChartBuilderClientProps) {
+  const t = useTranslations();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const builderRef = useRef<ChartBuilderHandle>(null);
@@ -52,7 +54,7 @@ export function ChartBuilderClient({
           chartType: data.chartType,
           spec: data.spec,
         });
-        toast.success('图表更新成功');
+        toast.success(t('Chart updated successfully'));
       } else {
         // Create new chart
         await chartsApi.create({
@@ -62,12 +64,12 @@ export function ChartBuilderClient({
           chartType: data.chartType,
           spec: data.spec,
         });
-        toast.success('图表创建成功');
+        toast.success(t('Chart created successfully'));
       }
 
       router.push('/charts');
     } catch (error) {
-      toast.error(chartId ? '更新图表失败' : '创建图表失败');
+      toast.error(chartId ? t('Failed to update chart') : t('Failed to create chart'));
       console.error(error);
     } finally {
       setIsSaving(false);
