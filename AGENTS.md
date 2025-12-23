@@ -445,3 +445,56 @@ When multiple valid approaches exist, choose based on:
 - Set `DATABASE_URL` for API to hit real MySQL; default falls back to in-memory stores (limited).
 - Dashboard expects `NEXT_PUBLIC_API_URL`; CLI can override API with `--api`.
 - Avoid committing secrets; use `.env` locally and never add it to git.
+
+## i18n Internationalization Guidelines
+
+### Message File Structure
+
+- **Language files MUST use flat structure**: No nested objects allowed in `messages/en.json` and `messages/zh-CN.json`
+- **Keys MUST use English original text**: Use the English text itself as the key (not camelCase or snake_case)
+- **Example structure**:
+  ```json
+  {
+    "Save": "Save",
+    "Delete": "Delete",
+    "Actions menu": "Actions menu",
+    "DataTableRowActions": {
+      "menu": "Actions menu"
+    }
+  }
+  ```
+
+### Key Naming Rules
+
+- **Flat keys**: `"Save"`, `"Delete"`, `"Actions menu"`
+- **Namespaced keys**: Use dot notation for organization, but keep values flat
+  - ✅ **Correct**: `"DataTableRowActions.menu": "Actions menu"`
+  - ❌ **Wrong**: Nested objects like `{ "DataTableRowActions": { "menu": "Actions menu" } }`
+- **English as key**: Always use the English phrase as the key name
+  - ✅ **Correct**: `"Copied": "已复制"` (en.json), `"Copied": "已复制"` (zh-CN.json)
+  - ❌ **Wrong**: `"copied": "已复制"` (lowercase key) or `"已复制": "已复制"` (Chinese key)
+
+### Component Usage
+
+- **Use `useTranslations` hook**: Import from `next-intl`
+- **Namespace organization**: Group related keys under namespace prefixes
+- **Example**:
+
+  ```tsx
+  import { useTranslations } from 'next-intl';
+
+  export function MyComponent() {
+    const t = useTranslations('DataTableRowActions');
+    return <button aria-label={t('menu')}>...</button>;
+  }
+  ```
+
+### Validation Checklist
+
+Before committing i18n changes:
+
+- [ ] All language files maintain flat structure
+- [ ] Keys use English original text
+- [ ] Both `en.json` and `zh-CN.json` have matching keys
+- [ ] Components use `useTranslations` with proper namespaces
+- [ ] No hardcoded text in components (except code comments)
