@@ -453,5 +453,8 @@
   "Last Updated": "Last Updated",
   "{count} fields": "{count} fields",
   "Search Actions": "Search Actions...",
-  "No Actions yet, click Create New in the top right": "No Actions yet, click Create New in the top right"
+  "No Actions yet, click Create New in the top right": "No Actions yet, click Create New in the top right",
+  "DataTableRowActions": {
+    "menu": "Actions menu"
+  }
 }

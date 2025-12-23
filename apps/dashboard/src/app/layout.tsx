@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Sparkset Dashboard',
-  description: 'AI 运营助手',
+  description: 'AI Operations Assistant',
 };
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => (

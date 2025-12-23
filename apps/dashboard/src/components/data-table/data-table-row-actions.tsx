@@ -1,5 +1,6 @@
 'use client';
 import { RiMore2Line } from '@remixicon/react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ interface DataTableRowActionsProps {
 }
 
 export function DataTableRowActions({ actions }: DataTableRowActionsProps) {
+  const t = useTranslations('DataTableRowActions');
   const regularActions = actions.filter((a) => a.variant !== 'destructive');
   const destructiveActions = actions.filter((a) => a.variant === 'destructive');
 
@@ -34,7 +36,7 @@ export function DataTableRowActions({ actions }: DataTableRowActionsProps) {
             size="icon"
             variant="ghost"
             className="h-8 w-8 shadow-none text-muted-foreground/40 hover:text-muted-foreground"
-            aria-label="操作菜单"
+            aria-label={t('menu')}
           >
             <RiMore2Line className="h-5 w-5" aria-hidden="true" />
           </Button>
