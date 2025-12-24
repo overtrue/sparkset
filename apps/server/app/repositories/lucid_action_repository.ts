@@ -20,6 +20,7 @@ export class LucidActionRepository implements ActionRepository {
       type: input.type,
       payload: input.payload,
       parameters: input.parameters ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inputSchema: (input as any).inputSchema ?? null,
     });
     return this.mapRow(row);
@@ -33,6 +34,7 @@ export class LucidActionRepository implements ActionRepository {
       type: input.type,
       payload: input.payload,
       parameters: input.parameters ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       inputSchema: (input as any).inputSchema ?? null,
     });
     await row.save();

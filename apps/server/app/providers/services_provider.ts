@@ -53,6 +53,7 @@ export default class ServicesProvider {
 
     // Get Lucid Database instance from container (lazy loading)
     let database: Database | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let createDBClientFactory: ((config: any) => any) | null = null;
     try {
       database = (await this.app.container.make('lucid.db')) as Database;
@@ -279,6 +280,7 @@ export default class ServicesProvider {
       // 注册 Chart 服务（内存模式）
       const chartCompiler = new ChartCompiler();
       // 内存模式下，DatasetService 需要一个 mock database
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockDatabase = null as any;
       const datasetService = new DatasetService(mockDatabase, datasourceService);
       const chartService = new ChartService(datasetService, chartCompiler);
@@ -292,11 +294,15 @@ export default class ServicesProvider {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   async boot() {}
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   async start() {}
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   async ready() {}
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   async shutdown() {}
 }

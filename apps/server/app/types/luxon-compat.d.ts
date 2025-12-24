@@ -2,12 +2,14 @@ import 'luxon';
 
 declare module 'luxon' {
   // Compatibility shim for legacy luxon typings used by some Adonis packages.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface DateTime<IsValid extends boolean = boolean> {
     resolvedLocaleOpts(
       options?: LocaleOptions & DateTimeFormatOptions,
     ): Intl.ResolvedDateTimeFormatOptions;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface Zone<IsValid extends boolean = boolean> {
     universal: boolean;
     isUniversal: boolean;

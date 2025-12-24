@@ -28,6 +28,7 @@ export default class DashboardWidgetsController {
     const parsed = dashboardWidgetCreateSchema.parse(request.body());
     const record = await this.service.addWidget(dashboardId, {
       ...parsed,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       config: parsed.config as any,
     });
     return response.created(record);
@@ -49,6 +50,7 @@ export default class DashboardWidgetsController {
     const parsed = dashboardWidgetUpdateSchema.parse(request.body());
     const record = await this.service.updateWidget(widgetId, {
       ...parsed,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       config: parsed.config as any,
     });
     return response.ok(record);

@@ -56,9 +56,13 @@ const executor = {
 describe('QueryService', () => {
   it('returns executor rows when wired', async () => {
     const svc = new QueryService({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       datasourceService: makeDatasourceService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       actionService: makeActionService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schemaService: makeSchemaService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       aiProviderService: makeAIProviderService() as any,
       planner,
       executor,
@@ -70,9 +74,13 @@ describe('QueryService', () => {
 
   it('returns empty rows when executor missing', async () => {
     const svc = new QueryService({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       datasourceService: makeDatasourceService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       actionService: makeActionService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schemaService: makeSchemaService() as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       aiProviderService: makeAIProviderService() as any,
       planner,
     });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global URL, console, process */
 
 /**
  * Script to run database migrations using ace kernel

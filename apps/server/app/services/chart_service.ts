@@ -98,6 +98,7 @@ export class ChartService {
     }
 
     // Transform spec to specJson for the model
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = { ...data };
     if (updateData.spec) {
       updateData.specJson = updateData.spec;

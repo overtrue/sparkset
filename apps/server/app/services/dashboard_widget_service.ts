@@ -7,6 +7,8 @@ import { toId } from '../utils/validation.js';
 
 @inject()
 export class DashboardWidgetService {
+  // Empty constructor required by AdonisJS dependency injection
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   constructor() {}
 
   /**
@@ -113,13 +115,13 @@ export class DashboardWidgetService {
    */
   async updateLayout(
     dashboardId: number,
-    layouts: Array<{
+    layouts: {
       id: number;
       x: number;
       y: number;
       w: number;
       h: number;
-    }>,
+    }[],
   ): Promise<void> {
     // 验证 dashboard 存在
     await Dashboard.findOrFail(dashboardId);

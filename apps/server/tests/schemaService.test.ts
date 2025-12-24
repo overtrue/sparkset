@@ -6,10 +6,12 @@ import { AIProviderService } from '../app/services/ai_provider_service';
 import { SchemaService } from '../app/services/schema_service';
 
 class MockDBClient implements DBClient {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private rows: any[]) {}
   async testConnection(): Promise<boolean> {
     return true;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async query<T>(_config: DataSourceConfig, _sql: string) {
     return { rows: this.rows as T[] };
   }

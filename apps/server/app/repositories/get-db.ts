@@ -2,6 +2,7 @@
  * Helper function to get db instance from container lazily
  * This avoids top-level await issues with tsx
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let dbInstance: any = null;
 
 export async function getDb() {

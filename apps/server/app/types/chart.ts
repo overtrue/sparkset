@@ -13,13 +13,14 @@ export interface DatasetSchema {
 }
 
 // shadcn ChartConfig 类型
-export interface ShadcnChartConfig {
-  [key: string]: {
+export type ShadcnChartConfig = Record<
+  string,
+  {
     label: string;
     color?: string;
     theme?: { light: string; dark: string };
-  };
-}
+  }
+>;
 
 // ChartSpec（适配 shadcn）
 export interface ChartSpec {

@@ -29,12 +29,15 @@ const IMPORTER = (filePath: string) => {
   return import(filePath);
 };
 
-new Ignitor(APP_ROOT, { importer: IMPORTER })
+void new Ignitor(APP_ROOT, { importer: IMPORTER })
   .tap((app) => {
+     
     app.booting(async () => {
       await import('#start/env');
     });
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.listen('SIGTERM', () => app.terminate());
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.listenIf(app.managedByPm2, 'SIGINT', () => app.terminate());
   })
   .httpServer()

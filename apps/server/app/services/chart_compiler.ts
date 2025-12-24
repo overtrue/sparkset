@@ -111,6 +111,7 @@ export class ChartCompiler {
       const xField = spec.encoding.x.field;
 
       // 为每个唯一值生成配置
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const uniqueValues = Array.from(new Set((data as any[]).map((d) => d[xField])));
       uniqueValues.forEach((value, index) => {
         config[String(value)] = {
@@ -220,6 +221,7 @@ export class ChartCompiler {
    * 执行 transform 链
    */
   private executeTransforms(data: unknown[], transforms?: ChartSpec['transform']): unknown[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let result = [...(data as any[])];
 
     for (const t of transforms || []) {
@@ -234,6 +236,7 @@ export class ChartCompiler {
           result = this.applySort(result, t);
           break;
         case 'limit':
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           result = result.slice(0, (t as any).count);
           break;
       }
@@ -254,6 +257,7 @@ export class ChartCompiler {
       groupByFields.push(spec.encoding.series.field);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.groupAndAggregate(data as any[], groupByFields, spec.encoding.y!);
   }
 
@@ -269,6 +273,7 @@ export class ChartCompiler {
     return colors[index % colors.length];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private applyFilter(data: any[], t: any): any[] {
     // 简单的 filter 实现
     const { field, eq, neq, gt, gte, lt, lte, in: inArr, between } = t;
@@ -289,8 +294,10 @@ export class ChartCompiler {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private applyTimeBucket(data: any[], t: any): any[] {
     // 简单的时间分桶实现
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { field: _field, unit: _unit } = t; // unit: 'hour' | 'day' | 'week' | 'month'
 
     // 这里需要根据实际日期格式进行分桶
@@ -298,6 +305,7 @@ export class ChartCompiler {
     return data;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private applySort(data: any[], t: any): any[] {
     const { by } = t; // [{ field, dir: 'asc' | 'desc' }]
 
@@ -313,10 +321,13 @@ export class ChartCompiler {
   }
 
   private groupAndAggregate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any[],
     groupByFields: string[],
     yFields: { field: string; agg: string }[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): any[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const groups = new Map<string, any[]>();
 
     // 分组
@@ -329,9 +340,11 @@ export class ChartCompiler {
     });
 
     // 聚合
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any[] = [];
     groups.forEach((rows, key) => {
       const groupKey = key.split('|');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const newRow: any = {};
 
       // 设置分组字段

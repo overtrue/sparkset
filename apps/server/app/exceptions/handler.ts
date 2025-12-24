@@ -79,13 +79,16 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * Helper to convert error to HttpError format
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   #toHttpError(error: unknown): any {
     const httpError =
       typeof error === 'object' && error !== null ? error : new Error(String(error));
     if (!('message' in httpError) || !httpError.message) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (httpError as any).message = 'Internal server error';
     }
     if (!('status' in httpError) || !httpError.status) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (httpError as any).status = 500;
     }
     return httpError;

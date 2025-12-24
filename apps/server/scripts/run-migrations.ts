@@ -15,6 +15,7 @@ async function runMigrations() {
 
   try {
     // Create the app instance - this initializes all providers
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     const app = await ignitor.createApp('console');
 
     // Wait for app to be ready
@@ -59,4 +60,4 @@ async function runMigrations() {
   }
 }
 
-runMigrations();
+void runMigrations();

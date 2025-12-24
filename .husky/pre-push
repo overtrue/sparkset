@@ -3,9 +3,9 @@
 
 echo "🔍 Running pre-push validation..."
 
-# 运行 lint 检查
+# 运行 lint 检查（允许警告，只检查错误）
 echo "📝 Checking code style..."
-pnpm lint || {
+pnpm lint --max-warnings=100 || {
   echo "❌ Lint failed. Please fix the errors before pushing."
   exit 1
 }

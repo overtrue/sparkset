@@ -15,9 +15,7 @@ export class DatasetService {
   /**
    * 列表
    */
-  async list(
-    userId?: number,
-  ): Promise<Array<Record<string, unknown> & { datasourceName: string }>> {
+  async list(userId?: number): Promise<(Record<string, unknown> & { datasourceName: string })[]> {
     void userId;
     const query = Dataset.query().preload('datasource');
     // For now, ignore userId filter (no auth)
@@ -54,7 +52,7 @@ export class DatasetService {
     name: string;
     description?: string;
     querySql: string;
-    schemaJson: Array<{ name: string; type: string }>;
+    schemaJson: { name: string; type: string }[];
     ownerId?: number;
   }): Promise<Dataset> {
     // 计算 schema hash
@@ -80,7 +78,7 @@ export class DatasetService {
       name: string;
       description: string;
       querySql: string;
-      schemaJson: Array<{ name: string; type: string }>;
+      schemaJson: { name: string; type: string }[];
       schemaHash: string;
     }>,
   ): Promise<Dataset> {
@@ -120,6 +118,7 @@ export class DatasetService {
     const client = clientFactory({
       id: datasource.id,
       name: datasource.name,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type: datasource.type as any,
       host: datasource.host,
       port: datasource.port,
@@ -143,6 +142,7 @@ export class DatasetService {
       {
         id: datasource.id,
         name: datasource.name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: datasource.type as any,
         host: datasource.host,
         port: datasource.port,
@@ -168,7 +168,7 @@ export class DatasetService {
   /**
    * 计算 Schema Hash
    */
-  private computeSchemaHash(schema: Array<{ name: string; type: string }>): string {
+  private computeSchemaHash(schema: { name: string; type: string }[]): string {
     const canonical = JSON.stringify(schema.sort((a, b) => a.name.localeCompare(b.name)));
     // 使用简单的 hash（生产环境可使用 crypto）
     let hash = 0;

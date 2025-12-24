@@ -36,6 +36,7 @@ class LucidDBClient implements DBClient {
     private connectionName: string,
   ) {}
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async testConnection(_config: DataSourceConfig): Promise<boolean> {
     try {
       const connection = this.getConnection();

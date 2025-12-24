@@ -3,17 +3,17 @@ import { TableSchema } from '@sparkset/core';
 import { ActionRepository } from '../db/interfaces';
 import type { Action, AIProvider } from '../models/types';
 
-type AIClientLogger = {
+interface AIClientLogger {
   info: (msg: string, ...args: unknown[]) => void;
   warn: (msg: string, ...args: unknown[]) => void;
   error: (msg: string | Error, ...args: unknown[]) => void;
-};
+}
 
-type LogLike = {
+interface LogLike {
   info: (...args: unknown[]) => void;
   warn: (...args: unknown[]) => void;
   error: (...args: unknown[]) => void;
-};
+}
 
 export type CreateActionInput = Omit<Action, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateActionInput = Partial<CreateActionInput> & { id: number };
@@ -175,7 +175,7 @@ export class ActionService {
 
       try {
         parsedResponse = JSON.parse(cleanedResponse);
-      } catch (parseError) {
+      } catch {
         // 如果无法解析为 JSON，检查是否是纯 SQL（fallback 机制）
         const lowerResponse = cleanedResponse.toLowerCase().trim();
         const sqlKeywords = [
