@@ -403,7 +403,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         size: 60,
       },
     ],
-    [executingId, actionId],
+    [executingId, deletingId],
   );
 
   return (
