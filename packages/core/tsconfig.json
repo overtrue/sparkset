@@ -8,6 +8,5 @@
     "composite": true,
     "tsBuildInfoFile": ".tsbuildinfo"
   },
-  "include": ["src"],
-  "references": [{ "path": "../ai/" }]
+  "include": ["src"]
 }
