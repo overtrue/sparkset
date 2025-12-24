@@ -486,5 +486,16 @@
   "button": "button",
   "/query": "/query",
   "Are you sure to delete the selected {count} Action(s)? This action cannot be undone": "Are you sure to delete the selected {count} Action(s)? This action cannot be undone",
-  "Are you sure to delete this Action? This action cannot be undone": "Are you sure to delete this Action? This action cannot be undone"
+  "Are you sure to delete this Action? This action cannot be undone": "Are you sure to delete this Action? This action cannot be undone",
+  "Add to Dashboard": "Add to Dashboard",
+  "Select Dashboard": "Select Dashboard",
+  "Search dashboard": "Search dashboard",
+  "No dashboard found": "No dashboard found",
+  "Adding…": "Adding…",
+  "Add to": "Add to",
+  "Please select a dashboard": "Please select a dashboard",
+  "Successfully added to dashboard": "Successfully added to dashboard",
+  "Failed to add to dashboard": "Failed to add to dashboard",
+  "Missing content ID": "Missing content ID",
+  "Query Result Dataset": "Query Result Dataset"
 }

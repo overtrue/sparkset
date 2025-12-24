@@ -486,5 +486,16 @@
   "/query": "/查询",
   "Are you sure to delete this chart?": "确定要删除此图表吗？",
   "Are you sure to delete the selected {count} Action(s)? This action cannot be undone": "确定要删除选中的 {count} 个 Action 吗？此操作不可撤销。",
-  "Are you sure to delete this Action? This action cannot be undone": "确定要删除此 Action 吗？此操作不可撤销。"
+  "Are you sure to delete this Action? This action cannot be undone": "确定要删除此 Action 吗？此操作不可撤销。",
+  "Add to Dashboard": "添加到仪表盘",
+  "Select Dashboard": "选择仪表盘",
+  "Search dashboard": "搜索仪表盘",
+  "No dashboard found": "未找到匹配的仪表盘",
+  "Adding…": "添加中…",
+  "Add to": "添加到",
+  "Please select a dashboard": "请选择仪表盘",
+  "Successfully added to dashboard": "成功添加到仪表盘",
+  "Failed to add to dashboard": "添加到仪表盘失败",
+  "Missing content ID": "缺少内容 ID",
+  "Query Result Dataset": "查询结果数据集"
 }

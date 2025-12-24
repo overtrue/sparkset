@@ -1,6 +1,7 @@
 'use client';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DashboardSelector } from '@/components/dashboard-selector';
 import { PageHeader } from '@/components/page-header';
 import { ResultTable } from '@/components/query/result-table';
 import { Badge } from '@/components/ui/badge';
@@ -188,6 +189,7 @@ export default function DatasetDetailPage() {
         backButton="/datasets"
         action={
           <div className="flex gap-2">
+            {dataset && <DashboardSelector type="dataset" contentId={dataset.id} size="sm" />}
             <Button size="sm" onClick={handleSave} disabled={!hasChanges() || saving}>
               <RiSaveLine className="h-4 w-4" />
               {saving ? t('Saving…') : t('Save')}

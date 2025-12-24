@@ -7,6 +7,7 @@ import {
   DataTableRowActions,
   type RowAction,
 } from '@/components/data-table/data-table-row-actions';
+import { DashboardSelector } from '@/components/dashboard-selector';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import type { Chart, Dataset } from '@/types/chart';
 import {
   RiAddLine,
   RiBarChartLine,
+  RiDashboardLine,
   RiLineChartLine,
   RiPieChartLine,
   RiTableLine,
@@ -35,6 +37,7 @@ export default function ChartsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [chartToDelete, setChartToDelete] = useState<Chart | null>(null);
+  const [selectedChartForDashboard, setSelectedChartForDashboard] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -209,6 +212,11 @@ export default function ChartsPage() {
             onClick: () => router.push(`/charts/${chart.id}/edit`),
           },
           {
+            label: t('Add to Dashboard'),
+            icon: <RiDashboardLine className="h-4 w-4" />,
+            onClick: () => setSelectedChartForDashboard(chart.id),
+          },
+          {
             label: t('Create from this'),
             icon: <RiAddLine className="h-4 w-4" />,
             onClick: () => router.push(`/charts/new?datasetId=${chart.datasetId}`),
@@ -221,9 +229,29 @@ export default function ChartsPage() {
           },
         ];
 
-        return <DataTableRowActions actions={actions} />;
+        return (
+          <div className="flex items-center gap-2">
+            <DataTableRowActions actions={actions} />
+            {selectedChartForDashboard === chart.id && (
+              <DashboardSelector
+                type="chart"
+                contentId={chart.id}
+                size="sm"
+                defaultOpen={true}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setSelectedChartForDashboard(null);
+                  }
+                }}
+                onAdded={() => {
+                  setSelectedChartForDashboard(null);
+                }}
+              />
+            )}
+          </div>
+        );
       },
-      size: 60,
+      size: 100,
     },
   ];
 
