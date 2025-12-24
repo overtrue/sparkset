@@ -384,8 +384,8 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         searchKey="name"
         searchPlaceholder={t('Search datasource')}
         enableRowSelection
-        onDeleteSelected={() => {
-          void handleDeleteSelected();
+        onDeleteSelected={(rows) => {
+          void handleDeleteSelected(rows);
         }}
         deleteConfirmTitle={t('Delete Datasource')}
         deleteConfirmDescription={(count) =>
