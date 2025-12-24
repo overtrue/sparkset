@@ -123,6 +123,15 @@ export default class ActionsController {
       }
 
       // 生成 SQL
+      const logAdapter = {
+        info: (...args: unknown[]) =>
+          (logger as unknown as { info: (...args: unknown[]) => void }).info(...args),
+        warn: (...args: unknown[]) =>
+          (logger as unknown as { warn: (...args: unknown[]) => void }).warn(...args),
+        error: (...args: unknown[]) =>
+          (logger as unknown as { error: (...args: unknown[]) => void }).error(...args),
+      };
+
       const result = await this.service.generateSQL(
         body.name,
         body.description || '',
@@ -130,7 +139,7 @@ export default class ActionsController {
         {
           schemas,
           aiProvider,
-          logger,
+          logger: logAdapter,
         },
       );
 

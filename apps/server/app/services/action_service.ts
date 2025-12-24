@@ -1,4 +1,15 @@
-import { buildActionPrompt, VercelAIClient, type Logger as AIClientLogger } from '@sparkset/ai';
+import { buildActionPrompt, VercelAIClient } from '@sparkset/ai';
+type AIClientLogger = {
+  info: (msg: string, ...args: unknown[]) => void;
+  warn: (msg: string, ...args: unknown[]) => void;
+  error: (msg: string | Error, ...args: unknown[]) => void;
+};
+
+type LogLike = {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
 import { TableSchema } from '@sparkset/core';
 import { ActionRepository } from '../db/interfaces';
 import type { Action, AIProvider } from '../models/types';
@@ -90,10 +101,23 @@ export class ActionService {
     options: {
       schemas: TableSchema[];
       aiProvider?: AIProvider;
-      logger?: AIClientLogger;
+      logger?: LogLike;
     },
   ): Promise<GenerateSQLResult> {
     const { schemas, aiProvider, logger } = options;
+    const aiLogger: AIClientLogger | undefined = logger
+      ? {
+          info: (msg, ...args) => logger.info(msg, ...args),
+          warn: (msg, ...args) => logger.warn(msg, ...args),
+          error: (msg, ...args) => {
+            if (msg instanceof Error) {
+              logger.error(msg);
+              return;
+            }
+            logger.error(msg, ...args);
+          },
+        }
+      : undefined;
 
     if (schemas.length === 0) {
       throw new Error(
@@ -111,7 +135,7 @@ export class ActionService {
       defaultProvider: aiProvider.type,
       defaultApiKey: aiProvider.apiKey,
       defaultBaseURL: aiProvider.baseURL,
-      logger,
+      logger: aiLogger,
     });
 
     // 构建 Action Prompt

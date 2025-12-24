@@ -1,4 +1,15 @@
-import { AIClient, VercelAIClient, type Logger as AIClientLogger } from '@sparkset/ai';
+import { AIClient, VercelAIClient } from '@sparkset/ai';
+type AIClientLogger = {
+  info: (msg: string, ...args: unknown[]) => void;
+  warn: (msg: string, ...args: unknown[]) => void;
+  error: (msg: string | Error, ...args: unknown[]) => void;
+};
+
+type LogLike = {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
 import { DBClient, DataSourceConfig, QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
 import { ActionService } from '../services/action_service';
@@ -39,11 +50,11 @@ export class QueryService {
       executor?: QueryExecutor;
       getDBClient?: (datasourceId: number) => Promise<DBClient>;
       getDatasourceConfig?: (datasourceId: number) => Promise<DataSourceConfig>;
-      logger?: AIClientLogger;
+      logger?: LogLike;
     },
   ) {}
 
-  private toPlannerLogger(logger?: AIClientLogger) {
+  private toPlannerLogger(logger?: LogLike): AIClientLogger | undefined {
     if (!logger) return undefined;
     return {
       info: (msg: string, ...args: unknown[]) => logger.info(msg, ...args),
@@ -85,7 +96,7 @@ export class QueryService {
       defaultProvider: provider.type,
       defaultApiKey: provider.apiKey,
       defaultBaseURL: provider.baseURL,
-      logger: this.deps.logger,
+      logger: this.toPlannerLogger(this.deps.logger),
     });
   }
 
