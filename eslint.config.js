@@ -4,7 +4,15 @@ const tsPlugin = require('@typescript-eslint/eslint-plugin');
 
 module.exports = [
   {
-    ignores: ['dist/**', 'build/**', '.turbo/**', 'node_modules/**', '.next/**'],
+    ignores: [
+      '**/dist/**',
+      '**/build/**',
+      '**/.turbo/**',
+      '**/node_modules/**',
+      '**/.next/**',
+      'apps/server/build/**',
+      'apps/dashboard/.next/**',
+    ],
   },
   js.configs.recommended,
   {
