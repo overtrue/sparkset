@@ -371,7 +371,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         cell: ({ row }) => {
           const action = row.original;
           const isExecuting = executingId === action.id;
-          const isDeleting = actionId === action.id;
+          const isDeleting = deletingId === action.id;
 
           const rowActions: RowAction[] = [
             {
@@ -427,7 +427,6 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         toolbar={
           <Button
             onClick={() => {
-               
               handleOpenDialog();
             }}
           >
