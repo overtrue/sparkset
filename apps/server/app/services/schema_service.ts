@@ -162,7 +162,6 @@ export class SchemaService {
           } catch (err: unknown) {
             // 如果更新失败（可能是记录不存在），尝试重新查找表
             const errorMessage = err instanceof Error ? err.message : String(err);
-            const _errorCode = (err as { code?: string })?.code;
             const errorString = String(err);
             // 检查是否是记录未找到的错误
             const isRecordNotFound =
@@ -203,17 +202,17 @@ export class SchemaService {
 
       // 列级描述任务
       for (const col of table.columns) {
-        if (col.semanticDescription || col.id == null) continue;
+        const columnId = col.id;
+        if (col.semanticDescription || columnId == null) continue;
         tasks.push(async () => {
           const prompt = this.buildColumnPrompt(table, col);
           const description = await this.generateTextWithProvider(prompt, provider);
           // 尝试更新，如果记录不存在则重新查找
           try {
-            await this.updateColumnMetadata(col.id, { semanticDescription: description });
+            await this.updateColumnMetadata(columnId, { semanticDescription: description });
           } catch (err: unknown) {
             // 如果更新失败（可能是记录不存在），尝试重新查找列
             const errorMessage = err instanceof Error ? err.message : String(err);
-            const _errorCode = (err as { code?: string })?.code;
             const errorString = String(err);
             // 检查是否是记录未找到的错误
             const isRecordNotFound =

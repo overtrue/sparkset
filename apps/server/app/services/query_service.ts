@@ -1,10 +1,22 @@
-import { AIClient, VercelAIClient } from '../ai/index.js';
+import { AIClient, VercelAIClient } from '@sparkset/ai';
 import { DBClient, DataSourceConfig, QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
 import { ActionService } from '../services/action_service';
 import { AIProviderService } from '../services/ai_provider_service';
 import { DatasourceService } from '../services/datasource_service';
 import { SchemaService } from '../services/schema_service';
+
+interface AIClientLogger {
+  info: (msg: string, ...args: unknown[]) => void;
+  warn: (msg: string, ...args: unknown[]) => void;
+  error: (msg: string | Error, ...args: unknown[]) => void;
+}
+
+interface LogLike {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+}
 
 export interface QueryRequest {
   question: string;
@@ -39,13 +51,24 @@ export class QueryService {
       executor?: QueryExecutor;
       getDBClient?: (datasourceId: number) => Promise<DBClient>;
       getDatasourceConfig?: (datasourceId: number) => Promise<DataSourceConfig>;
-      logger?: {
-        info: (msg: string, ...args: unknown[]) => void;
-        warn: (msg: string, ...args: unknown[]) => void;
-        error: (msg: string | Error, ...args: unknown[]) => void;
-      };
+      logger?: LogLike;
     },
   ) {}
+
+  private toPlannerLogger(logger?: LogLike): AIClientLogger | undefined {
+    if (!logger) return undefined;
+    return {
+      info: (msg, ...args) => logger.info(msg, ...args),
+      warn: (msg, ...args) => logger.warn(msg, ...args),
+      error: (msg, ...args) => {
+        if (msg instanceof Error) {
+          logger.error(msg);
+          return;
+        }
+        logger.error(msg, ...args);
+      },
+    };
+  }
 
   /**
    * 根据 provider ID 创建 AI Client
@@ -74,7 +97,7 @@ export class QueryService {
       defaultProvider: provider.type,
       defaultApiKey: provider.apiKey,
       defaultBaseURL: provider.baseURL,
-      logger: this.deps.logger,
+      logger: this.toPlannerLogger(this.deps.logger),
     });
   }
 
@@ -87,7 +110,7 @@ export class QueryService {
     const datasourceId =
       input.datasource ??
       (await this.deps.datasourceService.list()).find((d) => d.isDefault)?.id ??
-      null;
+      undefined;
 
     const planner =
       this.deps.planner ??
@@ -100,7 +123,7 @@ export class QueryService {
           return this.deps.schemaService.list(datasourceId);
         },
         aiClient,
-        logger: this.deps.logger,
+        logger: this.toPlannerLogger(this.deps.logger),
       });
 
     const plan = await planner.plan(input.question, datasourceId, input.limit);

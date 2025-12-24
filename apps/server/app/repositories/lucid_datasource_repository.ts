@@ -49,7 +49,9 @@ export class LucidDatasourceRepository implements DatasourceRepository {
       database: input.database,
       isDefault: input.isDefault,
       // 将 Date 转换为 luxon.DateTime（Lucid 模型需要）
-      lastSyncAt: input.lastSyncAt ? DateTime.fromJSDate(input.lastSyncAt) : undefined,
+      lastSyncAt: input.lastSyncAt
+        ? (DateTime.fromJSDate(input.lastSyncAt) as DateTime<true>)
+        : undefined,
     });
     await row.save();
     return this.mapRow(row);

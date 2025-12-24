@@ -17,6 +17,7 @@ export default class DashboardsController {
     const parsed = dashboardCreateSchema.parse(request.body());
     const record = await this.service.create({
       ...parsed,
+      description: parsed.description ?? undefined,
       ownerId: undefined, // No auth yet
     });
     return response.created(record);
@@ -42,13 +43,17 @@ export default class DashboardsController {
       return response.badRequest({ message: 'Invalid dashboard ID' });
     }
     const parsed = dashboardUpdateSchema.parse({ ...request.body(), id });
+    const updateInput = {
+      ...parsed,
+      description: parsed.description ?? undefined,
+    };
 
     const existing = await this.service.get(id);
     if (!existing) {
       return response.notFound({ message: 'Dashboard not found' });
     }
 
-    const record = await this.service.update(id, parsed);
+    const record = await this.service.update(id, updateInput);
     return response.ok(record);
   }
 

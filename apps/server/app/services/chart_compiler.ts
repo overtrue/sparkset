@@ -5,7 +5,6 @@ import type {
   ChartRenderResult,
   ValidationResult,
 } from '../types/chart.js';
-import type { ColumnDefinition } from '@sparkset/core';
 
 export class ChartCompiler {
   /**
@@ -292,7 +291,7 @@ export class ChartCompiler {
 
   private applyTimeBucket(data: any[], t: any): any[] {
     // 简单的时间分桶实现
-    const { field, unit } = t; // unit: 'hour' | 'day' | 'week' | 'month'
+    const { field: _field, unit: _unit } = t; // unit: 'hour' | 'day' | 'week' | 'month'
 
     // 这里需要根据实际日期格式进行分桶
     // 暂返回原数据，实际实现需要 date-fns

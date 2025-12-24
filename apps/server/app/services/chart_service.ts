@@ -17,6 +17,7 @@ export class ChartService {
    * 列表
    */
   async list(datasetId?: number, userId?: number): Promise<Chart[]> {
+    void userId;
     const query = Chart.query().preload('dataset');
     if (datasetId) {
       query.where('dataset_id', datasetId);
@@ -29,6 +30,7 @@ export class ChartService {
    * 详情
    */
   async get(id: number, userId?: number): Promise<Chart | null> {
+    void userId;
     const validId = toId(id);
     if (!validId) {
       return null;
@@ -123,6 +125,7 @@ export class ChartService {
    * 渲染图表（从保存的配置）
    */
   async render(id: number, useCache = true): Promise<ChartRenderResult> {
+    void useCache;
     const validId = toId(id);
     if (!validId) {
       throw new Error('Invalid chart ID');

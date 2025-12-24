@@ -134,7 +134,11 @@ export default function DatasetsPage() {
       cell: ({ row }) => {
         const schema = row.getValue('schemaJson');
         return (
-          <Badge variant="secondary">{t('{count} fields', { count: schema?.length ?? 0 })}</Badge>
+          <Badge variant="secondary">
+            {t('{count} fields', {
+              count: (schema as { name: string; type: string }[])?.length ?? 0,
+            })}
+          </Badge>
         );
       },
       size: 100,

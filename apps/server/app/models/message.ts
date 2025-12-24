@@ -30,7 +30,7 @@ export default class Message extends BaseModel {
   declare metadata: unknown | null;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @belongsTo(() => Conversation)
   declare conversation: BelongsTo<typeof Conversation>;

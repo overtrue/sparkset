@@ -4,6 +4,8 @@
     "rootDir": "./",
     "outDir": "./build",
     "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "paths": {
       "#controllers/*": ["./app/controllers/*"],
       "#exceptions/*": ["./app/exceptions/*"],
@@ -12,11 +14,17 @@
       "#middleware/*": ["./app/middleware/*"],
       "#providers/*": ["./app/providers/*"],
       "#start/*": ["./start/*"],
-      "@sparkset/core/*": ["../../packages/core/src/*"],
-      "@sparkset/utils/*": ["../../packages/utils/src/*"],
-      "@sparkset/config/*": ["../../packages/config/src/*"]
+      "@sparkset/core": ["../../packages/core/dist/index.d.ts"],
+      "@sparkset/core/*": ["../../packages/core/dist/*"],
+      "@sparkset/ai": ["../../packages/ai/dist/index.d.ts"],
+      "@sparkset/ai/*": ["../../packages/ai/dist/*"],
+      "@sparkset/utils": ["../../packages/utils/dist/index.d.ts"],
+      "@sparkset/utils/*": ["../../packages/utils/dist/*"],
+      "@sparkset/config": ["../../packages/config/dist/index.d.ts"],
+      "@sparkset/config/*": ["../../packages/config/dist/*"],
+      "luxon": ["./node_modules/@types/luxon"]
     }
   },
   "include": ["app", "config", "start", "bin", "tests", "adonisrc.ts"],
-  "exclude": ["build"]
+  "exclude": ["build", "app/ai", "app/ai/**"]
 }

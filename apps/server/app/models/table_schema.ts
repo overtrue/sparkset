@@ -23,10 +23,10 @@ export default class TableSchema extends BaseModel {
   declare semanticDescription: string | null;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 
   @belongsTo(() => DataSource)
   declare datasource: BelongsTo<typeof DataSource>;

@@ -2,7 +2,7 @@ import { DatasourceRepository } from '../db/interfaces';
 import type { DataSource } from '../models/types';
 
 export type CreateDataSourceInput = Omit<DataSource, 'id' | 'lastSyncAt'>;
-export type UpdateDataSourceInput = Partial<CreateDataSourceInput> & { id: number };
+export type UpdateDataSourceInput = Partial<DataSource> & { id: number };
 
 /**
  * Datasource service that can use a repository or fall back to in-memory store.

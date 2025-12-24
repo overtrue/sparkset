@@ -35,6 +35,7 @@ export default class DatasetsController {
     const parsed = createSchema.parse(request.body());
     const record = await this.service.create({
       ...parsed,
+      description: parsed.description ?? undefined,
       ownerId: undefined, // No auth yet
     });
     return response.created(record);
@@ -56,13 +57,17 @@ export default class DatasetsController {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const parsed = createSchema.partial().parse(request.body());
+    const updateInput = {
+      ...parsed,
+      description: parsed.description ?? undefined,
+    };
 
     const existing = await this.service.get(id);
     if (!existing) {
       return response.notFound({ message: 'Dataset not found' });
     }
 
-    const record = await this.service.update(id, parsed);
+    const record = await this.service.update(id, updateInput);
     return response.ok(record);
   }
 

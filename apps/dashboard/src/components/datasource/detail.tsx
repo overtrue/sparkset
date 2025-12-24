@@ -30,7 +30,7 @@ import { cn } from '../../lib/utils';
 import { PageHeader } from '../page-header';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Button, buttonVariants } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import {
   Dialog,
   DialogContent,

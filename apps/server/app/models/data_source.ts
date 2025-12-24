@@ -34,13 +34,13 @@ export default class DataSource extends BaseModel {
   declare isDefault: boolean;
 
   @column.dateTime({ columnName: 'last_sync_at' })
-  declare lastSyncAt: DateTime | null;
+  declare lastSyncAt: DateTime<true> | null;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 
   @hasMany(() => TableSchema)
   declare tableSchemas: HasMany<typeof TableSchema>;

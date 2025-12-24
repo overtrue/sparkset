@@ -1,5 +1,5 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm';
-import { DateTime } from 'luxon';
+import type { DateTime } from 'luxon';
 
 export default class Action extends BaseModel {
   static table = 'actions';
@@ -51,8 +51,8 @@ export default class Action extends BaseModel {
   declare inputSchema: unknown | null;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 }

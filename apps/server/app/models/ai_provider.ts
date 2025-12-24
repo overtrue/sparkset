@@ -26,8 +26,8 @@ export default class AiProvider extends BaseModel {
   declare isDefault: boolean;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 }

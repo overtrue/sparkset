@@ -54,10 +54,10 @@ export default class DashboardWidget extends BaseModel {
   declare order: number;
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 
   // 关联关系
   @belongsTo(() => Dashboard)

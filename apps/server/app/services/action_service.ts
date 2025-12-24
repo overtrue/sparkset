@@ -1,7 +1,19 @@
-import { buildActionPrompt, VercelAIClient } from '../ai/index.js';
+import { buildActionPrompt, VercelAIClient } from '@sparkset/ai';
 import { TableSchema } from '@sparkset/core';
 import { ActionRepository } from '../db/interfaces';
 import type { Action, AIProvider } from '../models/types';
+
+type AIClientLogger = {
+  info: (msg: string, ...args: unknown[]) => void;
+  warn: (msg: string, ...args: unknown[]) => void;
+  error: (msg: string | Error, ...args: unknown[]) => void;
+};
+
+type LogLike = {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
 
 export type CreateActionInput = Omit<Action, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateActionInput = Partial<CreateActionInput> & { id: number };
@@ -90,14 +102,23 @@ export class ActionService {
     options: {
       schemas: TableSchema[];
       aiProvider?: AIProvider;
-      logger?: {
-        info: (msg: string, ...args: unknown[]) => void;
-        warn: (msg: string, ...args: unknown[]) => void;
-        error: (msg: string | Error, ...args: unknown[]) => void;
-      };
+      logger?: LogLike;
     },
   ): Promise<GenerateSQLResult> {
     const { schemas, aiProvider, logger } = options;
+    const aiLogger: AIClientLogger | undefined = logger
+      ? {
+          info: (msg, ...args) => logger.info(msg, ...args),
+          warn: (msg, ...args) => logger.warn(msg, ...args),
+          error: (msg, ...args) => {
+            if (msg instanceof Error) {
+              logger.error(msg);
+              return;
+            }
+            logger.error(msg, ...args);
+          },
+        }
+      : undefined;
 
     if (schemas.length === 0) {
       throw new Error(
@@ -115,7 +136,7 @@ export class ActionService {
       defaultProvider: aiProvider.type,
       defaultApiKey: aiProvider.apiKey,
       defaultBaseURL: aiProvider.baseURL,
-      logger,
+      logger: aiLogger,
     });
 
     // 构建 Action Prompt
@@ -326,7 +347,6 @@ export class ActionService {
    */
   private inferParameterDescription(paramName: string, description: string): string | undefined {
     // 尝试从描述中提取参数相关的信息
-    const lowerDesc = description.toLowerCase();
     const lowerName = paramName.toLowerCase();
 
     // 查找描述中与参数相关的部分

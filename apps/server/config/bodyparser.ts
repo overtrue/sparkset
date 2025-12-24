@@ -4,14 +4,10 @@ const bodyParserConfig = defineConfig({
   allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
   form: {
     convertEmptyStringsToNull: true,
-    arrays: true,
-    objects: true,
   },
   json: {
     strict: true,
     convertEmptyStringsToNull: true,
-    arrays: true,
-    objects: true,
   },
   raw: {
     types: ['text/*', 'application/json'],

@@ -2,6 +2,7 @@ import { DBClient, DataSourceConfig } from '@sparkset/core';
 import { describe, expect, it } from 'vitest';
 import { InMemorySchemaCacheRepository } from '../app/db/in-memory';
 import type { DataSource } from '../app/models/types';
+import { AIProviderService } from '../app/services/ai_provider_service';
 import { SchemaService } from '../app/services/schema_service';
 
 class MockDBClient implements DBClient {
@@ -47,6 +48,7 @@ describe('SchemaService', () => {
     const service = new SchemaService({
       schemaRepo,
       getDBClient: async () => new MockDBClient(rows),
+      aiProviderService: new AIProviderService(),
     });
 
     const ts = await service.sync(datasource);

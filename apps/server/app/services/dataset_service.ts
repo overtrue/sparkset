@@ -2,8 +2,7 @@ import { inject } from '@adonisjs/core';
 import type { Database } from '@adonisjs/lucid/database';
 import Dataset from '../models/dataset.js';
 import { DatasourceService } from './datasource_service.js';
-import { QueryExecutor } from '@sparkset/core';
-import type { ResultSet } from '../types/chart.js';
+import type { ColumnType, ResultSet } from '../types/chart.js';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 
 @inject()
@@ -16,7 +15,10 @@ export class DatasetService {
   /**
    * 列表
    */
-  async list(userId?: number): Promise<(Dataset & { datasourceName: string })[]> {
+  async list(
+    userId?: number,
+  ): Promise<Array<Record<string, unknown> & { datasourceName: string }>> {
+    void userId;
     const query = Dataset.query().preload('datasource');
     // For now, ignore userId filter (no auth)
     const datasets = await query.orderBy('created_at', 'desc');
@@ -29,7 +31,11 @@ export class DatasetService {
   /**
    * 详情
    */
-  async get(id: number, userId?: number): Promise<(Dataset & { datasourceName: string }) | null> {
+  async get(
+    id: number,
+    userId?: number,
+  ): Promise<(Record<string, unknown> & { datasourceName: string }) | null> {
+    void userId;
     const query = Dataset.query().where('id', id).preload('datasource');
     // For now, ignore userId filter (no auth)
     const dataset = await query.first();
@@ -75,15 +81,17 @@ export class DatasetService {
       description: string;
       querySql: string;
       schemaJson: Array<{ name: string; type: string }>;
+      schemaHash: string;
     }>,
   ): Promise<Dataset> {
     const dataset = await Dataset.findOrFail(id);
 
+    const updateData = { ...data };
     if (data.schemaJson) {
-      data.schemaHash = this.computeSchemaHash(data.schemaJson);
+      updateData.schemaHash = this.computeSchemaHash(data.schemaJson);
     }
 
-    dataset.merge(data);
+    dataset.merge(updateData);
     await dataset.save();
     return dataset;
   }

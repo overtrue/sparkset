@@ -7,6 +7,7 @@ import type { SchemaService } from '../services/schema_service';
 import type { DatasetService } from '../services/dataset_service';
 import type { ChartService } from '../services/chart_service';
 import type { ChartCompiler } from '../services/chart_compiler';
+import type { ActionExecutor, QueryExecutor } from '@sparkset/core';
 
 declare module '@adonisjs/core/types' {
   interface ContainerBindings {
@@ -19,5 +20,7 @@ declare module '@adonisjs/core/types' {
     DatasetService: DatasetService;
     ChartService: ChartService;
     ChartCompiler: ChartCompiler;
+    'executors/query': QueryExecutor | undefined;
+    'executors/action': ActionExecutor | undefined;
   }
 }

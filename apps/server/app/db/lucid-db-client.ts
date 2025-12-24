@@ -47,7 +47,7 @@ class LucidDBClient implements DBClient {
     }
   }
 
-  async query<T = unknown>(config: DataSourceConfig, sql: string): Promise<QueryResult<T>> {
+  async query<T = unknown>(_config: DataSourceConfig, sql: string): Promise<QueryResult<T>> {
     const connection = this.getConnection();
     const result = await connection.rawQuery(sql);
 
@@ -63,23 +63,48 @@ class LucidDBClient implements DBClient {
   private getConnection() {
     // Lazily register connection if it doesn't exist yet
     if (!this.database.manager.has(this.connectionName)) {
-      this.database.manager.add(this.connectionName, {
-        client: getClientType(this.config.type),
-        connection: {
-          host: this.config.host,
-          port: this.config.port,
-          user: this.config.username,
-          password: this.config.password,
-          database: this.config.database,
-        },
-        // Disable extra features we don't use for ad-hoc connections
-        healthCheck: false,
+      const client = getClientType(this.config.type);
+      const baseConfig = {
         debug: false,
         migrations: {
           naturalSort: true,
           paths: ['database/migrations'],
         },
-      });
+      };
+
+      if (client === 'mysql2') {
+        this.database.manager.add(this.connectionName, {
+          client: 'mysql2',
+          connection: {
+            host: this.config.host,
+            port: this.config.port,
+            user: this.config.username,
+            password: this.config.password,
+            database: this.config.database,
+          },
+          ...baseConfig,
+        });
+      } else if (client === 'pg') {
+        this.database.manager.add(this.connectionName, {
+          client: 'pg',
+          connection: {
+            host: this.config.host,
+            port: this.config.port,
+            user: this.config.username,
+            password: this.config.password,
+            database: this.config.database,
+          },
+          ...baseConfig,
+        });
+      } else {
+        this.database.manager.add(this.connectionName, {
+          client: 'better-sqlite3',
+          connection: {
+            filename: this.config.database,
+          },
+          ...baseConfig,
+        });
+      }
     }
 
     // Database.connection will call manager.connect under the hood

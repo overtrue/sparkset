@@ -3,8 +3,6 @@
  * 适配 shadcn/ui Chart 组件
  */
 
-import type { ColumnDefinition } from '@sparkset/core';
-
 // 列类型（复用现有）
 export type ColumnType = 'quantitative' | 'temporal' | 'nominal' | 'ordinal';
 

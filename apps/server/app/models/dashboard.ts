@@ -19,10 +19,10 @@ export default class Dashboard extends BaseModel {
   declare ownerId: number | null;
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime;
+  declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime;
+  declare updatedAt: DateTime<true>;
 
   // 关联关系
   @hasMany(() => DashboardWidget)

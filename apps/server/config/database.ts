@@ -1,7 +1,8 @@
 import { defineConfig } from '@adonisjs/lucid';
 import env from '#start/env';
-import type { Env } from '@adonisjs/env';
 import type { DataSourceConfig } from '@sparkset/core';
+
+type Env = typeof env;
 
 export const buildDatasourceConfig = (currentEnv: Env = env): DataSourceConfig | null => {
   const host = currentEnv.get('DB_HOST');
