@@ -20,9 +20,29 @@ const ChartsController = () => import('#controllers/charts_controller');
 const DashboardsController = () => import('#controllers/dashboards_controller');
 const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
 
+// Public routes
 router.get('/health', [HealthController, 'handle']);
 
-// Datasource routes
+// Auth status endpoint (public, returns current user info)
+router.get('/auth/status', async ({ auth, response }) => {
+  if (auth?.user) {
+    return {
+      authenticated: true,
+      user: {
+        id: auth.user.id,
+        username: auth.user.username,
+        email: auth.user.email,
+        displayName: auth.user.displayName,
+        roles: auth.user.roles,
+        permissions: auth.user.permissions,
+        provider: auth.user.provider,
+      },
+    }
+  }
+  return response.unauthorized({ authenticated: false })
+});
+
+// Datasource routes (requires authentication)
 router
   .group(() => {
     router.get('/', [DatasourcesController, 'index']);
@@ -42,9 +62,10 @@ router
     router.put('/:id', [DatasourcesController, 'update']);
     router.delete('/:id', [DatasourcesController, 'destroy']);
   })
-  .prefix('/datasources');
+  .prefix('/datasources')
+  .middleware(['auth']);
 
-// Action routes
+// Action routes (requires authentication)
 router
   .group(() => {
     router.get('/', [ActionsController, 'index']);
@@ -55,12 +76,13 @@ router
     router.delete('/:id', [ActionsController, 'destroy']);
     router.post('/:id/execute', [ActionsController, 'execute']);
   })
-  .prefix('/actions');
+  .prefix('/actions')
+  .middleware(['auth']);
 
-// Query routes
-router.post('/query', [QueriesController, 'run']);
+// Query routes (requires authentication)
+router.post('/query', [QueriesController, 'run']).middleware(['auth']);
 
-// Conversation routes
+// Conversation routes (requires authentication)
 router
   .group(() => {
     router.get('/', [ConversationsController, 'index']);
@@ -68,9 +90,10 @@ router
     router.post('/', [ConversationsController, 'store']);
     router.post('/:id/messages', [ConversationsController, 'appendMessage']);
   })
-  .prefix('/conversations');
+  .prefix('/conversations')
+  .middleware(['auth']);
 
-// AI Provider routes
+// AI Provider routes (requires authentication)
 router
   .group(() => {
     router.get('/', [AIProvidersController, 'index']);
@@ -81,9 +104,10 @@ router
     router.put('/:id', [AIProvidersController, 'update']);
     router.delete('/:id', [AIProvidersController, 'destroy']);
   })
-  .prefix('/ai-providers');
+  .prefix('/ai-providers')
+  .middleware(['auth']);
 
-// Dataset routes
+// Dataset routes (requires authentication)
 router
   .group(() => {
     router.get('/', [DatasetsController, 'index']);
@@ -93,9 +117,10 @@ router
     router.delete('/:id', [DatasetsController, 'destroy']);
     router.post('/:id/preview', [DatasetsController, 'preview']);
   })
-  .prefix('/api/datasets');
+  .prefix('/api/datasets')
+  .middleware(['auth']);
 
-// Chart routes
+// Chart routes (requires authentication)
 router
   .group(() => {
     router.get('/', [ChartsController, 'index']);
@@ -106,9 +131,10 @@ router
     router.get('/:id/render', [ChartsController, 'render']);
     router.post('/preview', [ChartsController, 'preview']);
   })
-  .prefix('/api/charts');
+  .prefix('/api/charts')
+  .middleware(['auth']);
 
-// Dashboard routes
+// Dashboard routes (requires authentication)
 router
   .group(() => {
     router.get('/', [DashboardsController, 'index']);
@@ -117,9 +143,10 @@ router
     router.put('/:id', [DashboardsController, 'update']);
     router.delete('/:id', [DashboardsController, 'destroy']);
   })
-  .prefix('/api/dashboards');
+  .prefix('/api/dashboards')
+  .middleware(['auth']);
 
-// Dashboard Widget routes
+// Dashboard Widget routes (requires authentication)
 router
   .group(() => {
     router.post('/:dashboardId/widgets', [DashboardWidgetsController, 'store']);
@@ -129,4 +156,5 @@ router
     router.put('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'update']);
     router.delete('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'destroy']);
   })
-  .prefix('/api/dashboards');
+  .prefix('/api/dashboards')
+  .middleware(['auth']);

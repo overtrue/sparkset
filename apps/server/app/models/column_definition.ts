@@ -2,6 +2,7 @@ import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
 import type { BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import TableSchema from './table_schema.js';
+import User from './user.js';
 
 export default class ColumnDefinition extends BaseModel {
   static table = 'column_definitions';
@@ -35,4 +36,16 @@ export default class ColumnDefinition extends BaseModel {
 
   @belongsTo(() => TableSchema)
   declare tableSchema: BelongsTo<typeof TableSchema>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

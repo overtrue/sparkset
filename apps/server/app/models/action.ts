@@ -1,5 +1,7 @@
-import { BaseModel, column } from '@adonisjs/lucid/orm';
-import type { DateTime } from 'luxon';
+import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm';
+import type { BelongsTo } from '@adonisjs/lucid/types/relations';
+import { DateTime } from 'luxon';
+import User from './user.js';
 
 export default class Action extends BaseModel {
   static table = 'actions';
@@ -50,9 +52,21 @@ export default class Action extends BaseModel {
   })
   declare inputSchema: unknown | null;
 
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
   declare createdAt: DateTime<true>;
 
   @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
   declare updatedAt: DateTime<true>;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

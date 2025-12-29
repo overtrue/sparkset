@@ -2,6 +2,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm';
 import type { BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import Dashboard from './dashboard.js';
+import User from './user.js';
 
 export type WidgetType = 'chart' | 'dataset' | 'text';
 
@@ -62,4 +63,16 @@ export default class DashboardWidget extends BaseModel {
   // 关联关系
   @belongsTo(() => Dashboard)
   declare dashboard: BelongsTo<typeof Dashboard>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

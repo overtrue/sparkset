@@ -1,7 +1,8 @@
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm';
-import type { HasMany } from '@adonisjs/lucid/types/relations';
+import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm';
+import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import DashboardWidget from './dashboard_widget.js';
+import User from './user.js';
 
 export default class Dashboard extends BaseModel {
   static table = 'dashboards';
@@ -27,4 +28,16 @@ export default class Dashboard extends BaseModel {
   // 关联关系
   @hasMany(() => DashboardWidget)
   declare widgets: HasMany<typeof DashboardWidget>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

@@ -1,7 +1,8 @@
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm';
-import type { HasMany } from '@adonisjs/lucid/types/relations';
+import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm';
+import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import TableSchema from './table_schema.js';
+import User from './user.js';
 
 export default class DataSource extends BaseModel {
   static table = 'datasources';
@@ -36,6 +37,12 @@ export default class DataSource extends BaseModel {
   @column.dateTime({ columnName: 'last_sync_at' })
   declare lastSyncAt: DateTime<true> | null;
 
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })
   declare createdAt: DateTime<true>;
 
@@ -44,4 +51,10 @@ export default class DataSource extends BaseModel {
 
   @hasMany(() => TableSchema)
   declare tableSchemas: HasMany<typeof TableSchema>;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

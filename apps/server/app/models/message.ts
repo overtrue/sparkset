@@ -2,6 +2,7 @@ import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
 import type { BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import Conversation from './conversation.js';
+import User from './user.js';
 
 export default class Message extends BaseModel {
   static table = 'conversation_messages';
@@ -34,4 +35,16 @@ export default class Message extends BaseModel {
 
   @belongsTo(() => Conversation)
   declare conversation: BelongsTo<typeof Conversation>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

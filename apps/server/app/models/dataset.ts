@@ -2,6 +2,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm';
 import type { BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import DataSource from './data_source.js';
+import User from './user.js';
 import type { ColumnDefinition } from '@sparkset/core';
 
 export default class Dataset extends BaseModel {
@@ -40,4 +41,16 @@ export default class Dataset extends BaseModel {
   // 关联关系
   @belongsTo(() => DataSource, { foreignKey: 'datasourceId' })
   declare datasource: BelongsTo<typeof DataSource>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

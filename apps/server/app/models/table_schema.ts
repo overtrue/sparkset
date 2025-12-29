@@ -3,6 +3,7 @@ import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import ColumnDefinition from './column_definition.js';
 import DataSource from './data_source.js';
+import User from './user.js';
 
 export default class TableSchema extends BaseModel {
   static table = 'table_schemas';
@@ -33,4 +34,16 @@ export default class TableSchema extends BaseModel {
 
   @hasMany(() => ColumnDefinition)
   declare columns: HasMany<typeof ColumnDefinition>;
+
+  @column()
+  declare creatorId: number | null;
+
+  @column()
+  declare updaterId: number | null;
+
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
+  declare creator: BelongsTo<typeof User>;
+
+  @belongsTo(() => User, { foreignKey: 'updaterId' })
+  declare updater: BelongsTo<typeof User>;
 }

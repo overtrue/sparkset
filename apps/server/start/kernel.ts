@@ -36,5 +36,5 @@ router.use([() => import('@adonisjs/core/bodyparser_middleware')]);
  * Register named middleware collection
  */
 router.named({
-  // auth: () => import('#middleware/auth_middleware'),
+  auth: () => import('#middleware/auth_middleware'),
 });
