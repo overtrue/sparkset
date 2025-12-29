@@ -1,7 +1,8 @@
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm';
-import type { HasMany } from '@adonisjs/lucid/types/relations';
+import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm';
+import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import Message from './message.js';
+import User from './user.js';
 
 export default class Conversation extends BaseModel {
   static table = 'conversations';
@@ -10,7 +11,10 @@ export default class Conversation extends BaseModel {
   declare id: number;
 
   @column({ columnName: 'user_id' })
-  declare userId: number | null;
+  declare userId: number;
+
+  @belongsTo(() => User)
+  declare user: BelongsTo<typeof User>;
 
   @column()
   declare title: string | null;
