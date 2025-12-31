@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link, useRouter } from '@/i18n/client-routing';
-import { chartsApi } from '@/lib/api/charts';
-import { datasetsApi } from '@/lib/api/datasets';
-import type { Chart, Dataset } from '@/types/chart';
+import { useCharts, useDeleteChart } from '@/lib/api/charts-hooks';
+import { useDatasets } from '@/lib/api/datasets-hooks';
+import { useResourceList } from '@/hooks/use-resource-list';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import type { Chart } from '@/types/api';
 import {
   RiAddLine,
   RiBarChartLine,
@@ -26,37 +28,55 @@ import {
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils/date';
+import { useState } from 'react';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { LoadingState } from '@/components/loading-state';
 
 export default function ChartsPage() {
   const t = useTranslations();
   const router = useRouter();
-  const [charts, setCharts] = useState<Chart[]>([]);
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [chartToDelete, setChartToDelete] = useState<Chart | null>(null);
+  const {
+    data: chartsData,
+    error: chartsError,
+    isLoading: chartsLoading,
+    mutate: mutateCharts,
+  } = useCharts();
+  const { data: datasetsData, error: datasetsError, isLoading: datasetsLoading } = useDatasets();
+  const { trigger: deleteChart } = useDeleteChart();
+  const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
   const [selectedChartForDashboard, setSelectedChartForDashboard] = useState<number | null>(null);
 
-  useEffect(() => {
-    void loadData();
-  }, []);
+  const {
+    items: charts,
+    handleDelete,
+    handleBulkDelete,
+  } = useResourceList(chartsData, mutateCharts, {
+    resourceName: t('Chart'),
+    onDelete: async (item) => {
+      await deleteChart(item.id);
+    },
+    onBulkDelete: async (items) => {
+      for (const item of items) {
+        await deleteChart(item.id);
+      }
+    },
+  });
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [datasetsResult, chartsResult] = await Promise.all([
-        datasetsApi.list(),
-        chartsApi.list(),
-      ]);
-      setDatasets(datasetsResult.items);
-      setCharts(chartsResult.items);
-    } catch {
-      toast.error(t('Failed to load data'));
-    } finally {
-      setLoading(false);
-    }
+  const datasets = datasetsData?.items || [];
+  const isLoading = chartsLoading || datasetsLoading;
+  const error = chartsError || datasetsError;
+
+  const handleDeleteClick = (chart: Chart) => {
+    openDialog({
+      title: t('Delete Chart'),
+      description: t(`Are you sure to delete '{name}'? This cannot be undone`, {
+        name: chart.title,
+      }),
+      variant: 'destructive',
+      onConfirm: () => handleDelete(chart),
+    });
   };
 
   const getChartIcon = (chartType: Chart['chartType']) => {
@@ -94,42 +114,7 @@ export default function ChartsPage() {
     }
   };
 
-  const formatDate = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  };
-
-  const handleDelete = async (chart: Chart) => {
-    setChartToDelete(chart);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!chartToDelete) return;
-
-    try {
-      await chartsApi.delete(chartToDelete.id);
-      toast.success(t('Chart deleted'));
-      setDeleteConfirmOpen(false);
-      setChartToDelete(null);
-      void loadData();
-    } catch {
-      toast.error(t('Delete failed'));
-    }
-  };
-
-  const handleDeleteSelected = async (rows: Chart[]) => {
-    for (const row of rows) {
-      try {
-        await chartsApi.delete(row.id);
-      } catch {
-        toast.error(`${t('Delete failed')}: ${row.title}`);
-      }
-    }
-    setCharts((prev) => prev.filter((c) => !rows.some((r) => r.id === c.id)));
-    toast.success(t('Successfully deleted {count} chart(s)', { count: rows.length }));
-  };
+  const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Chart>[] = [
     {
@@ -224,7 +209,7 @@ export default function ChartsPage() {
           {
             label: t('Delete'),
             icon: <RiBarChartLine className="h-4 w-4" />,
-            onClick: () => handleDelete(chart),
+            onClick: () => handleDeleteClick(chart),
             variant: 'destructive',
           },
         ];
@@ -255,7 +240,7 @@ export default function ChartsPage() {
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -270,7 +255,27 @@ export default function ChartsPage() {
             </Button>
           }
         />
-        <div className="text-center py-12 text-muted-foreground">{t('Loading...')}</div>
+        <LoadingState message={t('Loading...')} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('Chart Management')}
+          description={t('Create and manage dataset-based visualization charts')}
+          action={
+            <Button asChild>
+              <Link href="/dashboard/charts/new">
+                <RiAddLine className="h-4 w-4" />
+                {t('Create Chart')}
+              </Link>
+            </Button>
+          }
+        />
+        <ErrorState error={error} onRetry={() => mutateCharts()} />
       </div>
     );
   }
@@ -326,22 +331,15 @@ export default function ChartsPage() {
             </Button>
           }
         />
-
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <RiBarChartLine className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">{t('No Charts')}</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {t('Create your first chart to start visualizing data')}
-          </p>
-          <Button asChild>
-            <Link href="/dashboard/charts/new">
-              <RiAddLine className="h-4 w-4" />
-              {t('Create Chart')}
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={<RiBarChartLine className="h-8 w-8 text-muted-foreground" />}
+          title={t('No Charts')}
+          description={t('Create your first chart to start visualizing data')}
+          action={{
+            label: t('Create Chart'),
+            onClick: () => router.push('/dashboard/charts/new'),
+          }}
+        />
       </div>
     );
   }
@@ -367,7 +365,7 @@ export default function ChartsPage() {
         searchKey="title"
         searchPlaceholder={t('Search...')}
         enableRowSelection
-        onDeleteSelected={handleDeleteSelected}
+        onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Chart')}
         deleteConfirmDescription={(count) =>
           t('Are you sure to delete the selected {count} chart(s)? This action cannot be undone', {
@@ -377,18 +375,20 @@ export default function ChartsPage() {
         emptyMessage={t('No Charts')}
       />
 
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        title={t('Delete Chart')}
-        description={t(`Are you sure to delete chart '{title}'? This action cannot be undone`, {
-          title: chartToDelete?.title || '',
-        })}
-        onConfirm={confirmDelete}
-        confirmText={t('Delete')}
-        cancelText={t('Cancel')}
-        variant="destructive"
-      />
+      {dialogState && (
+        <ConfirmDialog
+          open={dialogState.open}
+          onOpenChange={(open) => {
+            if (!open) handleCancel();
+          }}
+          title={dialogState.title}
+          description={dialogState.description}
+          onConfirm={handleConfirm}
+          confirmText={dialogState.confirmText}
+          cancelText={dialogState.cancelText}
+          variant={dialogState.variant}
+        />
+      )}
     </div>
   );
 }

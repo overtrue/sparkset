@@ -1,46 +1,24 @@
 import type {
   Dashboard,
   DashboardWidget,
-  ChartWidgetConfig,
-  DatasetWidgetConfig,
-  TextWidgetConfig,
-} from '@/types/dashboard';
+  CreateDashboardDto,
+  CreateWidgetDto,
+  UpdateLayoutDto,
+  ApiListResponse,
+} from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
-export interface CreateDashboardDto {
-  title: string;
-  description?: string;
-}
-
-export interface CreateWidgetDto {
-  title: string;
-  type: 'chart' | 'dataset' | 'text';
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  config: ChartWidgetConfig | DatasetWidgetConfig | TextWidgetConfig;
-  order?: number;
-}
-
-export interface UpdateLayoutDto {
-  layouts: {
-    id: number;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  }[];
-}
-
 // API functions - can be used in both server and client components
-export async function fetchDashboards(): Promise<{ items: Dashboard[] }> {
+export async function fetchDashboards(): Promise<ApiListResponse<Dashboard>> {
   return apiGet('/api/dashboards');
 }
 
-export async function fetchDashboard(id: number): Promise<Dashboard> {
+export async function fetchDashboardById(id: number): Promise<Dashboard> {
   return apiGet(`/api/dashboards/${id}`);
 }
+
+// Alias for backward compatibility
+export const fetchDashboard = fetchDashboardById;
 
 export async function createDashboard(data: CreateDashboardDto): Promise<Dashboard> {
   return apiPost('/api/dashboards', data);

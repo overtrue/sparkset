@@ -5,7 +5,7 @@ import { getDb } from './get-db.js';
 
 export class LucidAIProviderRepository implements AIProviderRepository {
   async list(): Promise<AIProvider[]> {
-    const rows = await AiProviderModel.query().orderBy('isDefault', 'desc').orderBy('id', 'asc');
+    const rows = await AiProviderModel.query().orderBy('created_at', 'desc');
     return rows.map(this.mapRow);
   }
 

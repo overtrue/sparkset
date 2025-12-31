@@ -2,7 +2,6 @@ import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import {
   fetchDatasources,
-  fetchDatasource,
   createDatasource,
   updateDatasource,
   deleteDatasource,
@@ -19,7 +18,7 @@ export function useDatasources() {
 }
 
 export function useDatasource(id: number | null) {
-  return useSWR(id ? `/datasources/${id}` : null, () => fetchDatasource(id!));
+  return useSWR(id ? `/datasources/${id}` : null, () => fetchDatasourceById(id!));
 }
 
 // Mutations

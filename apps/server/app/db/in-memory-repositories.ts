@@ -22,9 +22,12 @@ export class InMemoryDatasourceRepository implements DatasourceRepository {
 
   async list(): Promise<DataSource[]> {
     return Array.from(this.store.values()).sort((a, b) => {
-      // Sort by isDefault (true first), then by id
-      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-      return a.id - b.id;
+      // Sort by createdAt descending (newest first)
+      if (a.createdAt && b.createdAt) {
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      }
+      // Fallback to id if createdAt is missing
+      return b.id - a.id;
     });
   }
 
@@ -44,11 +47,14 @@ export class InMemoryDatasourceRepository implements DatasourceRepository {
       }
     }
 
+    const now = new Date();
     const record: DataSource = {
       id: this.currentId++,
       lastSyncAt: undefined,
       ...input,
       isDefault: isFirst || (input.isDefault ?? false),
+      createdAt: now,
+      updatedAt: now,
     };
     this.store.set(record.id, record);
     return record;
@@ -101,7 +107,9 @@ export class InMemoryActionRepository implements ActionRepository {
   private currentId = 1;
 
   async list(): Promise<Action[]> {
-    return Array.from(this.store.values());
+    return Array.from(this.store.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 
   async get(id: number): Promise<Action | null> {
@@ -196,11 +204,9 @@ export class InMemoryAIProviderRepository implements AIProviderRepository {
   private currentId = 1;
 
   async list(): Promise<AIProvider[]> {
-    return Array.from(this.store.values()).sort((a, b) => {
-      // Sort by isDefault (true first), then by id
-      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-      return a.id - b.id;
-    });
+    return Array.from(this.store.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 
   async create(input: Omit<AIProvider, 'id' | 'createdAt' | 'updatedAt'>): Promise<AIProvider> {

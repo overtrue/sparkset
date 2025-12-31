@@ -6,7 +6,7 @@ import { getDb } from './get-db.js';
 
 export class LucidDatasourceRepository implements DatasourceRepository {
   async list(): Promise<DataSource[]> {
-    const rows = await DataSourceModel.query().orderBy('isDefault', 'desc').orderBy('id', 'asc');
+    const rows = await DataSourceModel.query().orderBy('created_at', 'desc');
     return rows.map(this.mapRow);
   }
 
@@ -110,5 +110,7 @@ export class LucidDatasourceRepository implements DatasourceRepository {
     database: row.database,
     isDefault: row.isDefault,
     lastSyncAt: row.lastSyncAt ? row.lastSyncAt.toJSDate() : undefined,
+    createdAt: row.createdAt.toJSDate(),
+    updatedAt: row.updatedAt.toJSDate(),
   });
 }

@@ -4,7 +4,7 @@ import type { Action } from '../models/types';
 
 export class LucidActionRepository implements ActionRepository {
   async list(): Promise<Action[]> {
-    const rows = await ActionModel.query().orderBy('id', 'asc');
+    const rows = await ActionModel.query().orderBy('created_at', 'desc');
     return rows.map(this.mapRow);
   }
 

@@ -16,6 +16,8 @@ export interface DataSource {
   database: string;
   isDefault?: boolean;
   lastSyncAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type ActionType = 'sql' | 'api' | 'file' | string;
