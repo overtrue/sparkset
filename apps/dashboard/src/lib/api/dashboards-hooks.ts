@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import type { CreateDashboardDto, CreateWidgetDto, UpdateLayoutDto } from '@/types/api';
 import {
   fetchDashboards,
   fetchDashboardById,
@@ -11,9 +12,6 @@ import {
   deleteWidget,
   updateLayout,
   refreshWidget,
-  CreateDashboardDto,
-  CreateWidgetDto,
-  UpdateLayoutDto,
 } from './dashboards-api';
 
 // SWR Hooks - only for client components
