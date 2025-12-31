@@ -1,15 +1,15 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import type { CreateDatasourceDto, TestConnectionDto } from '@/types/api';
 import {
   fetchDatasources,
+  fetchDatasourceById,
   createDatasource,
   updateDatasource,
   deleteDatasource,
   testConnection,
   syncDatasource,
   setDefaultDatasource,
-  CreateDatasourceDto,
-  TestConnectionDto,
 } from './datasources-api';
 
 // SWR Hooks - only for client components
