@@ -109,7 +109,7 @@ export default function DatasourcesPage() {
             onClick={() => handleViewDetails(datasource)}
           >
             {row.getValue('name')}
-            {datasource.isDefault === 1 && (
+            {datasource.isDefault && (
               <Badge variant="secondary" className="ml-2 text-xs">
                 {t('Default')}
               </Badge>
