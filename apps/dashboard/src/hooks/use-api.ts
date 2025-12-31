@@ -20,11 +20,11 @@ export interface UseApiOptions<T> {
   errorMessage?: string;
 }
 
-export interface UseApiResult<T> {
+export interface UseApiResult<T, Args extends unknown[] = []> {
   data: T | null;
   loading: boolean;
   error: Error | null;
-  execute: (...args: unknown[]) => Promise<T | null>;
+  execute: (...args: Args) => Promise<T | null>;
   reset: () => void;
 }
 
@@ -43,7 +43,7 @@ export interface UseApiResult<T> {
 export function useApi<T, Args extends unknown[] = []>(
   apiFunction: (...args: Args) => Promise<T>,
   options: UseApiOptions<T> = {},
-): UseApiResult<T> {
+): UseApiResult<T, Args> {
   const {
     onSuccess,
     onError,
@@ -122,7 +122,9 @@ export function useApi<T, Args extends unknown[] = []>(
 export function useMutation<T, Args extends unknown[] = []>(
   mutationFunction: (...args: Args) => Promise<T>,
   options: UseApiOptions<T> = {},
-): Omit<UseApiResult<T>, 'data' | 'reset'> & { mutate: (...args: Args) => Promise<T | null> } {
+): Omit<UseApiResult<T, Args>, 'data' | 'reset'> & {
+  mutate: (...args: Args) => Promise<T | null>;
+} {
   const { loading, error, execute, reset } = useApi(mutationFunction, {
     showSuccessToast: true,
     showErrorToast: true,
