@@ -38,7 +38,7 @@ export interface Datasource {
   username: string;
   password: string;
   database: string;
-  isDefault: number;
+  isDefault: boolean;
   lastSyncAt: string;
   createdAt?: string;
   updatedAt?: string;

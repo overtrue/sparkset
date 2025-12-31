@@ -21,7 +21,12 @@ const Page = async ({ params }: PageProps) => {
     if (!datasource || !datasource.id) {
       notFound();
     }
-    return <DatasourceDetail initial={datasource} />;
+    // Convert isDefault from number to boolean for component compatibility
+    const normalizedDatasource = {
+      ...datasource,
+      isDefault: Boolean(datasource.isDefault),
+    } as typeof datasource & { isDefault: boolean };
+    return <DatasourceDetail initial={normalizedDatasource} />;
   } catch (error) {
     console.error('Failed to fetch datasource detail:', error);
     notFound();
