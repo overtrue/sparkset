@@ -2,7 +2,6 @@
 
 import {
   RiAddLine,
-  RiCloseLine,
   RiDeleteBinLine,
   RiEditLine,
   RiLoader4Line,
@@ -34,7 +33,6 @@ import { DatasourceSelector } from '../datasource-selector';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import {
   Dialog,
   DialogContent,
@@ -88,6 +86,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   const [payloadText, setPayloadText] = useState('');
   const [executeDialogOpen, setExecuteDialogOpen] = useState(false);
   const [pendingExecuteId, setPendingExecuteId] = useState<number | null>(null);
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [datasources, setDatasources] = useState<DatasourceDTO[]>([]);
   const [selectedDatasourceId, setSelectedDatasourceId] = useState<number | undefined>(undefined);
   const [generatingSQL, setGeneratingSQL] = useState(false);
@@ -259,8 +258,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     try {
       const res = await executeAction(id, parameters);
       setExecutionResult(res);
+      setResultDialogOpen(true);
     } catch (err) {
       setExecutionError((err as Error)?.message ?? t('Execution failed'));
+      setResultDialogOpen(true);
     } finally {
       setExecutingId(null);
       setPendingExecuteId(null);
@@ -610,31 +611,27 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         />
       )}
 
-      {/* 执行结果 */}
-      {(executionResult || executionError) && (
-        <Card className="shadow-none mt-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{t('Execution Result')}</CardTitle>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setExecutionResult(null);
-                  setExecutionError(null);
-                }}
-              >
-                <RiCloseLine className="h-4 w-4" />
-                {t('Clear')}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+      {/* 执行结果弹窗 */}
+      <Dialog
+        open={resultDialogOpen}
+        onOpenChange={(open) => {
+          setResultDialogOpen(open);
+          if (!open) {
+            setExecutionResult(null);
+            setExecutionError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[90vw] max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('Execution Result')}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
             {executionError ? (
               <Alert variant="destructive">
                 <AlertDescription>{executionError}</AlertDescription>
               </Alert>
-            ) : (
+            ) : executionResult ? (
               <ActionResult
                 actionType={
                   actions.find(
@@ -643,10 +640,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 }
                 result={executionResult as ActionExecutionResponse}
               />
-            )}
-          </CardContent>
-        </Card>
-      )}
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
