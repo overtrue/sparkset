@@ -1,3 +1,4 @@
+/* eslint-env node */
 /**
  * 手动验证认证修复
  * 使用 fetch 直接测试 API
