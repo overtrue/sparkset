@@ -3,7 +3,8 @@ import { RiArrowDownSLine, RiArrowRightSLine, RiChat3Line } from '@remixicon/rea
 import { useTranslations } from '@/i18n/use-translations';
 
 import { useState } from 'react';
-import { ConversationDTO, ConversationDetailDTO, fetchConversation } from '../../lib/api';
+import { fetchConversation } from '../../lib/api/conversations-api';
+import type { ConversationDTO, ConversationDetailDTO } from '@/types/api';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';

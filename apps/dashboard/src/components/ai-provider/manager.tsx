@@ -17,15 +17,14 @@ import { toast } from 'sonner';
 
 import { AI_PROVIDER_TYPES, getProviderLabel } from '../../lib/aiProviderTypes';
 import {
-  type AIProviderDTO,
-  type CreateAIProviderInput,
-  type TestConnectionResult,
   createAIProvider,
-  removeAIProvider,
+  deleteAIProvider,
   setDefaultAIProvider,
   testAIProviderConnectionByConfig,
   updateAIProvider,
-} from '../../lib/api';
+} from '../../lib/api/ai-providers-api';
+import type { AIProviderDTO, CreateAIProviderInput, TestConnectionResult } from '@/types/api';
+const removeAIProvider = deleteAIProvider;
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';

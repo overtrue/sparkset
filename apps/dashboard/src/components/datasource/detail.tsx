@@ -14,18 +14,23 @@ import { useRouter } from 'next/navigation';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  type CreateDatasourceInput,
-  type DatasourceDetailDTO,
-  type TableColumnDTO,
-  type TableSchemaDTO,
   fetchDatasourceDetail,
   generateSemanticDescriptions,
-  removeDatasource,
+  deleteDatasource,
   syncDatasource,
   updateColumnMetadata,
   updateDatasource,
   updateTableMetadata,
-} from '../../lib/api';
+} from '../../lib/api/datasources-api';
+import type {
+  CreateDatasourceDto,
+  DatasourceDetailDTO,
+  TableColumnDTO,
+  TableSchemaDTO,
+} from '@/types/api';
+// Legacy type alias for backward compatibility
+type CreateDatasourceInput = CreateDatasourceDto;
+const removeDatasource = deleteDatasource;
 import { cn } from '../../lib/utils';
 import { PageHeader } from '../page-header';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';

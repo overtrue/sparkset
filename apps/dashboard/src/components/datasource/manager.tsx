@@ -17,14 +17,23 @@ import { toast } from 'sonner';
 
 import {
   createDatasource,
-  type CreateDatasourceInput,
-  type DatasourceDTO,
-  removeDatasource,
+  deleteDatasource,
+  fetchDatasources,
   syncDatasource,
-  testConnectionByConfig,
-  TestConnectionResult,
+  testConnection,
   updateDatasource,
-} from '../../lib/api';
+} from '../../lib/api/datasources-api';
+import type {
+  CreateDatasourceDto,
+  Datasource,
+  TestConnectionDto,
+  TestConnectionResult,
+} from '@/types/api';
+// Legacy type aliases for backward compatibility
+type CreateDatasourceInput = CreateDatasourceDto;
+type DatasourceDTO = Datasource;
+const removeDatasource = deleteDatasource;
+const testConnectionByConfig = testConnection;
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
@@ -52,7 +61,7 @@ const defaultForm: CreateDatasourceInput = {
   password: '',
   database: '',
   isDefault: false,
-};
+} as CreateDatasourceInput;
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -109,7 +118,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         const newPort = portMap[value as string] ?? 3306;
         setForm((prev: CreateDatasourceInput) => ({
           ...prev,
-          type: value as string,
+          type: value as 'mysql' | 'postgres' | 'sqlite' | 'mariadb',
           port: newPort,
         }));
       } else {
@@ -131,29 +140,16 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
     try {
       let result: TestConnectionResult;
 
-      if (editingId) {
-        // 编辑模式：使用测试配置（后端会处理使用存储密码或传入密码）
-        const testConfig = {
-          type: form.type,
-          host: form.host,
-          port: form.port,
-          username: form.username,
-          password: form.password, // 如果为空，后端会使用存储的密码
-          database: form.database,
-        };
-        result = await testConnectionByConfig(testConfig);
-      } else {
-        // 创建模式：直接使用表单配置
-        const testConfig = {
-          type: form.type,
-          host: form.host,
-          port: form.port,
-          username: form.username,
-          password: form.password,
-          database: form.database,
-        };
-        result = await testConnectionByConfig(testConfig);
-      }
+      // 编辑模式和创建模式都使用相同的测试配置
+      const testConfig: TestConnectionDto = {
+        type: form.type as 'mysql' | 'postgres' | 'sqlite' | 'mariadb',
+        host: form.host,
+        port: form.port,
+        username: form.username,
+        password: form.password, // 如果为空，后端会使用存储的密码（编辑模式）
+        database: form.database,
+      };
+      result = await testConnectionByConfig(testConfig);
 
       setTestResult(result);
       if (result.success) {
@@ -202,14 +198,14 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
       setEditingId(datasource.id);
       setForm({
         name: datasource.name,
-        type: datasource.type,
+        type: datasource.type as 'mysql' | 'postgres' | 'sqlite' | 'mariadb',
         host: datasource.host,
         port: datasource.port,
         username: datasource.username,
         password: '',
         database: datasource.database,
         isDefault: datasource.isDefault,
-      });
+      } as CreateDatasourceInput);
     } else {
       setEditingId(null);
       setForm(defaultForm);
@@ -233,12 +229,10 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
   const handleSync = async (id: number) => {
     setActionId(id);
     try {
-      const res = await syncDatasource(id);
-      setDatasources((prev: DatasourceDTO[]) =>
-        prev.map((ds: DatasourceDTO) =>
-          ds.id === id ? { ...ds, lastSyncAt: res.lastSyncAt } : ds,
-        ),
-      );
+      await syncDatasource(id);
+      // 同步成功后，重新获取数据源列表以更新 lastSyncAt
+      const updated = await fetchDatasources();
+      setDatasources(updated.items);
       toast.success(t('Sync successful'));
     } catch (err) {
       toast.error((err as Error)?.message ?? t('Sync failed'));

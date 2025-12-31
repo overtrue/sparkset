@@ -1,6 +1,6 @@
 'use client';
 
-import { ConversationDetailDTO } from '../../lib/api';
+import type { ConversationDetailDTO } from '@/types/api';
 import { MessageItem } from './message';
 
 interface ConversationDetailProps {

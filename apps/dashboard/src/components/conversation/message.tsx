@@ -2,7 +2,7 @@
 import { RiCodeSSlashLine, RiSave3Line, RiUserLine } from '@remixicon/react';
 
 import { useState } from 'react';
-import { MessageDTO } from '../../lib/api';
+import type { MessageDTO } from '@/types/api';
 import { QueryResponse } from '../../lib/query';
 import { SaveActionDialog } from '../action/save-dialog';
 import { QueryResult } from '../query/result';

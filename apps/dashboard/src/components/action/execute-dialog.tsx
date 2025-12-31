@@ -2,7 +2,7 @@
 
 import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
-import { type ActionInputSchema } from '../../lib/api';
+import type { ActionInputSchema } from '@/types/api';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import {
@@ -187,7 +187,7 @@ export function ExecuteDialog({
                       param.default !== undefined
                         ? typeof param.default === 'object'
                           ? JSON.stringify(param.default)
-                          : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                          :  
                             String(param.default)
                         : undefined
                     }
@@ -209,7 +209,7 @@ export function ExecuteDialog({
                       param.default !== undefined
                         ? typeof param.default === 'object'
                           ? JSON.stringify(param.default)
-                          : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                          :  
                             String(param.default)
                         : undefined
                     }

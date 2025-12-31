@@ -15,17 +15,20 @@ import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
-  type ActionDTO,
-  type CreateActionInput,
-  type DatasourceDTO,
-  type UpdateActionInput,
   createAction,
   deleteAction,
   executeAction,
-  fetchDatasources,
   generateActionSQL,
   updateAction,
-} from '../../lib/api';
+} from '../../lib/api/actions-api';
+import { fetchDatasources } from '../../lib/api/datasources-api';
+import type {
+  ActionDTO,
+  CreateActionInput,
+  UpdateActionInput,
+  GenerateActionSQLInput,
+} from '@/types/api';
+import type { DatasourceDTO } from '@/types/api';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
@@ -96,7 +99,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     if (dialogOpen) {
       setPayloadText(getPayloadForEdit(form.payload, form.type));
       // 加载数据源列表
-      void fetchDatasources().then(setDatasources);
+      void fetchDatasources().then((res) => setDatasources(res.items));
     }
   }, [form.type, dialogOpen]);
 
@@ -292,7 +295,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         name: form.name.trim(),
         description: form.description?.trim() || '',
         datasourceId: selectedDatasourceId,
-      });
+      } as GenerateActionSQLInput);
 
       // 更新 payload（包含 datasourceId）
       const newPayload = {

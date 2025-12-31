@@ -20,13 +20,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  ConversationDetailDTO,
-  ConversationDTO,
-  fetchConversation,
-  fetchConversations,
-  MessageDTO,
-} from '@/lib/api';
+import { fetchConversation, fetchConversations } from '@/lib/api/conversations-api';
+import type { ConversationDetailDTO, ConversationDTO, MessageDTO } from '@/types/api';
 import { QueryResponse } from '@/lib/query';
 import { useState } from 'react';
 
@@ -161,7 +156,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
     setError(null);
     try {
       const res = await fetchConversations();
-      setConversations(res);
+      setConversations(res.items);
     } catch (err) {
       setError((err as Error)?.message ?? t('Failed to load conversation history'));
     } finally {

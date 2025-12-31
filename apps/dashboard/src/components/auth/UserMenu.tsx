@@ -50,18 +50,14 @@ export function UserMenu() {
             <AvatarImage src="" alt={user.username} />
             <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
           </Avatar>
-          <div className="hidden lg:flex flex-col items-start">
-            <span className="text-sm font-medium">{user.displayName || user.username}</span>
-            <span className="text-xs text-muted-foreground">{user.email || user.provider}</span>
-          </div>
+          <span className="hidden lg:inline text-sm font-medium">
+            {user.displayName || user.username}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.displayName || user.username}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email || 'No email'}</p>
-          </div>
+          <p className="text-sm font-medium leading-none">{user.displayName || user.username}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

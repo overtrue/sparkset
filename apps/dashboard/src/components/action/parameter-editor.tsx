@@ -3,7 +3,7 @@
 import { RiAddLine, RiSubtractLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
-import { type ActionInputSchema, type ParameterDefinition } from '../../lib/api';
+import type { ActionInputSchema, ParameterDefinition } from '@/types/api';
 import { cn } from '../../lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { Button, buttonVariants } from '../ui/button';
@@ -181,7 +181,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                               ? ''
                               : typeof param.default === 'object'
                                 ? JSON.stringify(param.default)
-                                : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                                :  
                                   String(param.default)
                           }
                           onValueChange={(value) =>
@@ -208,7 +208,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                               ? ''
                               : typeof param.default === 'object'
                                 ? JSON.stringify(param.default)
-                                : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                                :  
                                   String(param.default)
                           }
                           onChange={(e) => {
