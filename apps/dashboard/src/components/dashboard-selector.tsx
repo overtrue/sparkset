@@ -198,17 +198,17 @@ export function DashboardSelector({
           <Button
             variant="outline"
             size={size}
-            className={cn(size === 'sm' && 'h-7 px-3 text-xs', 'gap-1.5', className)}
+            className={cn('gap-1.5', className)}
             disabled={adding}
           >
             {adding ? (
               <>
-                <RiLoader4Line className="h-3.5 w-3.5 animate-spin" />
+                <RiLoader4Line className="h-4 w-4 animate-spin" />
                 {t('Adding...')}
               </>
             ) : (
               <>
-                <RiDashboardLine className="h-3.5 w-3.5" />
+                <RiDashboardLine className="h-4 w-4" />
                 {t('Add to Dashboard')}
               </>
             )}

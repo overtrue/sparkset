@@ -2,6 +2,7 @@
 
 import {
   RiAddLine,
+  RiCloseLine,
   RiDeleteBinLine,
   RiEditLine,
   RiLoader4Line,
@@ -33,6 +34,7 @@ import { DatasourceSelector } from '../datasource-selector';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import {
   Dialog,
   DialogContent,
@@ -86,7 +88,6 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   const [payloadText, setPayloadText] = useState('');
   const [executeDialogOpen, setExecuteDialogOpen] = useState(false);
   const [pendingExecuteId, setPendingExecuteId] = useState<number | null>(null);
-  const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [datasources, setDatasources] = useState<DatasourceDTO[]>([]);
   const [selectedDatasourceId, setSelectedDatasourceId] = useState<number | undefined>(undefined);
   const [generatingSQL, setGeneratingSQL] = useState(false);
@@ -258,10 +259,8 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     try {
       const res = await executeAction(id, parameters);
       setExecutionResult(res);
-      setResultDialogOpen(true);
     } catch (err) {
       setExecutionError((err as Error)?.message ?? t('Execution failed'));
-      setResultDialogOpen(true);
     } finally {
       setExecutingId(null);
       setPendingExecuteId(null);
@@ -343,7 +342,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         accessorKey: 'type',
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
         cell: ({ row }) => (
-          <Badge variant="outline" className="uppercase">
+          <Badge variant="outline" className="uppercase text-xs">
             {row.getValue('type')}
           </Badge>
         ),
@@ -362,7 +361,9 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         accessorFn: (row) => row.updatedAt || row.createdAt,
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Updated')} />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
+          <span className="text-muted-foreground text-xs">
+            {formatDate(row.getValue('updatedAt'))}
+          </span>
         ),
         size: 180,
       },
@@ -415,22 +416,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         searchKey="name"
         searchPlaceholder={t('Search Actions')}
         enableRowSelection
-        onDeleteSelected={(rows) => {
-          void handleDeleteSelected(rows);
-        }}
+        onDeleteSelected={handleDeleteSelected}
         deleteConfirmTitle={t('Delete Action')}
-        deleteConfirmDescription={(count) =>
-          t('Are you sure to delete the selected {count} Action(s)? This action cannot be undone', {
-            count,
-          })
-        }
+        deleteConfirmDescription={(count) => t('confirmDeleteSelectedActions', { count })}
         emptyMessage={t('No Actions yet, click Create New in the top right')}
         toolbar={
-          <Button
-            onClick={() => {
-              handleOpenDialog();
-            }}
-          >
+          <Button onClick={() => handleOpenDialog()}>
             <RiAddLine className="h-4 w-4" />
             {t('Create Action')}
           </Button>
@@ -448,11 +439,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 : t('Fill in the information to create a new Action')}
             </DialogDescription>
           </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              void handleSubmit(e);
-            }}
-          >
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4 sm:grid-cols-2">
               {/* 左侧：基本信息 */}
               <div className="space-y-4">
@@ -462,7 +449,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                     id="name"
                     value={form.name}
                     onChange={onChange('name')}
-                    placeholder={t('e.g.: Query user list')}
+                    placeholder={t('eg: Query user list')}
                     required
                   />
                 </div>
@@ -519,20 +506,18 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          void handleGenerateSQL();
-                        }}
+                        onClick={handleGenerateSQL}
                         disabled={!canGenerateSQL}
                         className="h-7 text-xs"
                       >
                         {generatingSQL ? (
                           <>
-                            <RiLoader4Line className="h-3 w-3 animate-spin" />
+                            <RiLoader4Line className="mr-2 h-3 w-3 animate-spin" />
                             {t('Generating')}
                           </>
                         ) : (
                           <>
-                            <RiSparkling2Line className="h-3 w-3" />
+                            <RiSparkling2Line className="mr-2 h-3 w-3" />
                             {t('AI Generate')}
                           </>
                         )}
@@ -585,7 +570,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         title={t('Confirm Delete')}
-        description={t('Are you sure to delete this Action? This action cannot be undone')}
+        description={t('confirmDeleteAction')}
         confirmText={t('Delete')}
         cancelText={t('Cancel')}
         onConfirm={handleConfirmDelete}
@@ -611,27 +596,31 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         />
       )}
 
-      {/* 执行结果弹窗 */}
-      <Dialog
-        open={resultDialogOpen}
-        onOpenChange={(open) => {
-          setResultDialogOpen(open);
-          if (!open) {
-            setExecutionResult(null);
-            setExecutionError(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[90vw] max-w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('Execution Result')}</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
+      {/* 执行结果 */}
+      {(executionResult || executionError) && (
+        <Card className="shadow-none mt-4">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t('Execution Result')}</CardTitle>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setExecutionResult(null);
+                  setExecutionError(null);
+                }}
+              >
+                <RiCloseLine className="mr-2 h-4 w-4" />
+                {t('Clear')}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
             {executionError ? (
               <Alert variant="destructive">
                 <AlertDescription>{executionError}</AlertDescription>
               </Alert>
-            ) : executionResult ? (
+            ) : (
               <ActionResult
                 actionType={
                   actions.find(
@@ -640,10 +629,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 }
                 result={executionResult as ActionExecutionResponse}
               />
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

@@ -1,5 +1,4 @@
 'use client';
-import { useTranslations } from '@/i18n/use-translations';
 import {
   RiArrowDownSLine,
   RiArrowRightSLine,
@@ -9,6 +8,7 @@ import {
   RiRefreshLine,
   RiTimeLine,
 } from '@remixicon/react';
+import { useTranslations } from '@/i18n/use-translations';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,8 +20,13 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { ConversationDetailDTO, ConversationDTO, MessageDTO } from '@/types/api';
-import { fetchConversationById, fetchConversations } from '@/lib/api/conversations-api';
+import {
+  ConversationDetailDTO,
+  ConversationDTO,
+  fetchConversation,
+  fetchConversations,
+  MessageDTO,
+} from '@/lib/api';
 import { QueryResponse } from '@/lib/query';
 import { useState } from 'react';
 
@@ -189,7 +194,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
 
     setLoadingDetailId(id);
     try {
-      const detail = await fetchConversationById(id);
+      const detail = await fetchConversation(id);
       setDetails((prev) => new Map(prev).set(id, detail));
     } catch (err) {
       console.error('Failed to fetch conversation detail:', err);

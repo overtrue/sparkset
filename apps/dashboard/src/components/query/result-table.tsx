@@ -1,6 +1,6 @@
 'use client';
-import { useTranslations } from '@/i18n/use-translations';
 import { RiDatabase2Line } from '@remixicon/react';
+import { useTranslations } from '@/i18n/use-translations';
 
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
@@ -30,23 +30,25 @@ export function ResultTable({ rows }: ResultTableProps) {
       header: ({ column }) => <DataTableColumnHeader column={column} title={key} />,
       cell: ({ getValue }) => {
         const value = getValue();
-        let displayStr: string;
+        let displayValue: string;
         if (value === null || value === undefined) {
-          displayStr = '';
+          displayValue = '';
         } else if (typeof value === 'object') {
-          displayStr = JSON.stringify(value);
-        } else if (
-          typeof value === 'string' ||
-          typeof value === 'number' ||
-          typeof value === 'boolean'
-        ) {
-          displayStr = String(value);
+          // Handle objects and arrays
+          displayValue = JSON.stringify(value);
+        } else if (typeof value === 'boolean') {
+          displayValue = value ? 'true' : 'false';
+        } else if (typeof value === 'number') {
+          displayValue = value.toString();
+        } else if (typeof value === 'string') {
+          displayValue = value;
         } else {
-          displayStr = JSON.stringify(value);
+          // Fallback for any other type (shouldn't happen, but TypeScript needs this)
+          displayValue = JSON.stringify(value);
         }
         return (
-          <div className="max-w-full truncate" title={displayStr}>
-            {displayStr}
+          <div className="max-w-full truncate" title={displayValue}>
+            {displayValue}
           </div>
         );
       },

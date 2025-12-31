@@ -3,15 +3,26 @@ import { defineConfig, stores } from '@adonisjs/session';
 export default defineConfig({
   /*
   |--------------------------------------------------------------------------
-  | Session Driver
+  | Session Store
   |--------------------------------------------------------------------------
   |
-  | The driver to use for storing session data. The default is 'cookie'.
+  | The store to use for storing session data. The default is 'cookie'.
   | You can also use 'memory' for testing or 'file' for development.
   |
   */
-  // @ts-expect-error - driver property exists at runtime but not in types
-  driver: stores.cookie(),
+  store: 'cookie',
+
+  /*
+  |--------------------------------------------------------------------------
+  | Available Stores
+  |--------------------------------------------------------------------------
+  |
+  | Configure all available session stores.
+  |
+  */
+  stores: {
+    cookie: stores.cookie(),
+  },
 
   /*
   |--------------------------------------------------------------------------
@@ -36,13 +47,4 @@ export default defineConfig({
     sameSite: 'lax',
     secure: false, // Set to true in production with HTTPS
   },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Store
-  |--------------------------------------------------------------------------
-  |
-  | Configure the session store.
-  |
-  */
 });

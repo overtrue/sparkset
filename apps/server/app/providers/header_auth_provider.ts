@@ -108,7 +108,7 @@ export class HeaderAuthProvider implements AuthProvider {
   }
 
   /**
-   * 简单的 CIDR 检查（仅支持 /8, /16, /24）
+   * 简单的 CIDR 检查（支持 /8, /12, /16, /24）
    */
   private isIpInCidr(ip: string, cidr: string): boolean {
     const [range, bits] = cidr.split('/');
@@ -117,6 +117,11 @@ export class HeaderAuthProvider implements AuthProvider {
     const bitNum = parseInt(bits, 10);
 
     if (bitNum === 8) return ipParts[0] === rangeParts[0];
+    if (bitNum === 12) {
+      // /12 means first 12 bits must match
+      // First byte must match, second byte's first 4 bits must match
+      return ipParts[0] === rangeParts[0] && (ipParts[1] & 0xf0) === (rangeParts[1] & 0xf0);
+    }
     if (bitNum === 16) return ipParts[0] === rangeParts[0] && ipParts[1] === rangeParts[1];
     if (bitNum === 24)
       return (

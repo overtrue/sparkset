@@ -61,13 +61,27 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
   });
 
   const text = await res.text();
-  const json = text ? (JSON.parse(text) as unknown) : undefined;
+  let json: unknown | undefined;
+
+  // Safely parse JSON, handle empty responses or invalid JSON
+  if (text) {
+    try {
+      json = JSON.parse(text) as unknown;
+    } catch {
+      // If JSON parsing fails, use the text as error message
+      if (!res.ok) {
+        throw new Error(text || `API error ${res.status}`);
+      }
+      // If response is OK but not JSON, return undefined
+      json = undefined;
+    }
+  }
 
   if (!res.ok) {
     const message =
       typeof json === 'object' && json && 'message' in json
         ? (json as { message: string }).message
-        : `API error ${res.status}`;
+        : text || `API error ${res.status}`;
     throw new Error(message);
   }
 

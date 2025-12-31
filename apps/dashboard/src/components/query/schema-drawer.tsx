@@ -2,8 +2,7 @@
 import { RiDatabase2Line, RiRefreshLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
-import { fetchSchema } from '@/lib/api/datasources-api';
-import type { TableSchemaDTO } from '@/types/api';
+import { fetchSchema, TableSchemaDTO } from '@/lib/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,8 +51,8 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
   }, [open, datasourceId]);
 
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className="h-7 px-3 gap-1.5 text-xs shrink-0">
-      <RiDatabase2Line className="h-3.5 w-3.5" />
+    <Button variant="outline" size="sm" className="gap-2 shrink-0">
+      <RiDatabase2Line className="h-4 w-4" />
       {t('View Schema')}
     </Button>
   );
@@ -110,13 +109,13 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="font-medium text-sm">{table.tableName}</div>
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="text-xs">
                         {t('{count} columns', { count: table.columns.length })}
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {table.columns.map((col) => (
-                        <Badge key={col.name} variant="outline" className="font-normal">
+                        <Badge key={col.name} variant="outline" className="text-xs font-normal">
                           {col.name}
                           <span className="ml-1 text-muted-foreground">({col.type})</span>
                           {col.comment && (

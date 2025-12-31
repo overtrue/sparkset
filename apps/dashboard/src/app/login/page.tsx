@@ -15,14 +15,7 @@ import { z } from 'zod';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -111,171 +104,179 @@ export default function LoginPage() {
   const isDev = process.env.NODE_ENV === 'development';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <RiShieldKeyholeLine className="h-6 w-6 text-primary" />
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        {/* Brand Logo */}
+        <a href="#" className="flex items-center gap-2 self-center font-medium">
+          <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
+            <RiShieldKeyholeLine className="size-4" />
           </div>
-          <CardTitle className="text-2xl">Sparkset Dashboard</CardTitle>
-          <CardDescription>
-            {isDev ? '登录或注册以访问仪表板（开发环境）' : '请使用内网访问（Header 认证）'}
-          </CardDescription>
-        </CardHeader>
+          Sparkset Dashboard
+        </a>
 
-        <CardContent>
-          {isDev ? (
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as 'login' | 'register')}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="login">登录</TabsTrigger>
-                <TabsTrigger value="register">注册</TabsTrigger>
-              </TabsList>
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">欢迎回来</CardTitle>
+            <CardDescription>
+              {isDev ? '登录或注册以访问仪表板（开发环境）' : '请使用内网访问（Header 认证）'}
+            </CardDescription>
+          </CardHeader>
 
-              {/* Error Alert */}
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          <CardContent>
+            {isDev ? (
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as 'login' | 'register')}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="login">登录</TabsTrigger>
+                  <TabsTrigger value="register">注册</TabsTrigger>
+                </TabsList>
 
-              {/* Login Tab */}
-              <TabsContent value="login">
-                <Form {...loginForm}>
-                  <form
-                    onSubmit={(e) => void loginForm.handleSubmit(onLogin)(e)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={loginForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>用户名</FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入用户名" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>密码</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="请输入密码" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? '登录中...' : '登录'}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
+                {/* Error Alert */}
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-              {/* Register Tab */}
-              <TabsContent value="register">
-                <Form {...registerForm}>
-                  <form
-                    onSubmit={(e) => void registerForm.handleSubmit(onRegister)(e)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      control={registerForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>用户名</FormLabel>
-                          <FormControl>
-                            <Input placeholder="设置用户名" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={registerForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>密码</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="设置密码" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={registerForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>确认密码</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="再次输入密码" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={registerForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>邮箱（可选）</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="example@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? '注册中...' : '注册'}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <div className="space-y-4 text-center text-sm text-muted-foreground">
-              <p>此页面仅在内网环境中可用。</p>
-              <p>请确保您通过受信任的代理访问，并携带正确的认证头信息。</p>
-              <div className="mt-4 rounded-md bg-muted p-3 text-left font-mono text-xs">
-                <div>X-User-Id: [您的用户ID]</div>
-                <div>X-User-Name: [您的姓名]</div>
-                <div>X-User-Email: [您的邮箱]</div>
-                <div>X-User-Roles: [角色列表]</div>
+                {/* Login Tab */}
+                <TabsContent value="login">
+                  <Form {...loginForm}>
+                    <form
+                      onSubmit={(e) => void loginForm.handleSubmit(onLogin)(e)}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={loginForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>用户名</FormLabel>
+                            <FormControl>
+                              <Input placeholder="请输入用户名" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>密码</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="请输入密码" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? '登录中...' : '登录'}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+
+                {/* Register Tab */}
+                <TabsContent value="register">
+                  <Form {...registerForm}>
+                    <form
+                      onSubmit={(e) => void registerForm.handleSubmit(onRegister)(e)}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={registerForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>用户名</FormLabel>
+                            <FormControl>
+                              <Input placeholder="设置用户名" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>密码</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="设置密码" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>确认密码</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="再次输入密码" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>邮箱（可选）</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="example@email.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? '注册中...' : '注册'}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="space-y-4 text-center text-sm text-muted-foreground">
+                <p>此页面仅在内网环境中可用。</p>
+                <p>请确保您通过受信任的代理访问，并携带正确的认证头信息。</p>
+                <div className="mt-4 rounded-md bg-muted p-3 text-left font-mono text-xs">
+                  <div>X-User-Id: [您的用户ID]</div>
+                  <div>X-User-Name: [您的姓名]</div>
+                  <div>X-User-Email: [您的邮箱]</div>
+                  <div>X-User-Roles: [角色列表]</div>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* Development Environment Info */}
         {isDev && (
-          <CardFooter className="flex flex-col gap-2 text-center text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 justify-center">
+          <div className="px-6 text-center text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 justify-center mb-2">
               <RiLoginCircleLine className="h-4 w-4" />
               <span>开发模式：使用本地账号密码登录或注册</span>
             </div>
-            <div className="flex items-center gap-2 justify-center">
+            <div className="flex items-center gap-2 justify-center mb-2">
               <RiUserAddLine className="h-4 w-4" />
-              <span>首次使用？点击右上角“注册”创建账号</span>
+              <span>首次使用？点击上方"注册"标签创建账号</span>
             </div>
             <div>默认测试账号：admin / admin123</div>
-          </CardFooter>
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }

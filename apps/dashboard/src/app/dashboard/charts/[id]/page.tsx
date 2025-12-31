@@ -210,19 +210,19 @@ export default function ChartDetailPage({ params }: Props) {
         backButton="/dashboard/charts"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/charts/${id}/edit`}>
                 <RiEditLine className="h-4 w-4" />
                 {t('Edit')}
               </Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard/charts/new" className="flex items-center">
                 <RiRefreshLine className="h-4 w-4" />
                 {t('Create from this')}
               </Link>
             </Button>
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
               <RiDeleteBin2Line className="h-4 w-4" />
               {t('Delete')}
             </Button>

@@ -212,7 +212,7 @@ export default function DashboardDetailPage() {
         description={dashboard.description || ''}
         backButton={{ useRouter: true }}
         action={
-          <Button onClick={() => setAddWidgetOpen(true)}>
+          <Button size="sm" onClick={() => setAddWidgetOpen(true)}>
             <RiAddLine className="h-4 w-4" />
             {t('Add Widget')}
           </Button>

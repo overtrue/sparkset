@@ -350,7 +350,7 @@ export default function ChartsPage() {
         title={t('Chart Management')}
         description={t('Create and manage dataset-based visualization charts')}
         action={
-          <Button asChild>
+          <Button size="sm" asChild>
             <Link href="/dashboard/charts/new">
               <RiAddLine className="h-4 w-4" />
               {t('Create Chart')}

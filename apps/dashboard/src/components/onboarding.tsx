@@ -35,7 +35,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
       title: t('Configure Datasource'),
       description: t('Add database connection and sync schema'),
       completed: datasourceCount > 0,
-      href: '/dashboard/datasources',
+      href: '/',
       icon: RiDatabase2Line,
     },
     {
@@ -43,7 +43,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
       title: t('Configure AI Provider'),
       description: t('Set up AI service provider for intelligent queries'),
       completed: aiProviderCount > 0,
-      href: '/dashboard/ai-providers',
+      href: '/ai-providers',
       icon: RiSparkling2Line,
     },
   ];
@@ -128,7 +128,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
             <div className="space-y-2">
               <p className="text-muted-foreground">{t('All configurations completed!')}</p>
               <Button asChild size="lg">
-                <Link href="/dashboard/query">{t('Get Started')}</Link>
+                <Link href="/query">{t('Get Started')}</Link>
               </Button>
             </div>
           )}

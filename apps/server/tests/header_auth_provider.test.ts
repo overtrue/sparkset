@@ -101,7 +101,16 @@ describe('HeaderAuthProvider', () => {
         'X-User-Permissions': 'datasource:read,query:write',
       });
 
-      const mockUser = { id: 1, username: 'zhangsan' };
+      const mockUser = {
+        id: 1,
+        username: 'zhangsan',
+        email: 'zhangsan@example.com',
+        roles: ['admin', 'analyst'],
+        permissions: ['datasource:read', 'query:write'],
+        merge: vi.fn().mockReturnThis(),
+        save: vi.fn(),
+      };
+      mockUser.save = vi.fn().mockResolvedValue(mockUser);
       User.firstOrCreate = vi.fn().mockResolvedValue(mockUser);
 
       const result = await provider.authenticate(ctx);
@@ -128,7 +137,16 @@ describe('HeaderAuthProvider', () => {
         'X-User-Id': '456',
       });
 
-      const mockUser = { id: 2, username: '456' };
+      const mockUser = {
+        id: 2,
+        username: '456',
+        email: null,
+        roles: [],
+        permissions: [],
+        merge: vi.fn().mockReturnThis(),
+        save: vi.fn(),
+      };
+      mockUser.save = vi.fn().mockResolvedValue(mockUser);
       User.firstOrCreate = vi.fn().mockResolvedValue(mockUser);
 
       const result = await provider.authenticate(ctx);
@@ -164,9 +182,10 @@ describe('HeaderAuthProvider', () => {
         email: 'old@example.com',
         roles: ['analyst'],
         permissions: [],
-        merge: vi.fn(),
+        merge: vi.fn().mockReturnThis(),
         save: vi.fn(),
       };
+      existingUser.save = vi.fn().mockResolvedValue(existingUser);
 
       User.firstOrCreate = vi.fn().mockResolvedValue(existingUser);
 
@@ -193,7 +212,16 @@ describe('HeaderAuthProvider', () => {
         'Custom-Name': 'custom',
       });
 
-      const mockUser = { id: 4, username: 'custom' };
+      const mockUser = {
+        id: 4,
+        username: 'custom',
+        email: null,
+        roles: [],
+        permissions: [],
+        merge: vi.fn().mockReturnThis(),
+        save: vi.fn(),
+      };
+      mockUser.save = vi.fn().mockResolvedValue(mockUser);
       User.firstOrCreate = vi.fn().mockResolvedValue(mockUser);
 
       await provider.authenticate(ctx);
@@ -222,7 +250,7 @@ describe('HeaderAuthProvider', () => {
 function createMockContext(ip: string, headers: Record<string, string>): HttpContext {
   return {
     request: {
-      ip,
+      ip: () => ip,
       header: (name: string) => headers[name] || null,
     },
     response: {},

@@ -1,10 +1,9 @@
 'use client';
-import { useTranslations } from '@/i18n/use-translations';
 import { RiBarChartLine, RiFileTextLine, RiSave3Line } from '@remixicon/react';
+import { useTranslations } from '@/i18n/use-translations';
 
 import { SaveActionDialog } from '@/components/action/save-dialog';
 import { SaveChartDialog } from '@/components/charts/save-dialog';
-import { DashboardSelector } from '@/components/dashboard-selector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { QueryResponse } from '@/lib/query';
@@ -60,16 +59,6 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 <RiBarChartLine className="h-3.5 w-3.5" />
                 {t('Save as Chart')}
               </Button>
-              <DashboardSelector
-                type="query-result"
-                queryResult={{
-                  sql: result.sql,
-                  rows: result.rows,
-                  datasourceId: datasourceId!,
-                  question,
-                }}
-                size="sm"
-              />
               <SqlViewer sql={result.sql} open={sqlDrawerOpen} onOpenChange={setSqlDrawerOpen} />
               <SchemaDrawer
                 datasourceId={datasourceId}

@@ -96,9 +96,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
           <Collapsible
             key={conversation.id}
             open={isExpanded}
-            onOpenChange={() => {
-              void handleToggle(conversation.id);
-            }}
+            onOpenChange={() => handleToggle(conversation.id)}
           >
             <Card className="shadow-none">
               <CollapsibleTrigger asChild>
@@ -121,7 +119,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
                             {formatDate(conversation.createdAt, t)}
                           </span>
                           {detail && (
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="text-xs">
                               {t('{count} messages', { count: detail.messages.length })}
                             </Badge>
                           )}

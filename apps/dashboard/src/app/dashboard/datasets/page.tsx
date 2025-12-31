@@ -229,7 +229,7 @@ export default function DatasetsPage() {
         title={t('Datasets')}
         description={t('Manage your query result datasets')}
         action={
-          <Button onClick={handleCreateNew}>
+          <Button size="sm" onClick={handleCreateNew}>
             <RiAddLine className="h-4 w-4" />
             {t('New Dataset')}
           </Button>
