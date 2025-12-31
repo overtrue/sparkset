@@ -454,7 +454,5 @@
   "{count} fields": "{count} 个字段",
   "Search Actions": "搜索 Actions...",
   "No Actions yet, click Create New in the top right": "暂无 Actions，点击右上角创建",
-  "DataTableRowActions": {
-    "menu": "操作菜单"
-  }
+  "DataTableRowActions.menu": "操作菜单"
 }
