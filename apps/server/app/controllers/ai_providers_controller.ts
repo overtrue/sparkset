@@ -1,12 +1,13 @@
 import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
-import { AIProviderService } from '../services/ai_provider_service';
+import { AIProviderService } from '../services/ai_provider_service.js';
 import {
   aiProviderCreateSchema,
   aiProviderUpdateSchema,
   setDefaultSchema,
-} from '../validators/aiProvider';
+} from '../validators/aiProvider.js';
 import { toId } from '../utils/validation.js';
+import { serializeAIProvider, serializeAIProviders } from '../utils/serializers.js';
 
 @inject()
 export default class AIProvidersController {
@@ -14,19 +15,19 @@ export default class AIProvidersController {
 
   async index({ response }: HttpContext) {
     const items = await this.service.list();
-    return response.ok({ items });
+    return response.ok({ items: serializeAIProviders(items) });
   }
 
   async store({ request, response }: HttpContext) {
     const parsed = aiProviderCreateSchema.parse(request.body());
     const record = await this.service.create(parsed);
-    return response.created(record);
+    return response.created(serializeAIProvider(record));
   }
 
   async update({ params, request, response }: HttpContext) {
     const parsed = aiProviderUpdateSchema.parse({ ...request.body(), ...params });
     const record = await this.service.update(parsed);
-    return response.ok(record);
+    return response.ok(serializeAIProvider(record));
   }
 
   async destroy({ params, response }: HttpContext) {

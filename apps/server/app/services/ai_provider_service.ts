@@ -1,6 +1,6 @@
 import { testAIProviderConnection } from '../ai/index.js';
-import { AIProviderRepository } from '../db/interfaces';
-import type { AIProvider } from '../models/types';
+import type { AIProviderRepository } from '../db/interfaces.js';
+import type { AIProvider } from '../models/types.js';
 import { toId } from '../utils/validation.js';
 
 export interface CreateAIProviderInput {
@@ -23,134 +23,47 @@ export interface UpdateAIProviderInput {
 }
 
 /**
- * AI Provider service that can use a repository or fall back to in-memory store.
+ * AI Provider service that uses a repository for data access.
+ * The repository must be provided - use InMemoryAIProviderRepository for testing
+ * or LucidAIProviderRepository for production.
  */
 export class AIProviderService {
-  private store = new Map<number, AIProvider>();
-  private currentId = 1;
+  constructor(private repo: AIProviderRepository) {}
 
-  constructor(private repo?: AIProviderRepository) {}
-
-  async list() {
-    if (this.repo) return this.repo.list();
-    return Array.from(this.store.values());
+  async list(): Promise<AIProvider[]> {
+    return this.repo.list();
   }
 
   async create(input: CreateAIProviderInput): Promise<AIProvider> {
-    if (this.repo) {
-      const normalizedInput = { ...input, isDefault: input.isDefault ?? false };
-      // 如果是第一个 provider（列表为空），自动设置为默认
-      const list = await this.repo.list();
-      if (list.length === 0) {
-        normalizedInput.isDefault = true;
-      }
-      // 如果设置为默认，先取消其他 provider 的默认状态
-      if (normalizedInput.isDefault) {
-        const existingDefaults = list.filter((p) => p.isDefault);
-        for (const provider of existingDefaults) {
-          await this.repo.update({ ...provider, isDefault: false });
-        }
-      }
-      return this.repo.create(normalizedInput);
+    const normalizedInput = { ...input, isDefault: input.isDefault ?? false };
+    // If first provider (list is empty), auto set as default
+    const list = await this.repo.list();
+    if (list.length === 0) {
+      normalizedInput.isDefault = true;
     }
-
-    const exists = Array.from(this.store.values()).some((item) => item.name === input.name);
-    if (exists) throw new Error('AI Provider name already exists');
-
-    // 如果是第一个 provider，自动设置为默认
-    const isFirst = this.store.size === 0;
-
-    // 如果设置为默认，先取消其他 provider 的默认状态
-    if (input.isDefault || isFirst) {
-      Array.from(this.store.values()).forEach((item) => {
-        if (item.isDefault) {
-          this.store.set(item.id, { ...item, isDefault: false });
-        }
-      });
-    }
-
-    const record: AIProvider = {
-      id: this.currentId++,
-      name: input.name,
-      type: input.type,
-      apiKey: input.apiKey,
-      baseURL: input.baseURL,
-      defaultModel: input.defaultModel,
-      isDefault: isFirst || (input.isDefault ?? false),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.store.set(record.id, record);
-    return record;
+    return this.repo.create(normalizedInput);
   }
 
   async update(input: UpdateAIProviderInput): Promise<AIProvider> {
     const id = toId(input.id);
     if (!id) throw new Error('Invalid provider ID');
-
-    if (this.repo) return this.repo.update({ ...input, id });
-
-    const existing = this.store.get(id);
-    if (!existing) throw new Error('AI Provider not found');
-
-    // 如果设置为默认，先取消其他 provider 的默认状态
-    if (input.isDefault === true) {
-      Array.from(this.store.values()).forEach((item) => {
-        if (item.id !== input.id && item.isDefault) {
-          this.store.set(item.id, { ...item, isDefault: false });
-        }
-      });
-    }
-
-    const updated: AIProvider = {
-      ...existing,
-      ...input,
-      id: existing.id,
-      updatedAt: new Date(),
-    };
-    this.store.set(updated.id, updated);
-    return updated;
+    return this.repo.update({ ...input, id });
   }
 
-  async remove(id: number) {
+  async remove(id: number): Promise<void> {
     const validId = toId(id);
     if (!validId) throw new Error('Invalid provider ID');
-
-    if (this.repo) {
-      await this.repo.remove(validId);
-      return;
-    }
-    if (!this.store.has(validId)) throw new Error('AI Provider not found');
-    this.store.delete(validId);
+    await this.repo.remove(validId);
   }
 
-  async setDefault(id: number) {
+  async setDefault(id: number): Promise<void> {
     const validId = toId(id);
     if (!validId) throw new Error('Invalid provider ID');
-
-    if (this.repo) {
-      await this.repo.setDefault(validId);
-      return;
-    }
-
-    const existing = this.store.get(validId);
-    if (!existing) throw new Error('AI Provider not found');
-
-    // 取消所有 provider 的默认状态
-    Array.from(this.store.values()).forEach((item) => {
-      if (item.isDefault) {
-        this.store.set(item.id, { ...item, isDefault: false });
-      }
-    });
-
-    // 设置指定 provider 为默认
-    this.store.set(id, { ...existing, isDefault: true });
+    await this.repo.setDefault(validId);
   }
 
   /**
    * 测试 AI Provider 连通性
-   * @param config Provider 配置
-   * @returns 测试结果
    */
   async testConnection(config: {
     type: string;
@@ -176,8 +89,6 @@ export class AIProviderService {
 
   /**
    * 测试现有 Provider 的连通性
-   * @param id Provider ID
-   * @returns 测试结果
    */
   async testConnectionById(
     id: number,
@@ -190,14 +101,8 @@ export class AIProviderService {
       };
     }
 
-    let provider: AIProvider | undefined;
-
-    if (this.repo) {
-      const list = await this.repo.list();
-      provider = list.find((p) => p.id === validId);
-    } else {
-      provider = this.store.get(validId);
-    }
+    const list = await this.repo.list();
+    const provider = list.find((p) => p.id === validId);
 
     if (!provider) {
       return {

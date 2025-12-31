@@ -131,9 +131,10 @@ export class DatasetService {
     let sql = dataset.querySql;
     if (params) {
       for (const [key, value] of Object.entries(params)) {
-        // 简单的参数替换（生产环境应使用预处理语句）
+        // 转义参数值以防止 SQL 注入
+        const escapedValue = this.escapeSqlValue(value);
         const regex = new RegExp(`\\{${key}\\}`, 'g');
-        sql = sql.replace(regex, `'${String(value)}'`);
+        sql = sql.replace(regex, escapedValue);
       }
     }
 
@@ -163,6 +164,44 @@ export class DatasetService {
       rows: result.rows as Record<string, unknown>[],
       rowCount: result.rows.length,
     };
+  }
+
+  /**
+   * 转义 SQL 值以防止 SQL 注入
+   * @param value 要转义的值
+   * @returns 安全的 SQL 字符串
+   */
+  private escapeSqlValue(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'NULL';
+    }
+
+    if (typeof value === 'number') {
+      // 数字不需要引号，但需要验证
+      if (!Number.isFinite(value)) {
+        throw new Error('Invalid number value for SQL parameter');
+      }
+      return String(value);
+    }
+
+    if (typeof value === 'boolean') {
+      return value ? '1' : '0';
+    }
+
+    // 字符串需要转义特殊字符
+    const strValue = typeof value === 'string' ? value : JSON.stringify(value);
+    // 转义单引号、反斜杠和其他特殊字符
+    const escaped = strValue
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "''")
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x00/g, '\\0')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1a/g, '\\Z');
+
+    return `'${escaped}'`;
   }
 
   /**

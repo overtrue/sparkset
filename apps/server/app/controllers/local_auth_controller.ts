@@ -86,7 +86,7 @@ export default class LocalAuthController {
         };
       }
     } catch (error) {
-      console.log('Token verification failed:', error);
+      ctx.logger.debug({ error }, 'Token verification failed');
     }
 
     return {
@@ -146,7 +146,7 @@ export default class LocalAuthController {
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `login_${Date.now()}`);
 
-      console.log(`✅ Local login success: ${user.username}, token: ${token.substring(0, 20)}...`);
+      ctx.logger.info({ username: user.username }, 'Local login success');
 
       // 返回令牌给客户端（客户端存储在 localStorage）
       return {
@@ -163,10 +163,10 @@ export default class LocalAuthController {
         },
       };
     } catch (error) {
-      console.error('Login error:', error);
+      ctx.logger.error({ error }, 'Login error');
       return response.internalServerError({
         error: 'INTERNAL_ERROR',
-        message: error.message || '登录失败',
+        message: error instanceof Error ? error.message : '登录失败',
       });
     }
   }
@@ -234,7 +234,7 @@ export default class LocalAuthController {
         isActive: true,
       });
 
-      console.log(`✅ Local registration success: ${user.username}`);
+      ctx.logger.info({ username: user.username }, 'Local registration success');
 
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
@@ -254,10 +254,10 @@ export default class LocalAuthController {
         },
       };
     } catch (error) {
-      console.error('Registration error:', error);
+      ctx.logger.error({ error }, 'Registration error');
       return response.internalServerError({
         error: 'INTERNAL_ERROR',
-        message: error.message || '注册失败',
+        message: error instanceof Error ? error.message : '注册失败',
       });
     }
   }
@@ -294,7 +294,7 @@ export default class LocalAuthController {
         message: '已成功登出',
       };
     } catch (error) {
-      console.error('Logout error:', error);
+      ctx.logger.error({ error }, 'Logout error');
       return response.internalServerError({
         error: 'INTERNAL_ERROR',
         message: '登出失败',
@@ -350,7 +350,7 @@ export default class LocalAuthController {
         },
       };
     } catch (error) {
-      console.error('Refresh token error:', error);
+      ctx.logger.error({ error }, 'Refresh token error');
       return response.unauthorized({
         error: 'INVALID_TOKEN',
         message: '令牌无效，需要重新登录',

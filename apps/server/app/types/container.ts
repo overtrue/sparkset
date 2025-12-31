@@ -7,6 +7,8 @@ import type { SchemaService } from '../services/schema_service';
 import type { DatasetService } from '../services/dataset_service';
 import type { ChartService } from '../services/chart_service';
 import type { ChartCompiler } from '../services/chart_compiler';
+import type { DashboardService } from '../services/dashboard_service';
+import type { DashboardWidgetService } from '../services/dashboard_widget_service';
 import type { ActionExecutor, QueryExecutor } from '@sparkset/core';
 import type { Database } from '@adonisjs/lucid/database';
 
@@ -21,6 +23,8 @@ declare module '@adonisjs/core/types' {
     DatasetService: DatasetService;
     ChartService: ChartService;
     ChartCompiler: ChartCompiler;
+    DashboardService: DashboardService;
+    DashboardWidgetService: DashboardWidgetService;
     'executors/query': QueryExecutor | undefined;
     'executors/action': ActionExecutor | undefined;
     'lucid.db': Database;

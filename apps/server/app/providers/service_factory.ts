@@ -1,0 +1,194 @@
+/**
+ * Service Factory
+ *
+ * Factory functions for creating services with their dependencies.
+ * This centralizes service creation logic and reduces code duplication.
+ */
+
+import type { Database } from '@adonisjs/lucid/database';
+import {
+  ActionExecutor,
+  ActionRegistry,
+  QueryExecutor,
+  SqlActionExecutor,
+  createEchoHandler,
+  createSqlActionHandler,
+  DBClient,
+  DataSourceConfig,
+} from '@sparkset/core';
+import type { Repositories } from './repository_factory.js';
+import { InMemoryDBClient } from '../db/in-memory.js';
+import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
+import { ActionService } from '../services/action_service.js';
+import { AIProviderService } from '../services/ai_provider_service.js';
+import { ConversationService } from '../services/conversation_service.js';
+import { DatasourceService } from '../services/datasource_service.js';
+import { QueryService } from '../services/query_service.js';
+import { SchemaService } from '../services/schema_service.js';
+import { DatasetService } from '../services/dataset_service.js';
+import { ChartService } from '../services/chart_service.js';
+import { ChartCompiler } from '../services/chart_compiler.js';
+import { DashboardService } from '../services/dashboard_service.js';
+import { DashboardWidgetService } from '../services/dashboard_widget_service.js';
+
+/**
+ * All services needed by the application
+ */
+export interface Services {
+  datasource: DatasourceService;
+  action: ActionService;
+  conversation: ConversationService;
+  schema: SchemaService;
+  aiProvider: AIProviderService;
+  query: QueryService;
+  dataset: DatasetService;
+  chart: ChartService;
+  chartCompiler: ChartCompiler;
+  dashboard: DashboardService;
+  dashboardWidget: DashboardWidgetService;
+  queryExecutor?: QueryExecutor;
+  actionExecutor?: ActionExecutor;
+}
+
+/**
+ * Options for creating services
+ */
+export interface ServiceFactoryOptions {
+  database: Database | null;
+  repositories: Repositories;
+}
+
+/**
+ * Create all services with their dependencies
+ */
+export function createServices(options: ServiceFactoryOptions): Services {
+  const { database, repositories } = options;
+
+  // Create base services
+  const datasourceService = new DatasourceService(repositories.datasource);
+  const actionService = new ActionService(repositories.action);
+  const conversationService = new ConversationService(repositories.conversation);
+  const aiProviderService = new AIProviderService(repositories.aiProvider);
+
+  // Create DB client factory based on database availability
+  let createDBClientFactory: (config: DataSourceConfig) => DBClient;
+  if (database) {
+    createDBClientFactory = createLucidDBClientFactory(database);
+  } else {
+    createDBClientFactory = () => new InMemoryDBClient();
+  }
+
+  // Helper to get datasource config by ID
+  const getDatasourceConfig = async (id: number): Promise<DataSourceConfig> => {
+    const ds = await datasourceService.get(id);
+    if (!ds) throw new Error('Datasource not found');
+    return {
+      id: ds.id,
+      name: ds.name,
+      type: ds.type,
+      host: ds.host,
+      port: ds.port,
+      username: ds.username,
+      password: ds.password,
+      database: ds.database,
+    };
+  };
+
+  // Helper to get DB client by datasource ID
+  const getDBClient = async (datasourceId: number): Promise<DBClient> => {
+    const config = await getDatasourceConfig(datasourceId);
+    return createDBClientFactory(config);
+  };
+
+  // Create schema service
+  const schemaService = new SchemaService({
+    schemaRepo: repositories.schemaCache,
+    getDBClient: async (ds) =>
+      createDBClientFactory({
+        id: ds.id,
+        name: ds.name,
+        type: ds.type,
+        host: ds.host,
+        port: ds.port,
+        username: ds.username,
+        password: ds.password,
+        database: ds.database,
+      }),
+    aiProviderService,
+  });
+
+  // Create executors (only if database is available)
+  let queryExecutor: QueryExecutor | undefined;
+  let actionExecutor: ActionExecutor | undefined;
+
+  if (database) {
+    queryExecutor = new QueryExecutor({
+      getDBClient,
+      getDatasourceConfig,
+    });
+
+    // Build action executor registry
+    const registry = new ActionRegistry();
+    const sqlActionExecutor = new SqlActionExecutor({
+      getDBClient,
+      getDatasourceConfig,
+    });
+    registry.register(
+      createSqlActionHandler({
+        executor: sqlActionExecutor,
+        defaultDatasourceId: async () => {
+          const list = await datasourceService.list();
+          return list.find((d) => d.isDefault)?.id;
+        },
+      }),
+    );
+    registry.register(createEchoHandler('api'));
+    registry.register(createEchoHandler('file'));
+    actionExecutor = new ActionExecutor(registry);
+  }
+
+  // Create query service
+  const queryService = new QueryService({
+    datasourceService,
+    actionService,
+    schemaService,
+    aiProviderService,
+    executor: queryExecutor,
+    getDBClient,
+    getDatasourceConfig,
+  });
+
+  // Create chart services (requires database)
+  const chartCompiler = new ChartCompiler();
+  let datasetService: DatasetService;
+  let chartService: ChartService;
+
+  if (database) {
+    datasetService = new DatasetService(database, datasourceService);
+    chartService = new ChartService(datasetService, chartCompiler);
+  } else {
+    // Create placeholder services that will throw errors when used without database
+    datasetService = null as unknown as DatasetService;
+    chartService = null as unknown as ChartService;
+  }
+
+  // Create dashboard services
+  const dashboardService = new DashboardService();
+  const dashboardWidgetService = new DashboardWidgetService();
+
+  return {
+    datasource: datasourceService,
+    action: actionService,
+    conversation: conversationService,
+    schema: schemaService,
+    aiProvider: aiProviderService,
+    query: queryService,
+    dataset: datasetService,
+    chart: chartService,
+    chartCompiler,
+    dashboard: dashboardService,
+    dashboardWidget: dashboardWidgetService,
+    queryExecutor,
+    actionExecutor,
+  };
+}

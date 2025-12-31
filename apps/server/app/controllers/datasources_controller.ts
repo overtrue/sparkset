@@ -1,15 +1,16 @@
 import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { Database } from '@adonisjs/lucid/database';
-import { createLucidDBClientFactory } from '../db/lucid-db-client';
-import { DatasourceService } from '../services/datasource_service';
-import { SchemaService } from '../services/schema_service';
+import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
+import { DatasourceService } from '../services/datasource_service.js';
+import { SchemaService } from '../services/schema_service.js';
 import {
   datasourceCreateSchema,
   datasourceUpdateSchema,
   setDefaultSchema,
-} from '../validators/datasource';
+} from '../validators/datasource.js';
 import { toId } from '../utils/validation.js';
+import { serializeDataSource, serializeDataSources } from '../utils/serializers.js';
 
 @inject()
 export default class DatasourcesController {
@@ -21,19 +22,19 @@ export default class DatasourcesController {
 
   async index({ response }: HttpContext) {
     const items = await this.service.list();
-    return response.ok({ items });
+    return response.ok({ items: serializeDataSources(items) });
   }
 
   async store({ request, response }: HttpContext) {
     const parsed = datasourceCreateSchema.parse(request.body());
     const record = await this.service.create(parsed);
-    return response.created(record);
+    return response.created(serializeDataSource(record));
   }
 
   async update({ params, request, response }: HttpContext) {
     const parsed = datasourceUpdateSchema.parse({ ...request.body(), ...params });
     const record = await this.service.update(parsed);
-    return response.ok(record);
+    return response.ok(serializeDataSource(record));
   }
 
   async destroy({ params, response }: HttpContext) {
@@ -46,7 +47,7 @@ export default class DatasourcesController {
   async sync({ params, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === id);
+    const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
@@ -58,7 +59,7 @@ export default class DatasourcesController {
   async generateSemanticDescriptions({ params, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === id);
+    const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
@@ -70,7 +71,7 @@ export default class DatasourcesController {
   async schema({ params, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === id);
+    const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
@@ -81,12 +82,12 @@ export default class DatasourcesController {
   async show({ params, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === id);
+    const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
     const tables = await this.schemaService.list(id);
-    return response.ok({ ...datasource, tables });
+    return response.ok({ ...serializeDataSource(datasource), tables });
   }
 
   async updateTableMetadata({ params, request, response }: HttpContext) {
@@ -94,7 +95,7 @@ export default class DatasourcesController {
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const tableId = toId(params.tableId);
     if (!tableId) return response.badRequest({ message: 'Invalid table ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === datasourceId);
+    const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
@@ -115,7 +116,7 @@ export default class DatasourcesController {
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const columnId = toId(params.columnId);
     if (!columnId) return response.badRequest({ message: 'Invalid column ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === datasourceId);
+    const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
@@ -140,7 +141,7 @@ export default class DatasourcesController {
   async testConnection({ params, request, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    const datasource = (await this.service.list()).find((item) => item.id === id);
+    const datasource = await this.service.get(id);
 
     if (!datasource) {
       return response.notFound({ message: '数据源未找到' });

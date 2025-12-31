@@ -305,12 +305,43 @@ export class SchemaService {
     await this.deps.schemaRepo.updateColumnMetadata(columnId, data);
   }
 
+  /**
+   * Validate and escape a database identifier to prevent SQL injection.
+   * Only allows valid MySQL/PostgreSQL identifier characters.
+   * @throws Error if the identifier contains invalid characters
+   */
+  private validateAndEscapeIdentifier(identifier: string, fieldName: string): string {
+    // MySQL/PostgreSQL identifier rules:
+    // - Can contain alphanumeric, underscore, dollar sign
+    // - Length limit varies by database
+    // - Some databases allow Unicode characters
+    // We use a conservative whitelist approach
+    const validIdentifierPattern = /^[a-zA-Z0-9_$\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]+$/;
+
+    if (!identifier || identifier.length === 0) {
+      throw new Error(`${fieldName} cannot be empty`);
+    }
+
+    if (identifier.length > 128) {
+      throw new Error(`${fieldName} is too long (max 128 characters)`);
+    }
+
+    if (!validIdentifierPattern.test(identifier)) {
+      throw new Error(
+        `${fieldName} contains invalid characters. Only alphanumeric, underscore, dollar sign, and CJK characters are allowed.`,
+      );
+    }
+
+    // Even after validation, escape single quotes for extra safety
+    return identifier.replace(/'/g, "''");
+  }
+
   async sync(datasource: DataSource): Promise<Date> {
     const client = await this.deps.getDBClient(datasource);
     const config: DataSourceConfig = { ...datasource };
 
-    // 转义数据库名称，防止 SQL 注入
-    const escapedDbName = datasource.database.replace(/\\/g, '\\\\').replace(/'/g, "''");
+    // Validate and escape database name to prevent SQL injection
+    const escapedDbName = this.validateAndEscapeIdentifier(datasource.database, 'Database name');
 
     this.deps.logger?.info(
       `Syncing datasource ${datasource.id} (${datasource.name}), database: ${datasource.database}`,
