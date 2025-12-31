@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import type { CreateDatasetDto } from '@/types/api';
 import {
   fetchDatasets,
   fetchDatasetById,
@@ -7,7 +8,6 @@ import {
   updateDataset,
   deleteDataset,
   previewDataset,
-  CreateDatasetDto,
 } from './datasets-api';
 
 // SWR Hooks - only for client components
