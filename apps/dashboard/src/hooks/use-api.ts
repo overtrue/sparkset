@@ -122,7 +122,9 @@ export function useApi<T, Args extends unknown[] = []>(
 export function useMutation<T, Args extends unknown[] = []>(
   mutationFunction: (...args: Args) => Promise<T>,
   options: UseApiOptions<T> = {},
-): Omit<UseApiResult<T, Args>, 'data' | 'reset'> & {
+): {
+  loading: boolean;
+  error: Error | null;
   mutate: (...args: Args) => Promise<T | null>;
 } {
   const { loading, error, execute } = useApi(mutationFunction, {
