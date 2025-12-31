@@ -1,6 +1,7 @@
 import type { ChartSpec } from '@/types/api';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import type { CreateChartDto } from '@/types/api';
 import {
   fetchCharts,
   fetchChartById,
@@ -9,7 +10,6 @@ import {
   deleteChart,
   renderChart,
   previewChart,
-  CreateChartDto,
 } from './charts-api';
 
 // SWR Hooks - only for client components
