@@ -8,8 +8,8 @@
 import { RiLogoutCircleRLine, RiSettings3Line, RiUser3Line } from '@remixicon/react';
 import { useRouter } from 'next/navigation';
 
-import { useAuth, useUser } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,12 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
+import { useAuth, useUser } from '@/contexts/AuthContext';
+import { useTranslations } from '@/i18n/use-translations';
 
 export function UserMenu() {
   const user = useUser();
   const { logout } = useAuth();
   const router = useRouter();
+  const t = useTranslations();
 
   if (!user) {
     return null;
@@ -62,18 +64,18 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-            <RiUser3Line className="mr-2 h-4 w-4" />
-            个人资料
+            <RiUser3Line className="h-4 w-4" />
+            {t('Profile')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-            <RiSettings3Line className="mr-2 h-4 w-4" />
-            设置
+            <RiSettings3Line className="h-4 w-4" />
+            {t('Settings')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <div className="px-2 py-1">
-            <div className="text-xs font-medium text-muted-foreground mb-1">角色</div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">{t('Role')}</div>
             <div className="flex flex-wrap gap-1">
               {user.roles.length > 0 ? (
                 user.roles.map((role) => (
@@ -82,15 +84,15 @@ export function UserMenu() {
                   </Badge>
                 ))
               ) : (
-                <span className="text-xs text-muted-foreground">无角色</span>
+                <span className="text-xs text-muted-foreground">{t('No roles')}</span>
               )}
             </div>
           </div>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
-          <RiLogoutCircleRLine className="mr-2 h-4 w-4" />
-          退出登录
+          <RiLogoutCircleRLine className="h-4 w-4" />
+          {t('Logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
