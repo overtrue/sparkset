@@ -7,78 +7,54 @@ import {
   DataTableRowActions,
   type RowAction,
 } from '@/components/data-table/data-table-row-actions';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { useRouter } from '@/i18n/client-routing';
-import { dashboardsApi } from '@/lib/api/dashboards';
-import type { Dashboard } from '@/types/dashboard';
+import { useDashboards, useDeleteDashboard } from '@/lib/api/dashboards-hooks';
+import { useResourceList } from '@/hooks/use-resource-list';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import type { Dashboard } from '@/types/api';
 import { RiAddLine, RiDashboardLine } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils/date';
 
 export default function DashboardsPage() {
   const t = useTranslations();
   const router = useRouter();
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [dashboardToDelete, setDashboardToDelete] = useState<Dashboard | null>(null);
+  const { data, error, isLoading, mutate } = useDashboards();
+  const { trigger: deleteDashboard } = useDeleteDashboard();
+  const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
 
-  useEffect(() => {
-    void loadDashboards();
-  }, []);
-
-  const loadDashboards = async () => {
-    try {
-      setLoading(true);
-      const result = await dashboardsApi.list();
-      setDashboards(result.items);
-    } catch {
-      toast.error(t('Failed to load dashboards'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (dashboard: Dashboard) => {
-    setDashboardToDelete(dashboard);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!dashboardToDelete) return;
-
-    try {
-      await dashboardsApi.delete(dashboardToDelete.id);
-      toast.success(t('Dashboard deleted'));
-      void loadDashboards();
-    } catch {
-      toast.error(t('Failed to delete dashboard'));
-    } finally {
-      setDeleteConfirmOpen(false);
-      setDashboardToDelete(null);
-    }
-  };
-
-  const handleDeleteSelected = async (rows: Dashboard[]) => {
-    for (const row of rows) {
-      try {
-        await dashboardsApi.delete(row.id);
-      } catch {
-        toast.error(`${t('Delete failed')}: ${row.title}`);
+  const {
+    items: dashboards,
+    handleDelete,
+    handleBulkDelete,
+  } = useResourceList(data, mutate, {
+    resourceName: t('Dashboard'),
+    onDelete: async (item) => {
+      await deleteDashboard(item.id);
+    },
+    onBulkDelete: async (items) => {
+      for (const item of items) {
+        await deleteDashboard(item.id);
       }
-    }
-    setDashboards((prev) => prev.filter((d) => !rows.some((r) => r.id === d.id)));
-    toast.success(t('Successfully deleted {count} dashboard(s)', { count: rows.length }));
+    },
+  });
+
+  const handleDeleteClick = (dashboard: Dashboard) => {
+    openDialog({
+      title: t('Delete Dashboard'),
+      description: t('Are you sure to delete this dashboard? This action cannot be undone'),
+      variant: 'destructive',
+      onConfirm: () => handleDelete(dashboard),
+    });
   };
 
-  const formatDate = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  };
+  const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Dashboard>[] = [
     {
@@ -128,7 +104,7 @@ export default function DashboardsPage() {
           {
             label: t('Delete'),
             icon: <RiDashboardLine className="h-4 w-4" />,
-            onClick: () => handleDelete(dashboard),
+            onClick: () => handleDeleteClick(dashboard),
             variant: 'destructive',
           },
         ];
@@ -139,7 +115,7 @@ export default function DashboardsPage() {
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -152,7 +128,25 @@ export default function DashboardsPage() {
             </Button>
           }
         />
-        <div className="text-center py-12 text-muted-foreground">{t('Loading...')}</div>
+        <LoadingState message={t('Loading...')} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('Dashboards')}
+          description={t('Create and manage data visualization dashboards')}
+          action={
+            <Button onClick={() => router.push('/dashboard/dashboards/new')}>
+              <RiAddLine className="h-4 w-4" />
+              {t('New Dashboard')}
+            </Button>
+          }
+        />
+        <ErrorState error={error} onRetry={() => mutate()} />
       </div>
     );
   }
@@ -170,19 +164,15 @@ export default function DashboardsPage() {
             </Button>
           }
         />
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <RiDashboardLine className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">{t('No Dashboards')}</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {t('Create your first dashboard to start visualizing data')}
-          </p>
-          <Button onClick={() => router.push('/dashboard/dashboards/new')}>
-            <RiAddLine className="h-4 w-4" />
-            {t('Create Dashboard')}
-          </Button>
-        </div>
+        <EmptyState
+          icon={<RiDashboardLine className="h-8 w-8 text-muted-foreground" />}
+          title={t('No Dashboards')}
+          description={t('Create your first dashboard to start visualizing data')}
+          action={{
+            label: t('Create Dashboard'),
+            onClick: () => router.push('/dashboard/dashboards/new'),
+          }}
+        />
       </div>
     );
   }
@@ -206,7 +196,7 @@ export default function DashboardsPage() {
         searchKey="title"
         searchPlaceholder={t('Search...')}
         enableRowSelection
-        onDeleteSelected={handleDeleteSelected}
+        onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Dashboard')}
         deleteConfirmDescription={(count) =>
           t(
@@ -217,16 +207,20 @@ export default function DashboardsPage() {
         emptyMessage={t('No Dashboards')}
       />
 
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        title={t('Delete Dashboard')}
-        description={t('Are you sure to delete this dashboard? This action cannot be undone')}
-        onConfirm={confirmDelete}
-        confirmText={t('Delete')}
-        cancelText={t('Cancel')}
-        variant="destructive"
-      />
+      {dialogState && (
+        <ConfirmDialog
+          open={dialogState.open}
+          onOpenChange={(open) => {
+            if (!open) handleCancel();
+          }}
+          title={dialogState.title}
+          description={dialogState.description}
+          onConfirm={handleConfirm}
+          confirmText={dialogState.confirmText}
+          cancelText={dialogState.cancelText}
+          variant={dialogState.variant}
+        />
+      )}
     </div>
   );
 }

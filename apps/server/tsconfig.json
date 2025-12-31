@@ -15,6 +15,7 @@
       "#providers/*": ["./app/providers/*"],
       "#models/*": ["./app/models/*"],
       "#types/*": ["./app/types/*"],
+      "#guards/*": ["./app/guards/*"],
       "#start/*": ["./start/*"],
       "@sparkset/core": ["../../packages/core/dist/index.d.ts"],
       "@sparkset/core/*": ["../../packages/core/dist/*"],

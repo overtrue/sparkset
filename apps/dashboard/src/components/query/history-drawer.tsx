@@ -20,13 +20,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  ConversationDetailDTO,
-  ConversationDTO,
-  fetchConversation,
-  fetchConversations,
-  MessageDTO,
-} from '@/lib/api';
+import type { ConversationDetailDTO, ConversationDTO, MessageDTO } from '@/types/api';
+import { fetchConversationById, fetchConversations } from '@/lib/api/conversations-api';
 import { QueryResponse } from '@/lib/query';
 import { useState } from 'react';
 
@@ -194,7 +189,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
 
     setLoadingDetailId(id);
     try {
-      const detail = await fetchConversation(id);
+      const detail = await fetchConversationById(id);
       setDetails((prev) => new Map(prev).set(id, detail));
     } catch (err) {
       console.error('Failed to fetch conversation detail:', err);

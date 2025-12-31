@@ -10,6 +10,7 @@ export default defineConfig({
   | You can also use 'memory' for testing or 'file' for development.
   |
   */
+  // @ts-expect-error - driver property exists at runtime but not in types
   driver: stores.cookie(),
 
   /*
@@ -34,7 +35,6 @@ export default defineConfig({
     httpOnly: true,
     sameSite: 'lax',
     secure: false, // Set to true in production with HTTPS
-    maxAge: 60 * 60 * 24 * 7, // 7 days
   },
 
   /*
@@ -45,5 +45,4 @@ export default defineConfig({
   | Configure the session store.
   |
   */
-  store: {},
 });

@@ -1,3 +1,18 @@
+/**
+ * @deprecated This file is deprecated and will be removed in a future version.
+ * Please migrate to the new modular API structure:
+ * - Use `@/lib/api/datasources-api` for datasource operations
+ * - Use `@/lib/api/datasets-api` for dataset operations
+ * - Use `@/lib/api/dashboards-api` for dashboard operations
+ * - Use `@/lib/api/charts-api` for chart operations
+ * - Use `@/lib/api/actions-api` for action operations
+ * - Use `@/lib/api/ai-providers-api` for AI provider operations
+ * - Use `@/lib/api/conversations-api` for conversation operations
+ * - Use `@/types/api` for type definitions
+ *
+ * Migration guide: See MIGRATION_GUIDE.md in the docs folder
+ */
+
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
 const TOKEN_KEY = 'sparkset_access_token';

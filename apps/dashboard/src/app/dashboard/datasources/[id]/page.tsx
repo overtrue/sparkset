@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import DatasourceDetail from '@/components/datasource/detail';
-import { fetchDatasourceDetail } from '@/lib/api';
+import { fetchDatasourceDetail } from '@/lib/api/datasources-api';
 
 interface PageProps {
   params: Promise<{ id: string }>;

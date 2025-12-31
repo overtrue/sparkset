@@ -1,13 +1,19 @@
 import { Onboarding } from '@/components/onboarding';
-import { fetchAIProviders, fetchDatasources } from '@/lib/api';
+import { fetchDatasources } from '@/lib/api/datasources-api';
+import { fetchAIProviders } from '@/lib/api/ai-providers-api';
 
 const DashboardPage = async () => {
-  const [datasources, aiProviders] = await Promise.all([
-    fetchDatasources().catch(() => []),
-    fetchAIProviders().catch(() => []),
+  const [datasourcesResult, aiProvidersResult] = await Promise.all([
+    fetchDatasources().catch(() => ({ items: [] })),
+    fetchAIProviders().catch(() => ({ items: [] })),
   ]);
 
-  return <Onboarding datasourceCount={datasources.length} aiProviderCount={aiProviders.length} />;
+  return (
+    <Onboarding
+      datasourceCount={datasourcesResult.items?.length || 0}
+      aiProviderCount={aiProvidersResult.items?.length || 0}
+    />
+  );
 };
 
 export default DashboardPage;

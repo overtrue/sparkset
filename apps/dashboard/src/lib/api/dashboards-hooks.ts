@@ -2,7 +2,7 @@ import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import {
   fetchDashboards,
-  fetchDashboard,
+  fetchDashboardById,
   createDashboard,
   updateDashboard,
   deleteDashboard,
@@ -22,7 +22,7 @@ export function useDashboards() {
 }
 
 export function useDashboard(id: number | null) {
-  return useSWR(id ? `/api/dashboards/${id}` : null, () => fetchDashboard(id!));
+  return useSWR(id ? `/api/dashboards/${id}` : null, () => fetchDashboardById(id!));
 }
 
 // Mutations

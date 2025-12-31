@@ -1,23 +1,24 @@
-import type { Chart, ChartSpec, ChartRenderResult } from '@/types/chart';
+import type {
+  Chart,
+  ChartSpec,
+  ChartRenderResult,
+  CreateChartDto,
+  ApiListResponse,
+} from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
-export interface CreateChartDto {
-  datasetId: number;
-  title: string;
-  description?: string;
-  chartType: ChartSpec['chartType'];
-  spec: ChartSpec;
-}
-
 // API functions - can be used in both server and client components
-export async function fetchCharts(datasetId?: number): Promise<{ items: Chart[] }> {
+export async function fetchCharts(datasetId?: number): Promise<ApiListResponse<Chart>> {
   const url = datasetId ? `/api/charts?datasetId=${datasetId}` : '/api/charts';
   return apiGet(url);
 }
 
-export async function fetchChart(id: number): Promise<Chart> {
+export async function fetchChartById(id: number): Promise<Chart> {
   return apiGet(`/api/charts/${id}`);
 }
+
+// Alias for backward compatibility
+export const fetchChart = fetchChartById;
 
 export async function createChart(data: CreateChartDto): Promise<Chart> {
   return apiPost('/api/charts', data);

@@ -11,7 +11,7 @@ export default class Conversation extends BaseModel {
   declare id: number;
 
   @column({ columnName: 'user_id' })
-  declare userId: number;
+  declare userId: number | null;
 
   @belongsTo(() => User)
   declare user: BelongsTo<typeof User>;

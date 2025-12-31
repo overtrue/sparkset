@@ -12,7 +12,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { createAction, type CreateActionInput } from '@/lib/api';
+import { createAction } from '@/lib/api/actions-api';
+import type { CreateActionInput } from '@/types/api';
 import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
 import { toast } from 'sonner';

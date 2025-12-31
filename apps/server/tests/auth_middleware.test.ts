@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AuthMiddleware from '../app/middleware/auth_middleware';
 import { AuthManager } from '../app/services/auth_manager';
 import { HttpContext } from '@adonisjs/core/http';
+import User from '#models/user';
 
 describe('AuthMiddleware', () => {
   let middleware: AuthMiddleware;
@@ -15,19 +16,33 @@ describe('AuthMiddleware', () => {
       authenticate: vi.fn(),
     } as unknown as AuthManager;
 
+    // @ts-expect-error - AuthMiddleware constructor accepts AuthManager via DI, but we're testing with mock
     middleware = new AuthMiddleware(mockAuthManager);
     mockNext = vi.fn().mockResolvedValue('next-result');
   });
 
   it('should call next() with authenticated user', async () => {
     const ctx = createMockContext(false);
-    const mockUser = { id: 1, username: 'test', isActive: true };
-    vi.mocked(mockAuthManager.authenticate).mockResolvedValue(mockUser);
+    const mockUser = {
+      id: 1,
+      username: 'test',
+      isActive: true,
+      uid: 'test:1',
+      provider: 'local' as const,
+      email: null,
+      displayName: null,
+      passwordHash: null,
+      roles: [],
+      permissions: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    vi.mocked(mockAuthManager.authenticate).mockResolvedValue(mockUser as unknown as User);
 
     const result = await middleware.handle(ctx, mockNext);
 
     expect(vi.mocked(mockAuthManager.authenticate)).toHaveBeenCalledWith(ctx);
-    expect(ctx.auth?.user).toBe(mockUser);
+    expect((ctx as { auth?: { user: User } }).auth?.user).toBe(mockUser);
     expect(mockNext).toHaveBeenCalled();
     expect(result).toBe('next-result');
   });
@@ -56,8 +71,21 @@ describe('AuthMiddleware', () => {
 
   it('should return 403 for disabled user', async () => {
     const ctx = createMockContext(false);
-    const disabledUser = { id: 1, username: 'test', isActive: false };
-    vi.mocked(mockAuthManager.authenticate).mockResolvedValue(disabledUser);
+    const disabledUser = {
+      id: 1,
+      username: 'test',
+      isActive: false,
+      uid: 'test:1',
+      provider: 'local' as const,
+      email: null,
+      displayName: null,
+      passwordHash: null,
+      roles: [],
+      permissions: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    vi.mocked(mockAuthManager.authenticate).mockResolvedValue(disabledUser as unknown as User);
 
     await middleware.handle(ctx, mockNext);
 

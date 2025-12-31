@@ -7,46 +7,62 @@ import {
   DataTableRowActions,
   type RowAction,
 } from '@/components/data-table/data-table-row-actions';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRouter } from '@/i18n/client-routing';
-import { datasourcesApi } from '@/lib/api/datasources';
-import { useDatasources } from '@/lib/api/datasources-hooks';
-import type { Datasource } from '@/types/chart';
+import {
+  useDatasources,
+  useDeleteDatasource,
+  useSetDefaultDatasource,
+  useSyncDatasource,
+} from '@/lib/api/datasources-hooks';
+import { useResourceList } from '@/hooks/use-resource-list';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import type { Datasource } from '@/types/api';
 import { RiAddLine, RiDatabase2Line, RiSettings4Line } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { useState } from 'react';
+import { formatDateTime } from '@/lib/utils/date';
 import { toast } from 'sonner';
 
 export default function DatasourcesPage() {
   const t = useTranslations();
   const router = useRouter();
   const { data, error, isLoading, mutate } = useDatasources();
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [datasourceToDelete, setDatasourceToDelete] = useState<Datasource | null>(null);
+  const { trigger: deleteDatasource } = useDeleteDatasource();
+  const { trigger: setDefaultDatasource } = useSetDefaultDatasource();
+  const { trigger: syncDatasource } = useSyncDatasource();
+  const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
 
-  const datasources = data?.items || [];
+  const {
+    items: datasources,
+    handleDelete,
+    handleBulkDelete,
+  } = useResourceList(data, mutate, {
+    resourceName: t('Datasource'),
+    onDelete: async (item) => {
+      await deleteDatasource(item.id);
+    },
+    onBulkDelete: async (items) => {
+      for (const item of items) {
+        await deleteDatasource(item.id);
+      }
+    },
+  });
 
-  const handleDelete = async (datasource: Datasource) => {
-    setDatasourceToDelete(datasource);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!datasourceToDelete) return;
-
-    try {
-      await datasourcesApi.delete(datasourceToDelete.id);
-      toast.success(t('Datasource deleted'));
-      mutate(); // Refresh the list
-    } catch {
-      toast.error(t('Failed to delete datasource'));
-    } finally {
-      setDeleteConfirmOpen(false);
-      setDatasourceToDelete(null);
-    }
+  const handleDeleteClick = (datasource: Datasource) => {
+    openDialog({
+      title: t('Delete Datasource'),
+      description: t(`Are you sure to delete '{name}'? This cannot be undone`, {
+        name: datasource.name,
+      }),
+      variant: 'destructive',
+      onConfirm: () => handleDelete(datasource),
+    });
   };
 
   const handleCreateNew = () => {
@@ -60,7 +76,7 @@ export default function DatasourcesPage() {
 
   const handleSetDefault = async (datasource: Datasource) => {
     try {
-      await datasourcesApi.setDefault(datasource.id);
+      await setDefaultDatasource(datasource.id);
       toast.success(t('Datasource set as default'));
       mutate();
     } catch {
@@ -70,19 +86,15 @@ export default function DatasourcesPage() {
 
   const handleSync = async (datasource: Datasource) => {
     try {
-      await datasourcesApi.sync(datasource.id);
+      await syncDatasource(datasource.id);
       toast.success(t('Datasource sync started'));
+      mutate();
     } catch {
       toast.error(t('Failed to sync datasource'));
     }
   };
 
-  const formatDate = (value: string) => {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  };
+  const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Datasource>[] = [
     {
@@ -161,7 +173,7 @@ export default function DatasourcesPage() {
           {
             label: t('Delete'),
             icon: <RiDatabase2Line className="h-4 w-4" />,
-            onClick: () => handleDelete(datasource),
+            onClick: () => handleDeleteClick(datasource),
             variant: 'destructive',
           },
         ];
@@ -185,7 +197,7 @@ export default function DatasourcesPage() {
             </Button>
           }
         />
-        <div className="text-center py-12 text-muted-foreground">{t('Loading...')}</div>
+        <LoadingState message={t('Loading...')} />
       </div>
     );
   }
@@ -203,9 +215,7 @@ export default function DatasourcesPage() {
             </Button>
           }
         />
-        <div className="text-center py-12 text-destructive">
-          {t('Failed to load datasources')}: {error.message}
-        </div>
+        <ErrorState error={error} onRetry={() => mutate()} />
       </div>
     );
   }
@@ -223,19 +233,15 @@ export default function DatasourcesPage() {
             </Button>
           }
         />
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <RiDatabase2Line className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">{t('No Datasources')}</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {t('Connect to your databases to start querying data')}
-          </p>
-          <Button onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4" />
-            {t('Add your first datasource')}
-          </Button>
-        </div>
+        <EmptyState
+          icon={<RiDatabase2Line className="h-8 w-8 text-muted-foreground" />}
+          title={t('No Datasources')}
+          description={t('Connect to your databases to start querying data')}
+          action={{
+            label: t('Add your first datasource'),
+            onClick: handleCreateNew,
+          }}
+        />
       </div>
     );
   }
@@ -259,17 +265,7 @@ export default function DatasourcesPage() {
         searchKey="name"
         searchPlaceholder={t('Search datasources...')}
         enableRowSelection
-        onDeleteSelected={async (rows) => {
-          for (const row of rows) {
-            try {
-              await datasourcesApi.delete(row.id);
-            } catch {
-              toast.error(`${t('Delete failed')}: ${row.name}`);
-            }
-          }
-          mutate();
-          toast.success(t('Successfully deleted {count} datasource(s)', { count: rows.length }));
-        }}
+        onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Datasource')}
         deleteConfirmDescription={(count) =>
           t(
@@ -280,18 +276,20 @@ export default function DatasourcesPage() {
         emptyMessage={t('No datasources yet, click the button above to add')}
       />
 
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        title={t('Delete Datasource')}
-        description={t(`Are you sure to delete '{name}'? This cannot be undone`, {
-          name: datasourceToDelete?.name || '',
-        })}
-        onConfirm={confirmDelete}
-        confirmText={t('Delete')}
-        cancelText={t('Cancel')}
-        variant="destructive"
-      />
+      {dialogState && (
+        <ConfirmDialog
+          open={dialogState.open}
+          onOpenChange={(open) => {
+            if (!open) handleCancel();
+          }}
+          title={dialogState.title}
+          description={dialogState.description}
+          onConfirm={handleConfirm}
+          confirmText={dialogState.confirmText}
+          cancelText={dialogState.cancelText}
+          variant={dialogState.variant}
+        />
+      )}
     </div>
   );
 }

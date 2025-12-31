@@ -37,16 +37,30 @@ export default class QueriesController {
             const existingConv = await this.conversationService.get(conversationId);
             if (!existingConv) {
               ctx.logger.warn(`Conversation ${conversationId} not found, creating new one`);
+              const auth = (ctx as unknown as { auth?: { user?: { id: number } } }).auth;
+              const userId = auth?.user?.id;
+              if (!userId) {
+                ctx.logger.error('User not authenticated when creating conversation');
+                throw new Error('User not authenticated');
+              }
               const newConv = await this.conversationService.create({
                 title: parsed.question.slice(0, 50),
+                userId,
               });
               conversationId = newConv.id;
             }
           } else {
             // 创建新会话
             ctx.logger.info('Creating new conversation');
+            const auth = (ctx as unknown as { auth?: { user?: { id: number } } }).auth;
+            const userId = auth?.user?.id;
+            if (!userId) {
+              ctx.logger.error('User not authenticated when creating conversation');
+              throw new Error('User not authenticated');
+            }
             const newConv = await this.conversationService.create({
               title: parsed.question.slice(0, 50),
+              userId,
             });
             conversationId = newConv.id;
             ctx.logger.info(`Created conversation ${conversationId}`);

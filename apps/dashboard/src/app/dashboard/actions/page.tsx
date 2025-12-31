@@ -1,6 +1,6 @@
 import ActionManager from '@/components/action/manager';
 import { PageHeader } from '@/components/page-header';
-import { fetchActions } from '@/lib/api';
+import { fetchActions } from '@/lib/api/actions-api';
 import { getLocaleFromRequest } from '@/i18n/server-utils';
 import { getDictionary } from '@/i18n/dictionaries';
 
@@ -9,7 +9,8 @@ const Page = async () => {
   const dict = await getDictionary(locale);
   const t = (key: string) => dict[key] || key;
 
-  const actions = await fetchActions().catch(() => []);
+  const actionsResult = await fetchActions().catch(() => ({ items: [] }));
+  const actions = actionsResult.items || [];
 
   return (
     <div className="space-y-6">

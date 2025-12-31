@@ -45,6 +45,12 @@ export interface LocalAuthConfig {
   allowRegistration: boolean;
   defaultRoles: string[];
   defaultPermissions: string[];
+  devUsers?: {
+    username: string;
+    password: string;
+    roles: string[];
+    permissions: string[];
+  }[];
 }
 
 /**

@@ -3,7 +3,8 @@ import { getDictionary } from '@/i18n/dictionaries';
 
 import { PageHeader } from '@/components/page-header';
 import { QueryEmptyState } from '@/components/query/empty-state';
-import { fetchAIProviders, fetchDatasources } from '@/lib/api';
+import { fetchDatasources } from '@/lib/api/datasources-api';
+import { fetchAIProviders } from '@/lib/api/ai-providers-api';
 import QueryRunner from './query-runner';
 
 const QueryPage = async () => {
@@ -11,8 +12,12 @@ const QueryPage = async () => {
   const dict = await getDictionary(locale);
   const t = (key: string) => dict[key] || key;
 
-  const datasources = await fetchDatasources().catch(() => []);
-  const aiProviders = await fetchAIProviders().catch(() => []);
+  const [datasourcesResult, aiProvidersResult] = await Promise.all([
+    fetchDatasources().catch(() => ({ items: [] })),
+    fetchAIProviders().catch(() => ({ items: [] })),
+  ]);
+  const datasources = datasourcesResult.items || [];
+  const aiProviders = aiProvidersResult.items || [];
 
   if (datasources.length === 0) {
     return (

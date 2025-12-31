@@ -7,83 +7,61 @@ import {
   DataTableRowActions,
   type RowAction,
 } from '@/components/data-table/data-table-row-actions';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRouter } from '@/i18n/client-routing';
-import { datasetsApi } from '@/lib/api/datasets';
-import type { Dataset } from '@/types/chart';
+import { useDatasets, useDeleteDataset } from '@/lib/api/datasets-hooks';
+import { useResourceList } from '@/hooks/use-resource-list';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import type { Dataset } from '@/types/api';
 import { RiAddLine, RiDatabaseLine } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils/date';
 
 export default function DatasetsPage() {
   const t = useTranslations();
   const router = useRouter();
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [datasetToDelete, setDatasetToDelete] = useState<Dataset | null>(null);
+  const { data, error, isLoading, mutate } = useDatasets();
+  const { trigger: deleteDataset } = useDeleteDataset();
+  const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
 
-  useEffect(() => {
-    void loadDatasets();
-  }, []);
+  const {
+    items: datasets,
+    handleDelete,
+    handleBulkDelete,
+  } = useResourceList(data, mutate, {
+    resourceName: t('Dataset'),
+    onDelete: async (item) => {
+      await deleteDataset(item.id);
+    },
+    onBulkDelete: async (items) => {
+      for (const item of items) {
+        await deleteDataset(item.id);
+      }
+    },
+  });
 
-  const loadDatasets = async () => {
-    try {
-      setLoading(true);
-      const result = await datasetsApi.list();
-      setDatasets(result.items);
-    } catch {
-      toast.error(t('Failed to load datasets'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (dataset: Dataset) => {
-    setDatasetToDelete(dataset);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!datasetToDelete) return;
-
-    try {
-      await datasetsApi.delete(datasetToDelete.id);
-      toast.success(t('Dataset deleted'));
-      void loadDatasets();
-    } catch {
-      toast.error(t('Failed to delete dataset'));
-    } finally {
-      setDeleteConfirmOpen(false);
-      setDatasetToDelete(null);
-    }
+  const handleDeleteClick = (dataset: Dataset) => {
+    openDialog({
+      title: t('Delete Dataset'),
+      description: t(`Are you sure to delete '{name}'? This cannot be undone`, {
+        name: dataset.name,
+      }),
+      variant: 'destructive',
+      onConfirm: () => handleDelete(dataset),
+    });
   };
 
   const handleCreateNew = () => {
     router.push('/dashboard/query');
   };
 
-  const handleDeleteSelected = async (rows: Dataset[]) => {
-    for (const row of rows) {
-      try {
-        await datasetsApi.delete(row.id);
-      } catch {
-        toast.error(`${t('Delete failed')}: ${row.name}`);
-      }
-    }
-    setDatasets((prev) => prev.filter((d) => !rows.some((r) => r.id === d.id)));
-    toast.success(t('Successfully deleted {count} dataset(s)', { count: rows.length }));
-  };
-
-  const formatDate = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toISOString().slice(0, 19).replace('T', ' ');
-  };
+  const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Dataset>[] = [
     {
@@ -170,7 +148,7 @@ export default function DatasetsPage() {
           {
             label: t('Delete'),
             icon: <RiDatabaseLine className="h-4 w-4" />,
-            onClick: () => handleDelete(dataset),
+            onClick: () => handleDeleteClick(dataset),
             variant: 'destructive',
           },
         ];
@@ -181,7 +159,7 @@ export default function DatasetsPage() {
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -194,7 +172,25 @@ export default function DatasetsPage() {
             </Button>
           }
         />
-        <div className="text-center py-12 text-muted-foreground">{t('Loading...')}</div>
+        <LoadingState message={t('Loading...')} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('Datasets')}
+          description={t('Manage your query result datasets')}
+          action={
+            <Button onClick={handleCreateNew}>
+              <RiAddLine className="h-4 w-4" />
+              {t('New Dataset')}
+            </Button>
+          }
+        />
+        <ErrorState error={error} onRetry={() => mutate()} />
       </div>
     );
   }
@@ -212,19 +208,17 @@ export default function DatasetsPage() {
             </Button>
           }
         />
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <RiDatabaseLine className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">{t('No Datasets')}</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {t('From Query page, execute SQL query and save result as dataset to create charts')}
-          </p>
-          <Button onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4" />
-            {t('Create your first dataset')}
-          </Button>
-        </div>
+        <EmptyState
+          icon={<RiDatabaseLine className="h-8 w-8 text-muted-foreground" />}
+          title={t('No Datasets')}
+          description={t(
+            'From Query page, execute SQL query and save result as dataset to create charts',
+          )}
+          action={{
+            label: t('Create your first dataset'),
+            onClick: handleCreateNew,
+          }}
+        />
       </div>
     );
   }
@@ -248,7 +242,7 @@ export default function DatasetsPage() {
         searchKey="name"
         searchPlaceholder={t('Search datasets...')}
         enableRowSelection
-        onDeleteSelected={handleDeleteSelected}
+        onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Dataset')}
         deleteConfirmDescription={(count) =>
           t(
@@ -259,18 +253,20 @@ export default function DatasetsPage() {
         emptyMessage={t('No datasets yet, click the button above to add')}
       />
 
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        title={t('Delete Dataset')}
-        description={t(`Are you sure to delete '{name}'? This cannot be undone`, {
-          name: datasetToDelete?.name || '',
-        })}
-        onConfirm={confirmDelete}
-        confirmText={t('Delete')}
-        cancelText={t('Cancel')}
-        variant="destructive"
-      />
+      {dialogState && (
+        <ConfirmDialog
+          open={dialogState.open}
+          onOpenChange={(open) => {
+            if (!open) handleCancel();
+          }}
+          title={dialogState.title}
+          description={dialogState.description}
+          onConfirm={handleConfirm}
+          confirmText={dialogState.confirmText}
+          cancelText={dialogState.cancelText}
+          variant={dialogState.variant}
+        />
+      )}
     </div>
   );
 }

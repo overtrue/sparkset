@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import AIProviderManager from '@/components/ai-provider/manager';
 import { PageHeader } from '@/components/page-header';
-import { fetchAIProviders } from '@/lib/api';
+import { fetchAIProviders } from '@/lib/api/ai-providers-api';
 import { getLocaleFromRequest } from '@/i18n/server-utils';
 import { getDictionary } from '@/i18n/dictionaries';
 
@@ -12,7 +12,8 @@ const Page = async () => {
   const dict = await getDictionary(locale);
   const t = (key: string) => dict[key] || key;
 
-  const providers = await fetchAIProviders().catch(() => []);
+  const providersResult = await fetchAIProviders().catch(() => ({ items: [] }));
+  const providers = providersResult.items || [];
 
   return (
     <div className="space-y-6">

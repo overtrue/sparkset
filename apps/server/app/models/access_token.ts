@@ -37,7 +37,6 @@ export default class AccessToken extends BaseModel {
    * 令牌明文（仅在创建时返回给客户端，之后无法访问）
    * 这个字段不会持久化到数据库
    */
-  @column({ serialize: false })
   declare token?: string;
 
   /**

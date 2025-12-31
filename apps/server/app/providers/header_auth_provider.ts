@@ -61,9 +61,9 @@ export class HeaderAuthProvider implements AuthProvider {
         username: ctx.request.header(`${this.getHeaderPrefix()}Name`) || uid,
         email: ctx.request.header(`${this.getHeaderPrefix()}Email`) || null,
         displayName: ctx.request.header(`${this.getHeaderPrefix()}DisplayName`) || null,
-        roles: this.parseRoles(ctx.request.header(`${this.getHeaderPrefix()}Roles`)),
+        roles: this.parseRoles(ctx.request.header(`${this.getHeaderPrefix()}Roles`) ?? null),
         permissions: this.parsePermissions(
-          ctx.request.header(`${this.getHeaderPrefix()}Permissions`),
+          ctx.request.header(`${this.getHeaderPrefix()}Permissions`) ?? null,
         ),
       };
 

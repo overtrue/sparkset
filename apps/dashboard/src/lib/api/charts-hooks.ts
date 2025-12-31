@@ -1,9 +1,9 @@
-import type { ChartSpec } from '@/types/chart';
+import type { ChartSpec } from '@/types/api';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import {
   fetchCharts,
-  fetchChart,
+  fetchChartById,
   createChart,
   updateChart,
   deleteChart,
@@ -19,7 +19,7 @@ export function useCharts(datasetId?: number) {
 }
 
 export function useChart(id: number | null) {
-  return useSWR(id ? `/api/charts/${id}` : null, () => fetchChart(id!));
+  return useSWR(id ? `/api/charts/${id}` : null, () => fetchChartById(id!));
 }
 
 // Mutations

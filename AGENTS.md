@@ -33,6 +33,7 @@
 - **Learning from existing code** - Study and plan before implementing
 - **Pragmatic over dogmatic** - Adapt to project reality
 - **Clear intent over clever code** - Be boring and obvious
+- **No backward compatibility required** - This is a new project, all changes can be breaking changes
 
 ### Simplicity Means
 
@@ -107,6 +108,7 @@ Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 - **Interfaces over singletons** - Enable testing and flexibility
 - **Explicit over implicit** - Clear data flow and dependencies
 - **Test-driven when possible** - Never disable tests, fix them
+- **No backward compatibility** - This is a new, unreleased project. All refactoring can be breaking changes. Don't maintain deprecated code or compatibility layers unless absolutely necessary
 
 ### Code Quality
 
@@ -127,6 +129,18 @@ Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 - Include context for debugging
 - Handle errors at appropriate level
 - Never silently swallow exceptions
+
+### Refactoring Principles
+
+**No Backward Compatibility Required**: This is a new, unreleased project. When refactoring:
+
+- **Remove deprecated code directly** - Don't maintain compatibility layers or deprecated functions
+- **Break existing patterns if needed** - If a better pattern exists, migrate all code to it
+- **Don't keep old implementations** - Remove old code instead of keeping it "just in case"
+- **Update all usages immediately** - When changing an API or pattern, update all call sites
+- **No deprecation warnings needed** - Since this is a new project, just remove and replace
+
+**Exception**: Only maintain compatibility if explicitly required by external dependencies or critical business needs.
 
 ### Compilation Error Handling
 
@@ -200,15 +214,34 @@ When multiple valid approaches exist, choose based on:
 - Use project's formatter/linter settings
 - Don't introduce new tools without strong justification
 - **Use installed agents more** - Leverage various specialized agents to improve efficiency and quality
-- **UI Debugging & Verification**: When encountering UI problems, bugs, or layout issues, prioritize using Chrome DevTools MCP to verify and debug
-  - Navigate to the problematic page using MCP tools
-  - Take snapshots to inspect the DOM structure and accessibility tree
-  - Use screenshot capabilities to verify visual appearance
-  - Test interactions (clicks, form fills, etc.) through MCP tools
-  - Check console messages and network requests for debugging
-  - Verify responsive behavior by resizing the page
-  - This approach allows for systematic verification before making code changes
-  - Benefits: Faster iteration cycle, consistent verification process, ability to capture and document issues with screenshots, automated interaction testing
+
+### Functional Verification with Chrome MCP
+
+**CRITICAL RULE**: Any code changes should be verified using Chrome DevTools MCP to ensure functional integrity and that all modules work correctly.
+
+- **Always verify after changes**: After making any code changes, especially UI-related changes, use Chrome DevTools MCP to verify functionality
+- **Systematic verification process**:
+  1. Navigate to the affected page/module using MCP tools
+  2. Take snapshots to inspect the DOM structure and accessibility tree
+  3. Use screenshot capabilities to verify visual appearance
+  4. Test interactions (clicks, form fills, button presses, etc.) through MCP tools
+  5. Check console messages for errors or warnings
+  6. Monitor network requests to ensure API calls work correctly
+  7. Verify responsive behavior by resizing the page
+  8. Test all related modules to ensure no regressions
+- **When to use Chrome MCP verification**:
+  - After implementing new features
+  - After refactoring existing code
+  - After fixing bugs
+  - Before committing changes
+  - When encountering UI problems, bugs, or layout issues
+- **Benefits**:
+  - Faster iteration cycle
+  - Consistent verification process
+  - Ability to capture and document issues with screenshots
+  - Automated interaction testing
+  - Early detection of regressions
+  - Ensures all modules function correctly after changes
 
 ## Quality Gates
 
@@ -355,6 +388,7 @@ git push --no-verify
 - **Verify syntax before applying changes** - Check that your edits will produce valid code
 - **Let Git Hooks validate your code** - Don't bypass unless absolutely necessary
 - Fix validation errors before committing/pushing
+- **Refactor without compatibility concerns** - This is a new project, remove deprecated code directly instead of maintaining compatibility layers
 
 ### Syntax Error Prevention
 

@@ -2,7 +2,8 @@
 import { RiDatabase2Line, RiRefreshLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
-import { fetchSchema, TableSchemaDTO } from '@/lib/api';
+import { fetchSchema } from '@/lib/api/datasources-api';
+import type { TableSchemaDTO } from '@/types/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

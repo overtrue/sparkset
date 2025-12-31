@@ -3,14 +3,15 @@ import { getDictionary } from '@/i18n/dictionaries';
 
 import { ConversationList } from '@/components/conversation/list';
 import { PageHeader } from '@/components/page-header';
-import { fetchConversations } from '@/lib/api';
+import { fetchConversations } from '@/lib/api/conversations-api';
 
 const ConversationsPage = async () => {
   const locale = await getLocaleFromRequest();
   const dict = await getDictionary(locale);
   const t = (key: string) => dict[key] || key;
 
-  const conversations = await fetchConversations().catch(() => []);
+  const conversationsResult = await fetchConversations().catch(() => ({ items: [] }));
+  const conversations = conversationsResult.items || [];
 
   // Sort by creation time descending
   const sortedConversations = [...conversations].sort(

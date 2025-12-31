@@ -23,6 +23,13 @@ export function getLocalAuthConfig(): LocalAuthConfig {
 
   return {
     enabled,
+    allowRegistration: process.env.AUTH_LOCAL_ALLOW_REGISTRATION !== 'false',
+    defaultRoles: process.env.AUTH_LOCAL_DEFAULT_ROLES
+      ? process.env.AUTH_LOCAL_DEFAULT_ROLES.split(',')
+      : ['viewer'],
+    defaultPermissions: process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS
+      ? process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS.split(',')
+      : ['read:datasource', 'read:action', 'read:conversation'],
     devUsers: [
       {
         username: 'admin',

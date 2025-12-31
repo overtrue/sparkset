@@ -1,22 +1,17 @@
-import type { Dataset, ResultSet } from '@/types/chart';
+import type { Dataset, CreateDatasetDto, ResultSet, ApiListResponse } from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
-export interface CreateDatasetDto {
-  datasourceId: number;
-  name: string;
-  description?: string;
-  querySql: string;
-  schemaJson: { name: string; type: string }[];
-}
-
 // API functions - can be used in both server and client components
-export async function fetchDatasets(): Promise<{ items: Dataset[] }> {
+export async function fetchDatasets(): Promise<ApiListResponse<Dataset>> {
   return apiGet('/api/datasets');
 }
 
-export async function fetchDataset(id: number): Promise<Dataset> {
+export async function fetchDatasetById(id: number): Promise<Dataset> {
   return apiGet(`/api/datasets/${id}`);
 }
+
+// Alias for backward compatibility
+export const fetchDataset = fetchDatasetById;
 
 export async function createDataset(data: CreateDatasetDto): Promise<Dataset> {
   return apiPost('/api/datasets', data);

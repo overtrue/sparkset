@@ -2,7 +2,7 @@ import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 import {
   fetchDatasets,
-  fetchDataset,
+  fetchDatasetById,
   createDataset,
   updateDataset,
   deleteDataset,
@@ -16,7 +16,7 @@ export function useDatasets() {
 }
 
 export function useDataset(id: number | null) {
-  return useSWR(id ? `/api/datasets/${id}` : null, () => fetchDataset(id!));
+  return useSWR(id ? `/api/datasets/${id}` : null, () => fetchDatasetById(id!));
 }
 
 // Mutations
