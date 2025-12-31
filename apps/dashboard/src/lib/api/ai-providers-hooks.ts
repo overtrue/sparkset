@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
+import type { CreateAIProviderInput } from '@/types/api';
 import {
   fetchAIProviders,
   fetchAIProviderById,
@@ -9,7 +10,6 @@ import {
   setDefaultAIProvider,
   testAIProviderConnection,
   testAIProviderConnectionByConfig,
-  CreateAIProviderInput,
 } from './ai-providers-api';
 
 // SWR Hooks - only for client components
