@@ -1,6 +1,6 @@
-import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { DatasetService } from '../services/dataset_service.js';
+import { DatasourceService } from '../services/datasource_service.js';
 import { z } from 'zod';
 import { toId } from '../utils/validation.js';
 
@@ -21,17 +21,41 @@ const previewSchema = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
-@inject()
 export default class DatasetsController {
-  constructor(private service: DatasetService) {}
+  private service: DatasetService;
+
+  constructor() {
+    // Manual instantiation to avoid container resolution issues
+    const datasourceService = new DatasourceService();
+    this.service = new DatasetService(
+      null as unknown as import('@adonisjs/lucid/database').Database,
+      datasourceService,
+    );
+  }
+
+  // Helper to initialize with database
+  private async ensureService() {
+    if (!this.service) {
+      const { default: app } = await import('@adonisjs/core/services/app');
+      const database = await app.container.make('lucid.db');
+      const { DatasourceService } = await import('../services/datasource_service');
+      const { LucidDatasourceRepository } =
+        await import('../repositories/lucid_datasource_repository');
+      const datasourceService = new DatasourceService(new LucidDatasourceRepository());
+      const { DatasetService } = await import('../services/dataset_service');
+      this.service = new DatasetService(database, datasourceService);
+    }
+  }
 
   async index({ response }: HttpContext) {
+    await this.ensureService();
     // For now, return all datasets (no auth)
     const items = await this.service.list();
     return response.ok({ items });
   }
 
   async store({ request, response }: HttpContext) {
+    await this.ensureService();
     const parsed = createSchema.parse(request.body());
     const record = await this.service.create({
       ...parsed,
@@ -42,6 +66,7 @@ export default class DatasetsController {
   }
 
   async show({ params, response }: HttpContext) {
+    await this.ensureService();
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const dataset = await this.service.get(id);
@@ -54,6 +79,7 @@ export default class DatasetsController {
   }
 
   async update({ params, request, response }: HttpContext) {
+    await this.ensureService();
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const parsed = createSchema.partial().parse(request.body());
@@ -72,6 +98,7 @@ export default class DatasetsController {
   }
 
   async destroy({ params, response }: HttpContext) {
+    await this.ensureService();
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
 
@@ -85,6 +112,7 @@ export default class DatasetsController {
   }
 
   async preview({ params, request, response }: HttpContext) {
+    await this.ensureService();
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid dataset ID' });
     const parsed = previewSchema.parse(request.body());

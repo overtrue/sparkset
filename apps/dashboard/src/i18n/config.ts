@@ -6,3 +6,10 @@ export const localeNames: Record<Locale, string> = {
   en: 'English',
   'zh-CN': '中文',
 };
+
+/**
+ * Check if a value is a valid locale
+ */
+export function hasLocale(value: string): value is Locale {
+  return locales.includes(value as Locale);
+}

@@ -1,6 +1,6 @@
 // Export local implementations
-export { buildActionPrompt, buildPrompt } from './prompt';
-export type { ActionPromptOptions, PromptOptions } from './prompt';
+export { buildActionPrompt, buildPrompt } from './prompt.js';
+export type { ActionPromptOptions, PromptOptions } from './prompt.js';
 
 // Export AI client implementations
 export {
@@ -10,5 +10,5 @@ export {
   StubAIClient,
   testAIProviderConnection,
   VercelAIClient,
-} from './client';
-export type { AIClient, AIClientConfig, ModelCallOptions } from './client';
+} from './client.js';
+export type { AIClient, AIClientConfig, ModelCallOptions } from './client.js';

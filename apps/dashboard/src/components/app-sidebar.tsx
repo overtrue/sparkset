@@ -50,13 +50,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       label: t('Features'),
       items: [
-        { title: t('Query'), url: '/query', icon: RiPlayLine },
-        { title: t('Datasets'), url: '/datasets', icon: RiDatabaseLine },
-        { title: t('Charts'), url: '/charts', icon: RiBarChartLine },
-        { title: t('Dashboards'), url: '/dashboards', icon: RiDashboardLine },
-        { title: t('Actions'), url: '/actions', icon: RiFlashlightLine },
-        { title: t('Datasources'), url: '/', icon: RiDatabase2Line },
-        { title: t('AI Providers'), url: '/ai-providers', icon: RiSparkling2Line },
+        { title: t('Query'), url: '/dashboard/query', icon: RiPlayLine },
+        { title: t('Datasets'), url: '/dashboard/datasets', icon: RiDatabaseLine },
+        { title: t('Charts'), url: '/dashboard/charts', icon: RiBarChartLine },
+        { title: t('Dashboards'), url: '/dashboard/dashboards', icon: RiDashboardLine },
+        { title: t('Actions'), url: '/dashboard/actions', icon: RiFlashlightLine },
+        { title: t('Datasources'), url: '/dashboard/datasources', icon: RiDatabase2Line },
+        { title: t('AI Providers'), url: '/dashboard/ai-providers', icon: RiSparkling2Line },
       ],
     },
     {

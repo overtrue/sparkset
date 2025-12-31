@@ -1,49 +1,65 @@
-import { HttpContext } from '@adonisjs/core/http'
-import { NextFn } from '@adonisjs/core/types/http'
-import { inject } from '@adonisjs/core'
-import { AuthManager } from '#services/auth_manager'
+import { HttpContext } from '@adonisjs/core/http';
+import { NextFn } from '@adonisjs/core/types/http';
+import { AuthManager } from '#services/auth_manager';
 
 /**
- * 认证中间件
- *
- * 保护需要认证的路由，自动执行认证流程
+ * Auth middleware as a class for AdonisJS container resolution
  */
-@inject()
 export default class AuthMiddleware {
-  constructor(private authManager: AuthManager) {}
+  private authManager: AuthManager;
+
+  constructor() {
+    this.authManager = new AuthManager();
+  }
 
   async handle(ctx: HttpContext, next: NextFn) {
-    // 1. 尝试认证
-    const user = await this.authManager.authenticate(ctx)
+    try {
+      const user = await this.authManager.authenticate(ctx);
 
-    if (!user) {
-      // 2. 未认证处理
-      const isAjax = ctx.request.header('X-Requested-With') === 'XMLHttpRequest' ||
-                     ctx.request.header('Accept')?.includes('application/json')
+      if (!user) {
+        const isAjax =
+          ctx.request.header('X-Requested-With') === 'XMLHttpRequest' ||
+          ctx.request.header('Accept')?.includes('application/json');
 
-      if (isAjax || ctx.request.is(['json'])) {
+        if (isAjax || ctx.request.is(['json'])) {
+          return ctx.response.unauthorized({
+            error: 'Authentication required',
+            message: '请先登录或提供有效的认证信息',
+          });
+        }
+
+        // For non-API requests, return 401 with clear error
+        // The frontend should handle redirecting to login page
         return ctx.response.unauthorized({
           error: 'Authentication required',
           message: '请先登录或提供有效的认证信息',
-        })
+        });
       }
 
-      // 重定向到登录页（如果有）
-      return ctx.response.redirect('/login')
+      if (!user.isActive) {
+        return ctx.response.forbidden({
+          error: 'User account disabled',
+          message: '您的账户已被禁用',
+        });
+      }
+
+      // Bind user to context
+      (ctx as unknown as { auth: { user: typeof user } }).auth = { user };
+
+      return next();
+    } catch (error) {
+      console.error('Auth middleware error:', error);
+      return ctx.response.internalServerError({
+        error: 'Authentication error',
+        message: 'An error occurred during authentication',
+      });
     }
-
-    // 3. 检查用户状态
-    if (!user.isActive) {
-      return ctx.response.forbidden({
-        error: 'User account disabled',
-        message: '您的账户已被禁用',
-      })
-    }
-
-    // 4. 绑定到上下文
-    ctx.auth = { user }
-
-    // 5. 继续处理
-    return next()
   }
 }
+
+/**
+ * Named middleware export for AdonisJS
+ * Note: Currently not used due to container resolution issues
+ * Using inline middleware in routes.ts instead
+ */
+export const authMiddlewareFn = () => AuthMiddleware;

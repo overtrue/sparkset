@@ -13,6 +13,7 @@ export default defineConfig({
     start: './start',
     tmp: './tmp',
     views: './resources/views',
+    models: './app/models',
   },
   providers: [
     () => import('@adonisjs/core/providers/app_provider'),
@@ -22,7 +23,7 @@ export default defineConfig({
     () => import('./app/providers/app_provider.js'),
     () => import('./app/providers/services_provider.js'),
   ],
-  preloads: [() => import('#start/routes'), () => import('#start/kernel')],
+  preloads: [() => import('#start/kernel'), () => import('#start/routes')],
   commands: [() => import('@adonisjs/core/commands'), () => import('@adonisjs/lucid/commands')],
   metaFiles: [
     {

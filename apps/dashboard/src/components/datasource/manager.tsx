@@ -289,7 +289,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
         header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
         cell: ({ row }) => (
           <Link
-            href={`/datasources/${row.original.id}`}
+            href={`/dashboard/datasources/${row.original.id}`}
             className="font-medium text-primary hover:underline"
           >
             {row.getValue('name')}
@@ -342,7 +342,7 @@ export default function DatasourceManager({ initial }: DatasourceManagerProps) {
               label: t('View Details'),
               icon: <RiEyeLine className="h-4 w-4" />,
               onClick: () => {
-                window.location.href = `/datasources/${ds.id}`;
+                window.location.href = `/dashboard/datasources/${ds.id}`;
               },
             },
             {

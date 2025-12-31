@@ -1,7 +1,6 @@
 'use client';
 
 import { RiTranslate2 } from '@remixicon/react';
-import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -10,27 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { localeNames, locales, type Locale } from '@/i18n/config';
-import { useLocale } from '@/i18n/use-locale';
+import { localeNames, type Locale } from '@/i18n/config';
+import { useLocale, useSetLocale } from '@/i18n/client-routing';
 
 export function LanguageSwitcher() {
-  const locale = useLocale() as Locale;
-  const fullPathname = usePathname(); // Get full pathname including locale
+  const locale = useLocale();
+  const setLocale = useSetLocale();
 
   const switchLocale = (newLocale: Locale) => {
-    // Remove current locale from pathname
-    const segments = fullPathname.split('/').filter(Boolean);
-    const pathWithoutLocale =
-      segments.length > 0 && locales.includes(segments[0] as Locale)
-        ? '/' + segments.slice(1).join('/')
-        : fullPathname;
-
-    // Build new path with new locale
-    const newPath =
-      pathWithoutLocale === '/' ? `/${newLocale}` : `/${newLocale}${pathWithoutLocale}`;
-
-    // Use window.location for immediate navigation
-    window.location.href = newPath;
+    // Update locale in localStorage
+    setLocale(newLocale);
   };
 
   return (
@@ -42,7 +30,7 @@ export function LanguageSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {locales.map((loc) => (
+        {(['en', 'zh-CN'] as Locale[]).map((loc) => (
           <DropdownMenuItem
             key={loc}
             onClick={() => switchLocale(loc)}

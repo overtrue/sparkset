@@ -2,7 +2,7 @@
 
 import { RiArrowLeftLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import { Link, useRouter } from '@/i18n/routing';
+import { Link, useRouter } from '@/i18n/client-routing';
 import type React from 'react';
 
 import { Button } from '@/components/ui/button';

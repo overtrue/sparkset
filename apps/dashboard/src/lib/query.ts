@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333';
+import { apiPost } from '@/lib/fetch';
+import useSWRMutation from 'swr/mutation';
 
 export interface QueryRequest {
   question: string;
@@ -15,11 +16,12 @@ export interface QueryResponse {
 }
 
 export async function runQuery(body: QueryRequest): Promise<QueryResponse> {
-  const res = await fetch(`${API_BASE}/query`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  return apiPost('/query', body);
+}
+
+// SWR Mutation Hook
+export function useRunQuery() {
+  return useSWRMutation('/query', async (_, { arg }: { arg: QueryRequest }) => {
+    return runQuery(arg);
   });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  return (await res.json()) as QueryResponse;
 }

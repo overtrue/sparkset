@@ -8,8 +8,10 @@
 */
 
 import router from '@adonisjs/core/services/router';
+import { apiAuthMiddleware } from '#middleware/api_auth_middleware';
 
 const HealthController = () => import('#controllers/health_controller');
+const LocalAuthController = () => import('#controllers/local_auth_controller');
 const ConversationsController = () => import('#controllers/conversations_controller');
 const DatasourcesController = () => import('#controllers/datasources_controller');
 const ActionsController = () => import('#controllers/actions_controller');
@@ -23,24 +25,12 @@ const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_
 // Public routes
 router.get('/health', [HealthController, 'handle']);
 
-// Auth status endpoint (public, returns current user info)
-router.get('/auth/status', async ({ auth, response }) => {
-  if (auth?.user) {
-    return {
-      authenticated: true,
-      user: {
-        id: auth.user.id,
-        username: auth.user.username,
-        email: auth.user.email,
-        displayName: auth.user.displayName,
-        roles: auth.user.roles,
-        permissions: auth.user.permissions,
-        provider: auth.user.provider,
-      },
-    }
-  }
-  return response.unauthorized({ authenticated: false })
-});
+// Auth routes (public)
+router.post('/auth/local/login', [LocalAuthController, 'login']);
+router.post('/auth/local/register', [LocalAuthController, 'register']);
+router.post('/auth/local/logout', [LocalAuthController, 'logout']);
+router.post('/auth/local/refresh', [LocalAuthController, 'refresh']);
+router.get('/auth/local/status', [LocalAuthController, 'status']);
 
 // Datasource routes (requires authentication)
 router
@@ -63,7 +53,7 @@ router
     router.delete('/:id', [DatasourcesController, 'destroy']);
   })
   .prefix('/datasources')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Action routes (requires authentication)
 router
@@ -77,10 +67,10 @@ router
     router.post('/:id/execute', [ActionsController, 'execute']);
   })
   .prefix('/actions')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Query routes (requires authentication)
-router.post('/query', [QueriesController, 'run']).middleware(['auth']);
+router.post('/query', [QueriesController, 'run']).middleware([apiAuthMiddleware]);
 
 // Conversation routes (requires authentication)
 router
@@ -91,7 +81,7 @@ router
     router.post('/:id/messages', [ConversationsController, 'appendMessage']);
   })
   .prefix('/conversations')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // AI Provider routes (requires authentication)
 router
@@ -105,7 +95,7 @@ router
     router.delete('/:id', [AIProvidersController, 'destroy']);
   })
   .prefix('/ai-providers')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Dataset routes (requires authentication)
 router
@@ -118,7 +108,7 @@ router
     router.post('/:id/preview', [DatasetsController, 'preview']);
   })
   .prefix('/api/datasets')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Chart routes (requires authentication)
 router
@@ -132,7 +122,7 @@ router
     router.post('/preview', [ChartsController, 'preview']);
   })
   .prefix('/api/charts')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Dashboard routes (requires authentication)
 router
@@ -144,7 +134,7 @@ router
     router.delete('/:id', [DashboardsController, 'destroy']);
   })
   .prefix('/api/dashboards')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);
 
 // Dashboard Widget routes (requires authentication)
 router
@@ -157,4 +147,4 @@ router
     router.delete('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'destroy']);
   })
   .prefix('/api/dashboards')
-  .middleware(['auth']);
+  .middleware([apiAuthMiddleware]);

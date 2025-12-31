@@ -47,8 +47,8 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
   }, [sql, isMultiLine]);
 
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2">
-      <RiCodeSSlashLine className="h-4 w-4" />
+    <Button variant="outline" size="sm" className="h-7 px-3 gap-1.5 text-xs">
+      <RiCodeSSlashLine className="h-3.5 w-3.5" />
       {t('View SQL')}
     </Button>
   );

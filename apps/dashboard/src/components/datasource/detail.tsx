@@ -279,7 +279,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
     try {
       await removeDatasource(datasource.id);
       toast.success(t('Datasource deleted'));
-      router.push('/');
+      router.push('/dashboard/datasources');
     } catch (err) {
       toast.error((err as Error)?.message ?? t('Delete failed'));
       setDeleting(false);
@@ -291,7 +291,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       <PageHeader
         title={t('Datasource Info')}
         description={t('Basic connection information')}
-        backButton="/"
+        backButton="/dashboard/datasources"
         action={
           <div className="flex items-center gap-2">
             <Button

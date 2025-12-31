@@ -111,7 +111,7 @@ export function SaveChartDialog({
 
       toast.success(t('Chart created successfully'));
       onOpenChange(false);
-      router.push('/charts');
+      router.push('/dashboard/charts');
     } catch {
       toast.error(t('Failed to create chart'));
     } finally {

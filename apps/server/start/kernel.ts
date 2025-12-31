@@ -30,11 +30,17 @@ server.use([
  * The router middleware stack runs on all the HTTP requests
  * with a registered route.
  */
-router.use([() => import('@adonisjs/core/bodyparser_middleware')]);
+router.use([
+  () => import('@adonisjs/core/bodyparser_middleware'),
+  // Session middleware temporarily disabled due to container resolution issues
+  // () => import('@adonisjs/session/session_middleware'),
+]);
 
 /**
  * Register named middleware collection
+ * Note: Named middleware registration has issues with AdonisJS container resolution
+ * Using inline middleware functions in routes.ts instead
  */
 router.named({
-  auth: () => import('#middleware/auth_middleware'),
+  // auth: () => import('#middleware/auth_middleware').then(m => m.authMiddlewareFn()),
 });

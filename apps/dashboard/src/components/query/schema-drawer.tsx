@@ -51,8 +51,8 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
   }, [open, datasourceId]);
 
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2 shrink-0">
-      <RiDatabase2Line className="h-4 w-4" />
+    <Button variant="outline" size="sm" className="h-7 px-3 gap-1.5 text-xs shrink-0">
+      <RiDatabase2Line className="h-3.5 w-3.5" />
       {t('View Schema')}
     </Button>
   );

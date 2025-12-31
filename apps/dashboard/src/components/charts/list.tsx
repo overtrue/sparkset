@@ -122,7 +122,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
           </CardDescription>
           <div>
             <Button asChild>
-              <Link href="/charts/new">
+              <Link href="/dashboard/charts/new">
                 <RiAddLine className="h-4 w-4 mr-2" />
                 {t('Create Chart')}
               </Link>
@@ -141,7 +141,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
           <p className="text-muted-foreground">{t('{count} charts', { count: charts.length })}</p>
         </div>
         <Button asChild>
-          <Link href="/charts/new">
+          <Link href="/dashboard/charts/new">
             <RiAddLine className="h-4 w-4 mr-2" />
             {t('New Chart')}
           </Link>
@@ -188,14 +188,14 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
 
             <CardFooter className="pt-3 gap-2">
               <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link href={`/charts/${chart.id}`}>
+                <Link href={`/dashboard/charts/${chart.id}`}>
                   <RiEyeLine className="h-4 w-4" />
                   {t('View')}
                 </Link>
               </Button>
 
               <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link href={`/charts/${chart.id}/edit`}>
+                <Link href={`/dashboard/charts/${chart.id}/edit`}>
                   <RiEditLine className="h-4 w-4" />
                   {t('Edit')}
                 </Link>

@@ -497,5 +497,8 @@
   "Successfully added to dashboard": "Successfully added to dashboard",
   "Failed to add to dashboard": "Failed to add to dashboard",
   "Missing content ID": "Missing content ID",
-  "Query Result Dataset": "Query Result Dataset"
+  "Query Result Dataset": "Query Result Dataset",
+  "Query Execution Failed": "Query Execution Failed",
+  "Generated SQL": "Generated SQL",
+  "Tip: Try rephrasing your question or check if the table/column names are correct": "Tip: Try rephrasing your question or check if the table/column names are correct"
 }

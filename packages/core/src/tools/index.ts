@@ -1,8 +1,8 @@
-import { QueryExecutor, SqlActionExecutor } from '../query/executor';
-import { SqlSnippet } from '../query/types';
+import { QueryExecutor, SqlActionExecutor } from '../query/executor.js';
+import { SqlSnippet } from '../query/types.js';
 
 // Re-export SqlActionExecutor for convenience
-export { SqlActionExecutor } from '../query/executor';
+export { SqlActionExecutor } from '../query/executor.js';
 
 export type ActionType = 'sql' | 'api' | 'file' | string;
 

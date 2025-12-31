@@ -79,3 +79,19 @@ export interface ResultSet {
   rows: Record<string, unknown>[];
   rowCount: number;
 }
+
+export interface Datasource {
+  id: number;
+  name: string;
+  type: 'mysql' | 'postgres' | 'sqlite' | 'mariadb';
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  database: string;
+  isDefault: number;
+  lastSyncAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  description?: string;
+}

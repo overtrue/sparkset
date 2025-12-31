@@ -1,28 +1,97 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3333';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
-async function request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
-  const hasBody = init.body !== undefined;
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: hasBody
-      ? {
-          'Content-Type': 'application/json',
-          ...(init.headers ?? {}),
-        }
-      : init.headers,
-    ...init,
-  });
+const TOKEN_KEY = 'sparkset_access_token';
 
-  const text = await res.text();
-  const json = text ? (JSON.parse(text) as unknown) : undefined;
-  if (!res.ok) {
-    const message =
-      typeof json === 'object' && json && 'message' in json
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (json as any).message
-        : `API error ${res.status}`;
-    throw new Error(message);
+// Helper to check if we're in a server context
+function isServerContext(): boolean {
+  return typeof window === 'undefined';
+}
+
+// Helper to get token - works on both server (from cookies) and client (from localStorage)
+async function getTokenFromContext(): Promise<string | null> {
+  if (isServerContext()) {
+    // Server-side: try to get from cookies
+    try {
+      const { cookies } = await import('next/headers');
+      const cookieStore = await cookies();
+      const tokenCookie = cookieStore.get(TOKEN_KEY);
+      return tokenCookie?.value || null;
+    } catch {
+      return null;
+    }
+  } else {
+    // Client-side: get from localStorage
+    return localStorage.getItem(TOKEN_KEY);
   }
-  return json as T;
+}
+
+// Server-side request timeout in milliseconds
+const SERVER_REQUEST_TIMEOUT = 5000;
+
+// Legacy request function for backward compatibility
+// Use the new apiGet, apiPost, apiPut, apiDelete from @/lib/fetch instead
+async function request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = init.method || 'GET';
+  const hasBody = init.body !== undefined;
+
+  // For client-side calls, use the unified fetch wrapper (which handles localStorage tokens)
+  if (!isServerContext()) {
+    if (method === 'GET') return apiGet<T>(path);
+    if (method === 'POST')
+      return apiPost<T>(path, hasBody ? JSON.parse(init.body as string) : undefined);
+    if (method === 'PUT')
+      return apiPut<T>(path, hasBody ? JSON.parse(init.body as string) : undefined);
+    if (method === 'DELETE') return apiDelete(path) as unknown as Promise<T>;
+  }
+
+  // For server-side calls, we need to get token from cookies and add Authorization header
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333';
+  const url = `${API_BASE_URL}${path}`;
+
+  // Get token from context (cookies on server, localStorage on client)
+  const token = await getTokenFromContext();
+
+  const headers: Record<string, string> = {
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...((init.headers as Record<string, string>) || {}),
+  };
+
+  // Add Authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Add timeout for server-side requests to prevent hanging
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SERVER_REQUEST_TIMEOUT);
+
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers,
+      credentials: 'omit',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const text = await res.text();
+    const json = text ? (JSON.parse(text) as unknown) : undefined;
+    if (!res.ok) {
+      const message =
+        typeof json === 'object' && json && 'message' in json
+          ? (json as { message: string }).message
+          : `API error ${res.status}`;
+      throw new Error(message);
+    }
+    return json as T;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timeout: ${path}`);
+    }
+    throw error;
+  }
 }
 
 export interface DatasourceDTO {

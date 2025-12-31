@@ -497,5 +497,8 @@
   "Successfully added to dashboard": "成功添加到仪表盘",
   "Failed to add to dashboard": "添加到仪表盘失败",
   "Missing content ID": "缺少内容 ID",
-  "Query Result Dataset": "查询结果数据集"
+  "Query Result Dataset": "查询结果数据集",
+  "Query Execution Failed": "查询执行失败",
+  "Generated SQL": "生成的 SQL",
+  "Tip: Try rephrasing your question or check if the table/column names are correct": "提示：请尝试重新描述您的问题，或检查表名/字段名是否正确"
 }

@@ -33,14 +33,14 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
   const handleEditChart = () => {
     if (widget.type === 'chart') {
       const config = widget.config as { chartId: number };
-      router.push(`/charts/${config.chartId}/edit`);
+      router.push(`/dashboard/charts/${config.chartId}/edit`);
     }
   };
 
   const handleViewDataset = () => {
     if (widget.type === 'dataset') {
       const config = widget.config as { datasetId: number };
-      router.push(`/datasets/${config.datasetId}`);
+      router.push(`/dashboard/datasets/${config.datasetId}`);
     }
   };
 

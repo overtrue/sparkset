@@ -2,6 +2,7 @@ import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm';
 import type { HasMany } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import Conversation from './conversation.js';
+import AccessToken from './access_token.js';
 
 export default class User extends BaseModel {
   static table = 'users';
@@ -35,6 +36,13 @@ export default class User extends BaseModel {
 
   @column()
   declare displayName: string | null;
+
+  /**
+   * 密码哈希（仅用于 local provider）
+   * 使用 bcrypt 哈希存储
+   */
+  @column()
+  declare passwordHash: string | null;
 
   /**
    * 用户角色数组
@@ -84,4 +92,10 @@ export default class User extends BaseModel {
    */
   @hasMany(() => Conversation)
   declare conversations: HasMany<typeof Conversation>;
+
+  /**
+   * 关联的访问令牌
+   */
+  @hasMany(() => AccessToken)
+  declare accessTokens: HasMany<typeof AccessToken>;
 }

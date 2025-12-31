@@ -9,7 +9,7 @@
 */
 
 import type { ApplicationService } from '@adonisjs/core/types';
-import type { Database } from '@adonisjs/lucid/database';
+import { Database } from '@adonisjs/lucid/database';
 import {
   ActionExecutor,
   ActionRegistry,
@@ -34,6 +34,8 @@ import { SchemaService } from '../services/schema_service.js';
 import { DatasetService } from '../services/dataset_service.js';
 import { ChartService } from '../services/chart_service.js';
 import { ChartCompiler } from '../services/chart_compiler.js';
+import { DashboardService } from '../services/dashboard_service.js';
+import { DashboardWidgetService } from '../services/dashboard_widget_service.js';
 import '../types/container.js';
 
 export default class ServicesProvider {
@@ -64,6 +66,11 @@ export default class ServicesProvider {
     }
 
     if (database && createDBClientFactory) {
+      // Register Database instance for dependency injection
+      // This is critical for controllers that need Database injected
+      this.app.container.singleton(Database, () => database!);
+      this.app.container.singleton('lucid.db', () => database!);
+
       // Use Lucid repositories
       datasourceService = new DatasourceService(new LucidDatasourceRepository());
       actionService = new ActionService(new LucidActionRepository());
@@ -222,6 +229,15 @@ export default class ServicesProvider {
       this.app.container.singleton(ChartService, () => chartService);
       this.app.container.singleton('ChartService', () => chartService);
 
+      // 注册 Dashboard 服务（无依赖）
+      const dashboardService = new DashboardService();
+      const dashboardWidgetService = new DashboardWidgetService();
+
+      this.app.container.singleton(DashboardService, () => dashboardService);
+      this.app.container.singleton('DashboardService', () => dashboardService);
+      this.app.container.singleton(DashboardWidgetService, () => dashboardWidgetService);
+      this.app.container.singleton('DashboardWidgetService', () => dashboardWidgetService);
+
       return;
     } else {
       datasourceService = new DatasourceService();
@@ -291,6 +307,15 @@ export default class ServicesProvider {
       this.app.container.singleton('ChartCompiler', () => chartCompiler);
       this.app.container.singleton(ChartService, () => chartService);
       this.app.container.singleton('ChartService', () => chartService);
+
+      // 注册 Dashboard 服务（内存模式，无依赖）
+      const dashboardService = new DashboardService();
+      const dashboardWidgetService = new DashboardWidgetService();
+
+      this.app.container.singleton(DashboardService, () => dashboardService);
+      this.app.container.singleton('DashboardService', () => dashboardService);
+      this.app.container.singleton(DashboardWidgetService, () => dashboardWidgetService);
+      this.app.container.singleton('DashboardWidgetService', () => dashboardWidgetService);
     }
   }
 

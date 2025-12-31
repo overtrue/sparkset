@@ -2,67 +2,72 @@
 
 import NextLink from 'next/link';
 import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next/navigation';
-import type { ComponentProps } from 'react';
+import { ComponentProps, useEffect, useState } from 'react';
 
-import { defaultLocale, locales } from './config';
+import { defaultLocale, hasLocale, type Locale } from './config';
+import { getStoredLocale, setStoredLocale } from './locale-storage';
 
-function getLocaleFromPathname(pathname: string): string {
-  const segments = pathname.split('/').filter(Boolean);
-  const firstSegment = segments[0];
-  return locales.includes(firstSegment as (typeof locales)[number]) ? firstSegment : defaultLocale;
+/**
+ * 获取当前语言（从 localStorage）
+ */
+export function useLocale(): Locale {
+  const [locale, setLocale] = useState<Locale>(defaultLocale);
+
+  useEffect(() => {
+    const stored = getStoredLocale();
+    setLocale(stored);
+  }, []);
+
+  return locale;
 }
 
-function removeLocaleFromPathname(pathname: string): string {
+/**
+ * 设置语言（更新 localStorage）
+ */
+export function useSetLocale() {
+  const router = useNextRouter();
+
+  return (locale: Locale) => {
+    setStoredLocale(locale);
+    // 刷新页面以应用新语言
+    router.refresh();
+  };
+}
+
+/**
+ * 获取清理了语言前缀的路径名
+ * 例如：/zh-CN/charts → /charts
+ */
+export function usePathname(): string {
+  const pathname = useNextPathname();
+
+  // 移除任何语言前缀
   const segments = pathname.split('/').filter(Boolean);
   const firstSegment = segments[0];
-  if (locales.includes(firstSegment as (typeof locales)[number])) {
+
+  if (hasLocale(firstSegment)) {
     return '/' + segments.slice(1).join('/');
   }
+
   return pathname;
 }
 
-function addLocaleToPathname(pathname: string, locale: string): string {
-  const pathWithoutLocale = removeLocaleFromPathname(pathname);
-  if (pathWithoutLocale === '/') {
-    return `/${locale}`;
-  }
-  return `/${locale}${pathWithoutLocale}`;
-}
-
-export function usePathname(): string {
-  const pathname = useNextPathname();
-  return removeLocaleFromPathname(pathname);
-}
-
+/**
+ * 路由钩子 - 移除了语言处理逻辑
+ * 所有路径都是干净的，不包含语言前缀
+ */
 export function useRouter() {
   const router = useNextRouter();
-  const pathname = useNextPathname();
-  const currentLocale = getLocaleFromPathname(pathname);
-
-  // Check if href already contains a locale
-  const hrefHasLocale = (href: string): boolean => {
-    if (!href.startsWith('/')) return false;
-    const segments = href.split('/').filter(Boolean);
-    return segments.length > 0 && locales.includes(segments[0] as (typeof locales)[number]);
-  };
 
   return {
     ...router,
     push: (href: string) => {
-      // If href already has a locale, use it directly
-      if (hrefHasLocale(href)) {
-        return router.push(href);
-      }
-      const hrefWithLocale = href.startsWith('/') ? addLocaleToPathname(href, currentLocale) : href;
-      return router.push(hrefWithLocale);
+      // 直接使用提供的路径，不添加语言前缀
+      return router.push(href);
     },
     replace: (href: string) => {
-      // If href already has a locale, use it directly
-      if (hrefHasLocale(href)) {
-        return router.replace(href);
-      }
-      const hrefWithLocale = href.startsWith('/') ? addLocaleToPathname(href, currentLocale) : href;
-      return router.replace(hrefWithLocale);
+      // 直接使用提供的路径，不添加语言前缀
+      return router.replace(href);
     },
     back: () => {
       router.back();
@@ -80,13 +85,10 @@ interface LinkProps extends ComponentProps<typeof NextLink> {
   href: string;
 }
 
-// Client component wrapper for Link
-function LinkClient({ href, ...props }: LinkProps) {
-  const pathname = useNextPathname();
-  const currentLocale = getLocaleFromPathname(pathname);
-  const hrefWithLocale = href.startsWith('/') ? addLocaleToPathname(href, currentLocale) : href;
-
-  return <NextLink {...props} href={hrefWithLocale} />;
+/**
+ * 链接组件 - 不再需要添加语言前缀
+ */
+export function Link({ href, ...props }: LinkProps) {
+  // 直接使用提供的 href，不添加语言前缀
+  return <NextLink {...props} href={href} />;
 }
-
-export const Link = LinkClient;

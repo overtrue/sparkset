@@ -68,7 +68,7 @@ export function ChartBuilderClient({
         toast.success(t('Chart created successfully'));
       }
 
-      router.push('/charts');
+      router.push('/dashboard/charts');
     } catch (error) {
       toast.error(chartId ? t('Failed to update chart') : t('Failed to create chart'));
       console.error(error);

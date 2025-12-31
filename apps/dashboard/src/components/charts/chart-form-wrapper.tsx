@@ -88,7 +88,7 @@ export function ChartFormWrapper({
     mode === 'create'
       ? t('Create a new data visualization chart')
       : t('Modify chart configuration');
-  const backLink = mode === 'create' ? '/charts' : `/charts/${chartId}`;
+  const backLink = mode === 'create' ? '/dashboard/charts' : `/dashboard/charts/${chartId}`;
 
   return (
     <div className="space-y-6">
