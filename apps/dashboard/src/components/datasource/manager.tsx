@@ -15,6 +15,12 @@ import Link from 'next/link';
 import { type ChangeEvent, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import type {
+  CreateDatasourceDto,
+  Datasource,
+  TestConnectionDto,
+  TestConnectionResult,
+} from '@/types/api';
 import {
   createDatasource,
   deleteDatasource,
@@ -23,17 +29,6 @@ import {
   testConnection,
   updateDatasource,
 } from '../../lib/api/datasources-api';
-import type {
-  CreateDatasourceDto,
-  Datasource,
-  TestConnectionDto,
-  TestConnectionResult,
-} from '@/types/api';
-// Legacy type aliases for backward compatibility
-type CreateDatasourceInput = CreateDatasourceDto;
-type DatasourceDTO = Datasource;
-const removeDatasource = deleteDatasource;
-const testConnectionByConfig = testConnection;
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
@@ -44,6 +39,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+// Legacy type aliases for backward compatibility
+type CreateDatasourceInput = CreateDatasourceDto & { isDefault?: boolean };
+type DatasourceDTO = Datasource & { isDefault?: boolean; lastSyncAt?: string };
+const removeDatasource = deleteDatasource;
+const testConnectionByConfig = testConnection;
 
 // 支持的数据库类型列表
 const DATABASE_TYPES = [

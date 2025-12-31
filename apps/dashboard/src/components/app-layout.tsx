@@ -8,7 +8,7 @@
 import { RiNotification3Line } from '@remixicon/react';
 import type React from 'react';
 
-import { UserMenu } from '@/components/auth/UserMenu';
+import { UserMenu } from '@/components/auth/user-menu';
 import { AppSidebar } from '@/components/app-sidebar';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';

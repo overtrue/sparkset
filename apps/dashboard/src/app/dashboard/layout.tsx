@@ -6,8 +6,8 @@
 import type React from 'react';
 import { Metadata } from 'next';
 
-import { AppLayout } from '@/components/AppLayout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AppLayout } from '@/components/app-layout';
+import { ProtectedRoute } from '@/components/auth/protected-route';
 
 export const metadata: Metadata = {
   title: 'Sparkset Dashboard',

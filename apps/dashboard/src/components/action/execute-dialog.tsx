@@ -187,8 +187,7 @@ export function ExecuteDialog({
                       param.default !== undefined
                         ? typeof param.default === 'object'
                           ? JSON.stringify(param.default)
-                          :  
-                            String(param.default)
+                          : String(param.default)
                         : undefined
                     }
                     disabled={executing}
@@ -209,8 +208,7 @@ export function ExecuteDialog({
                       param.default !== undefined
                         ? typeof param.default === 'object'
                           ? JSON.stringify(param.default)
-                          :  
-                            String(param.default)
+                          : String(param.default)
                         : undefined
                     }
                     disabled={executing}

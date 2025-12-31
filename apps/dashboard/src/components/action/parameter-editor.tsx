@@ -181,8 +181,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                               ? ''
                               : typeof param.default === 'object'
                                 ? JSON.stringify(param.default)
-                                :  
-                                  String(param.default)
+                                : String(param.default)
                           }
                           onValueChange={(value) =>
                             updateParameter(index, {
@@ -208,8 +207,7 @@ export function ParameterEditor({ value, onChange }: ParameterEditorProps) {
                               ? ''
                               : typeof param.default === 'object'
                                 ? JSON.stringify(param.default)
-                                :  
-                                  String(param.default)
+                                : String(param.default)
                           }
                           onChange={(e) => {
                             const value = e.target.value;
