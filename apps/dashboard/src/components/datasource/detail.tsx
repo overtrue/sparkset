@@ -29,7 +29,7 @@ import type {
   TableSchemaDTO,
 } from '@/types/api';
 // Legacy type alias for backward compatibility
-type CreateDatasourceInput = CreateDatasourceDto;
+type CreateDatasourceInput = CreateDatasourceDto & { isDefault?: boolean };
 const removeDatasource = deleteDatasource;
 import { cn } from '../../lib/utils';
 import { PageHeader } from '../page-header';
