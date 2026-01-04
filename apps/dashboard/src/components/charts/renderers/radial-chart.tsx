@@ -151,7 +151,6 @@ export function RadialChartRenderer({
 
               <RadialBar
                 dataKey={valueKey}
-                nameKey={nameKey}
                 cornerRadius={4}
                 background={{ fill: 'transparent' }}
                 label={false}
