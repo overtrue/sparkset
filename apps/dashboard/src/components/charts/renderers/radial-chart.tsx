@@ -214,14 +214,21 @@ export function RadialChartRenderer({
                               : '';
                       return {
                         value: entryName,
-                        type: 'radialBar',
+                        type: 'radialBar' as const,
                         id: `legend-${index}`,
                         color: fillColor,
                         dataKey: nameKey,
                         payload: entry,
                       };
                     });
-                    return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+                    return (
+                      <ChartLegendContent
+                        nameKey={nameKey}
+                        payload={
+                          customPayload as Parameters<typeof ChartLegendContent>[0]['payload']
+                        }
+                      />
+                    );
                   }}
                 />
               </div>
