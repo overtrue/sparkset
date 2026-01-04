@@ -269,10 +269,10 @@ function ChartLegendContent({
           const key = `${nameKey || item.dataKey || 'value'}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
-          // Use id as primary key (most unique), then value, then dataKey, finally index
-          // This ensures uniqueness even when multiple items share the same dataKey
-          const uniqueKey =
-            (item as { id?: string }).id || item.value || item.dataKey || `legend-${index}`;
+          // Always use index as the primary key to ensure uniqueness
+          // Even if id, value, or dataKey exist, they might not be unique
+          // Index is guaranteed to be unique within the array
+          const uniqueKey = `legend-item-${index}`;
 
           return (
             <div
