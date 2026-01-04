@@ -121,9 +121,9 @@ export function RadialChartRenderer({
           style={
             showLegend
               ? {
-                  height: 'calc(100% - 44px)',
+                  height: 'calc(100% - 52px)',
                   minHeight: 0,
-                  maxHeight: 'calc(100% - 44px)',
+                  maxHeight: 'calc(100% - 52px)',
                 }
               : undefined
           }
@@ -165,36 +165,64 @@ export function RadialChartRenderer({
         {showLegend && (
           <div
             className="shrink-0 relative"
-            style={{ height: '44px', overflow: 'hidden', paddingTop: '8px', paddingBottom: '8px' }}
+            style={{
+              height: '44px',
+              overflow: 'hidden',
+              paddingTop: '8px',
+              paddingBottom: '8px',
+              marginTop: '8px',
+            }}
           >
             {/* Provide ChartContext manually for legend without ResponsiveContainer */}
             <ChartContext.Provider value={{ config }}>
-              <ChartLegend
-                content={() => {
-                  // For RadialBarChart, create custom payload from data
-                  const customPayload = enrichedData.map((entry, index) => {
-                    const fillColor = (entry.fill as string) || getChartColor(index);
-                    const nameValue = entry[nameKey];
-                    const entryName =
-                      nameValue == null
-                        ? ''
-                        : typeof nameValue === 'string'
-                          ? nameValue
-                          : typeof nameValue === 'number' || typeof nameValue === 'boolean'
-                            ? String(nameValue)
-                            : '';
-                    return {
-                      value: entryName,
-                      type: 'radialBar',
-                      id: `legend-${index}`,
-                      color: fillColor,
-                      dataKey: nameKey,
-                      payload: entry,
-                    };
-                  });
-                  return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
                 }}
-              />
+              >
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      .recharts-legend-wrapper {
+                        position: absolute !important;
+                        left: 50% !important;
+                        transform: translateX(-50%) !important;
+                        bottom: 0 !important;
+                        width: auto !important;
+                        right: auto !important;
+                      }
+                    `,
+                  }}
+                />
+                <ChartLegend
+                  content={() => {
+                    // For RadialBarChart, create custom payload from data
+                    const customPayload = enrichedData.map((entry, index) => {
+                      const fillColor = (entry.fill as string) || getChartColor(index);
+                      const nameValue = entry[nameKey];
+                      const entryName =
+                        nameValue == null
+                          ? ''
+                          : typeof nameValue === 'string'
+                            ? nameValue
+                            : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+                              ? String(nameValue)
+                              : '';
+                      return {
+                        value: entryName,
+                        type: 'radialBar',
+                        id: `legend-${index}`,
+                        color: fillColor,
+                        dataKey: nameKey,
+                        payload: entry,
+                      };
+                    });
+                    return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+                  }}
+                />
+              </div>
             </ChartContext.Provider>
           </div>
         )}
