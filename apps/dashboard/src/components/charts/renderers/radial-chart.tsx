@@ -9,7 +9,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Cell, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
 import type { ChartStyleConfig } from '../types';
 import { getChartColor } from '../types';
@@ -69,12 +69,14 @@ export function RadialChartRenderer({
   }, []);
 
   // Calculate radius as percentage of container size
-  // If raw values are > 100, treat as percentage; otherwise as pixels
+  // Values 0-100 are treated as percentage, values > 100 are treated as pixels
   const minSize = Math.min(containerSize.width, containerSize.height);
+  // Default to percentage calculation (0-100 range)
+  // If value > 100, treat as absolute pixels; otherwise as percentage
   const innerRadius =
-    rawInnerRadius > 100 ? (rawInnerRadius / 100) * (minSize / 2) : rawInnerRadius;
+    rawInnerRadius > 100 ? rawInnerRadius : (rawInnerRadius / 100) * (minSize / 2);
   const outerRadius =
-    rawOuterRadius > 100 ? (rawOuterRadius / 100) * (minSize / 2) : rawOuterRadius;
+    rawOuterRadius > 100 ? rawOuterRadius : (rawOuterRadius / 100) * (minSize / 2);
 
   // Enrich data with fill colors following shadcn pattern
   // Also ensure all numeric values are properly converted to numbers
