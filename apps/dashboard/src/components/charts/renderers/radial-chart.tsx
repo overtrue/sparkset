@@ -225,7 +225,9 @@ export function RadialChartRenderer({
                       <ChartLegendContent
                         nameKey={nameKey}
                         payload={
-                          customPayload as Parameters<typeof ChartLegendContent>[0]['payload']
+                          customPayload as unknown as Parameters<
+                            typeof ChartLegendContent
+                          >[0]['payload']
                         }
                       />
                     );
