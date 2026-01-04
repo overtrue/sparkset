@@ -112,9 +112,12 @@ export function RadialChartRenderer({
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
       <ChartContainer
         config={config}
-        className={cn('flex w-full flex-col', showLegend ? 'flex-1' : 'h-full')}
+        className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
       >
-        <div className={cn('w-full', showLegend ? 'flex-1' : 'h-full')}>
+        <div
+          className={cn('w-full min-h-0', showLegend ? 'flex-1' : 'h-full')}
+          style={showLegend ? { minHeight: 0 } : { height: '100%' }}
+        >
           <RadialBarChart
             data={enrichedData}
             innerRadius={innerRadius}
