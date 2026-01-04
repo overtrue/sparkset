@@ -14,6 +14,7 @@ import { Cell, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
 import type { ChartStyleConfig } from '../types';
 import { getChartColor } from '../types';
 import { enrichPieData } from '../utils';
+import * as React from 'react';
 
 export interface RadialChartRendererProps {
   data: Record<string, unknown>[];
@@ -110,13 +111,13 @@ export function RadialChartRenderer({
 
   return (
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
-      <ChartContainer
-        config={config}
+      <div
         className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
+        style={showLegend ? { minHeight: 0 } : { height: '100%' }}
       >
-        <div
-          className={cn('w-full min-h-0', showLegend ? 'flex-1' : 'h-full')}
-          style={showLegend ? { minHeight: 0 } : { height: '100%' }}
+        <ChartContainer
+          config={config}
+          className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}
         >
           <RadialBarChart
             data={enrichedData}
@@ -151,38 +152,43 @@ export function RadialChartRenderer({
               })}
             </RadialBar>
           </RadialBarChart>
-        </div>
+        </ChartContainer>
         {showLegend && (
-          <div className="shrink-0">
-            <ChartLegend
-              content={() => {
-                // For RadialBarChart, create custom payload from data
-                const customPayload = enrichedData.map((entry, index) => {
-                  const fillColor = (entry.fill as string) || getChartColor(index);
-                  const nameValue = entry[nameKey];
-                  const entryName =
-                    nameValue == null
-                      ? ''
-                      : typeof nameValue === 'string'
-                        ? nameValue
-                        : typeof nameValue === 'number' || typeof nameValue === 'boolean'
-                          ? String(nameValue)
-                          : '';
-                  return {
-                    value: entryName,
-                    type: 'radialBar',
-                    id: `legend-${index}`,
-                    color: fillColor,
-                    dataKey: nameKey,
-                    payload: entry,
-                  };
-                });
-                return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
-              }}
-            />
+          <div className="shrink-0 py-2">
+            {/* Use ChartContainer but override height style */}
+            <div style={{ height: 'auto' }} className="w-full">
+              <ChartContainer config={config} className="w-full">
+                <ChartLegend
+                  content={() => {
+                    // For RadialBarChart, create custom payload from data
+                    const customPayload = enrichedData.map((entry, index) => {
+                      const fillColor = (entry.fill as string) || getChartColor(index);
+                      const nameValue = entry[nameKey];
+                      const entryName =
+                        nameValue == null
+                          ? ''
+                          : typeof nameValue === 'string'
+                            ? nameValue
+                            : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+                              ? String(nameValue)
+                              : '';
+                      return {
+                        value: entryName,
+                        type: 'radialBar',
+                        id: `legend-${index}`,
+                        color: fillColor,
+                        dataKey: nameKey,
+                        payload: entry,
+                      };
+                    });
+                    return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+                  }}
+                />
+              </ChartContainer>
+            </div>
           </div>
         )}
-      </ChartContainer>
+      </div>
     </div>
   );
 }
