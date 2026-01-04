@@ -146,7 +146,7 @@ export function RadialChartRenderer({
         </RadialBarChart>
       </ChartContainer>
       {showLegend && (
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <ChartLegend
             content={() => {
               // For RadialBarChart, create custom payload from data
