@@ -1,7 +1,6 @@
 'use client';
 
 import type { ChartConfig } from '@/components/ui/chart';
-import type { ChartCategory, ChartStyleConfig, ChartVariant } from './types';
 import { getDefaultStyle } from './registry';
 import {
   AreaChartRenderer,
@@ -12,6 +11,7 @@ import {
   RadialChartRenderer,
   TableRenderer,
 } from './renderers';
+import type { ChartCategory, ChartStyleConfig, ChartVariant } from './types';
 
 // ============================================================================
 // Types
@@ -87,7 +87,45 @@ export function ChartRenderer({
   const pieConfig = rechartsProps.pieConfig as { nameKey?: string; dataKey?: string } | undefined;
   const valueKey =
     pieConfig?.dataKey || dataKeys.find((k) => typeof chartData[0][k] === 'number') || 'value';
-  const nameKey = pieConfig?.nameKey || dataKeys.find((k) => k !== valueKey) || 'name';
+
+  // For radar/radial charts: use category field from spec, or infer from data
+  // Radar/Radial charts should show category names (not values) on the angle axis
+  let nameKey = pieConfig?.nameKey;
+  if (!nameKey && (chartType === 'radar' || chartType === 'radial')) {
+    // For radar/radial, category field should be the first non-numeric field that's not in configKeys
+    // This is the field used for grouping (e.g., "genre", "category")
+    // Priority: find field that is not in configKeys and not numeric
+    nameKey =
+      dataKeys.find((k) => {
+        const value = chartData[0][k];
+        return (
+          !configKeys.includes(k) &&
+          typeof value !== 'number' &&
+          value !== null &&
+          value !== undefined
+        );
+      }) ||
+      dataKeys.find((k) => k !== valueKey && !configKeys.includes(k)) ||
+      dataKeys[0] ||
+      'name';
+  } else if (!nameKey) {
+    nameKey = dataKeys.find((k) => k !== valueKey) || 'name';
+  }
+
+  // Debug: Log for radar charts
+  if (chartType === 'radar' && process.env.NODE_ENV === 'development') {
+     
+    console.log(
+      '[ChartRenderer] Radar chart - nameKey:',
+      nameKey,
+      'dataKeys:',
+      dataKeys,
+      'configKeys:',
+      configKeys,
+      'first data item:',
+      chartData[0],
+    );
+  }
 
   // Render based on chart type
   switch (chartType) {

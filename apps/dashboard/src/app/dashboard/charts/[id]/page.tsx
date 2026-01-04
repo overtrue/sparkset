@@ -1,6 +1,7 @@
 'use client';
 
 import { ChartRenderer } from '@/components/charts/renderer';
+import type { ChartSpec } from '@/components/charts/types';
 import { buildConfig, transformData } from '@/components/charts/utils';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
@@ -8,12 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Link, useRouter } from '@/i18n/client-routing';
+import { useTranslations } from '@/i18n/use-translations';
 import { chartsApi } from '@/lib/api/charts';
 import { datasetsApi } from '@/lib/api/datasets';
-import type { ChartSpec } from '@/components/charts/types';
 import { RiArrowLeftLine, RiDeleteBin2Line, RiEditLine, RiRefreshLine } from '@remixicon/react';
-import { useTranslations } from '@/i18n/use-translations';
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -71,7 +71,23 @@ export default function ChartDetailPage({ params }: Props) {
     };
 
     void loadData();
-  }, [id, t]);
+  }, [id]); // Remove 't' from dependencies to prevent infinite loop
+
+  // Memoize rechartsProps to prevent unnecessary re-renders
+  // Must be called at the top level (before any conditional returns)
+  // Use stable dependencies to avoid unnecessary recalculations
+  const nameKey =
+    chartData?.specJson.encoding.category?.field || chartData?.specJson.encoding.x?.field;
+  const dataKey = chartData?.specJson.encoding.y?.[0]?.field;
+  const rechartsProps = useMemo(
+    () => ({
+      pieConfig: {
+        nameKey,
+        dataKey,
+      },
+    }),
+    [nameKey, dataKey],
+  );
 
   const handleDelete = async () => {
     try {
@@ -174,14 +190,15 @@ export default function ChartDetailPage({ params }: Props) {
             {chartData.chartType.toUpperCase()} | {t('Dataset')}：{chartData.dataset?.name || 'N/A'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="h-[600px]">
           <ChartRenderer
             chartType={chartData.chartType}
             variant={chartData.specJson.variant}
             data={previewData}
             config={previewConfig}
             style={chartData.specJson.style}
-            className="w-full"
+            rechartsProps={rechartsProps}
+            className="h-full w-full"
           />
         </CardContent>
       </Card>

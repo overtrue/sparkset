@@ -56,7 +56,9 @@ function transformCategoricalData(
   const grouped = aggregateByField(rows, xField, yFields);
 
   return Object.entries(grouped).map(([xValue, values]) => {
-    const result: Record<string, unknown> = { [xField]: xValue };
+    // Ensure category value is always a string (not a number)
+    // This is critical for categorical charts (pie, radial) where category labels should be displayed as text
+    const result: Record<string, unknown> = { [xField]: String(xValue) };
 
     yFields.forEach((yField) => {
       if (yField.agg === 'avg') {
@@ -64,7 +66,26 @@ function transformCategoricalData(
         const count = values[`${yField.field}_count`] || 1;
         result[yField.field] = sum / count;
       } else {
-        result[yField.field] = values[yField.field];
+        // Ensure the value is a number, not undefined or null
+        // This is critical for radial charts where NaN values cause rendering issues
+        const value = values[yField.field];
+        // Debug: Log the value to verify it's correct
+        if (process.env.NODE_ENV === 'development') {
+           
+          console.log(
+            '[transformCategoricalData] yField:',
+            yField.field,
+            'value:',
+            value,
+            'type:',
+            typeof value,
+            'values:',
+            values,
+          );
+        }
+        // Convert to number, ensuring it's a valid number
+        const numValue = typeof value === 'number' ? value : Number(value);
+        result[yField.field] = isNaN(numValue) ? 0 : numValue;
       }
     });
 
@@ -90,7 +111,9 @@ function transformRadarData(
   const grouped = aggregateByField(rows, categoryField, yFields);
 
   return Object.entries(grouped).map(([categoryValue, values]) => {
-    const result: Record<string, unknown> = { [categoryField]: categoryValue };
+    // Ensure category value is always a string (not a number)
+    // This is critical for radar charts where category labels should be displayed as text
+    const result: Record<string, unknown> = { [categoryField]: String(categoryValue) };
 
     yFields.forEach((yField) => {
       if (yField.agg === 'avg') {
@@ -328,11 +351,12 @@ export function enrichPieData(
   return data.map((entry, index) => {
     const entryName = String(entry[nameKey]);
     // Find config key by matching label or direct key
-    const configKey = configKeys.find((k) => config[k].label === entryName || k === entryName);
+    let configKey = configKeys.find((k) => config[k].label === entryName || k === entryName);
 
-    // Use var(--color-xxx) format - ChartContainer's ChartStyle will resolve this
-    // based on the config's color property
-    const fillColor = configKey ? `var(--color-${configKey})` : getChartColor(index);
+    // If no match found, use index-based color assignment
+    // For pie/radial charts, each entry should get a unique color based on its index
+    // This ensures all entries have distinct colors even if config doesn't match
+    const fillColor = configKey ? `var(--color-${configKey})` : getChartColor(index); // Use index-based color if no config match
 
     return {
       ...entry,

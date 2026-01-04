@@ -263,14 +263,17 @@ function ChartLegendContent({
     >
       {payload
         .filter((item) => item.type !== 'none')
-        .map((item) => {
+        .map((item, index) => {
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           const key = `${nameKey || item.dataKey || 'value'}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
+          // Use dataKey as primary key, fallback to value and index for uniqueness
+          const uniqueKey = item.dataKey || item.value || `legend-${index}`;
+
           return (
             <div
-              key={item.value}
+              key={uniqueKey}
               className={cn(
                 '[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3',
               )}

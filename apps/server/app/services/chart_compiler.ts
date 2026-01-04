@@ -1,8 +1,8 @@
 import type {
+  ChartRenderResult,
   ChartSpec,
   ResultSet,
   ShadcnChartConfig,
-  ChartRenderResult,
   ValidationResult,
 } from '../types/chart.js';
 
@@ -357,8 +357,12 @@ export class ChartCompiler {
       const newRow: any = {};
 
       // 设置分组字段
+      // For radar charts, ensure category field values are strings (not numbers)
+      // This ensures proper label display on the polar angle axis
       groupByFields.forEach((field, index) => {
-        newRow[field] = groupKey[index];
+        // Convert to string to ensure proper display in radar charts
+        // Even if the original value was numeric, it should be displayed as a string label
+        newRow[field] = String(groupKey[index]);
       });
 
       // 计算聚合指标

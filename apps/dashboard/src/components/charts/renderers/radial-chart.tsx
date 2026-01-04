@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChartConfig } from '@/components/ui/chart';
 import {
   ChartContainer,
   ChartLegend,
@@ -7,13 +8,12 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import type { ChartConfig } from '@/components/ui/chart';
-import type { ChartStyleConfig } from '../types';
-import { enrichPieData } from '../utils';
-import { Cell, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
-import { getChartColor } from '../types';
-import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
+import { Cell, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
+import type { ChartStyleConfig } from '../types';
+import { getChartColor } from '../types';
+import { enrichPieData } from '../utils';
 
 export interface RadialChartRendererProps {
   data: Record<string, unknown>[];
@@ -38,19 +38,58 @@ export function RadialChartRenderer({
     showGrid = false,
     innerRadius: rawInnerRadius = 30,
     outerRadius: rawOuterRadius = 110,
-    showLabels = false,
+    startAngle = 90,
+    endAngle = -270,
   } = style;
 
-  // Convert to percentage for better responsiveness
-  const innerRadius = `${Math.min(rawInnerRadius, 100) * 0.4}%`;
-  const outerRadius = `${Math.min(rawOuterRadius, 110)}%`;
+  // Convert to numbers for Recharts RadialBarChart
+  // Recharts expects numbers (pixels), not percentage strings
+  // Use the raw values directly, but ensure they're reasonable
+  // For radial charts, outerRadius should be larger to fill the container
+  const innerRadius = rawInnerRadius;
+  const outerRadius = rawOuterRadius;
 
   // Enrich data with fill colors following shadcn pattern
-  const enrichedData = useMemo(() => enrichPieData(data, config, nameKey), [data, config, nameKey]);
+  // Also ensure all numeric values are properly converted to numbers
+  const enrichedData = useMemo(() => {
+    const enriched = enrichPieData(data, config, nameKey);
+    // Ensure valueKey is a number for RadialBarChart
+    // Also ensure nameKey is a string for proper label display
+    return enriched.map((entry) => {
+      const value = entry[valueKey];
+      const numValue = typeof value === 'number' ? value : Number(value);
+      const finalValue = isNaN(numValue) ? 0 : numValue;
+
+      // Safely convert nameKey value to string
+      const nameValue = entry[nameKey];
+      const nameString =
+        nameValue == null
+          ? ''
+          : typeof nameValue === 'string'
+            ? nameValue
+            : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+              ? String(nameValue)
+              : '';
+
+      return {
+        ...entry,
+        [nameKey]: nameString,
+        [valueKey]: finalValue,
+      };
+    });
+  }, [data, config, nameKey, valueKey]);
 
   return (
     <ChartContainer config={config} className={cn('mx-auto h-full w-full', className)}>
-      <RadialBarChart data={enrichedData} innerRadius={innerRadius} outerRadius={outerRadius}>
+      <RadialBarChart
+        data={enrichedData}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        cx="50%"
+        cy="50%"
+      >
         {showGrid && <PolarGrid />}
 
         {showTooltip && (
@@ -64,20 +103,14 @@ export function RadialChartRenderer({
 
         <RadialBar
           dataKey={valueKey}
-          background
-          label={
-            showLabels
-              ? {
-                  position: 'insideStart',
-                  fill: '#fff',
-                  fontSize: 12,
-                }
-              : undefined
-          }
+          cornerRadius={4}
+          background={{ fill: 'transparent' }}
+          label={false}
         >
-          {enrichedData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={(entry.fill as string) || getChartColor(index)} />
-          ))}
+          {enrichedData.map((entry, index) => {
+            const fillColor = (entry.fill as string) || getChartColor(index);
+            return <Cell key={`cell-${index}`} fill={fillColor} />;
+          })}
         </RadialBar>
       </RadialBarChart>
     </ChartContainer>

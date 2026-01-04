@@ -131,6 +131,9 @@ export interface ChartStyleConfig {
   gridType?: 'polygon' | 'circle';
   // Fill opacity for areas
   fillOpacity?: number;
+  // Radial chart angles
+  startAngle?: number;
+  endAngle?: number;
 }
 
 /**
