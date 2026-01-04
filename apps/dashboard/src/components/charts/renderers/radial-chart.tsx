@@ -163,35 +163,37 @@ export function RadialChartRenderer({
           </RadialBarChart>
         </ChartContainer>
         {showLegend && (
-          <div className="shrink-0 py-2" style={{ maxHeight: '44px', overflow: 'hidden' }}>
+          <div className="shrink-0" style={{ height: '44px', overflow: 'hidden' }}>
             {/* Provide ChartContext manually for legend without ResponsiveContainer */}
             <ChartContext.Provider value={{ config }}>
-              <ChartLegend
-                content={() => {
-                  // For RadialBarChart, create custom payload from data
-                  const customPayload = enrichedData.map((entry, index) => {
-                    const fillColor = (entry.fill as string) || getChartColor(index);
-                    const nameValue = entry[nameKey];
-                    const entryName =
-                      nameValue == null
-                        ? ''
-                        : typeof nameValue === 'string'
-                          ? nameValue
-                          : typeof nameValue === 'number' || typeof nameValue === 'boolean'
-                            ? String(nameValue)
-                            : '';
-                    return {
-                      value: entryName,
-                      type: 'radialBar',
-                      id: `legend-${index}`,
-                      color: fillColor,
-                      dataKey: nameKey,
-                      payload: entry,
-                    };
-                  });
-                  return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
-                }}
-              />
+              <div className="py-2">
+                <ChartLegend
+                  content={() => {
+                    // For RadialBarChart, create custom payload from data
+                    const customPayload = enrichedData.map((entry, index) => {
+                      const fillColor = (entry.fill as string) || getChartColor(index);
+                      const nameValue = entry[nameKey];
+                      const entryName =
+                        nameValue == null
+                          ? ''
+                          : typeof nameValue === 'string'
+                            ? nameValue
+                            : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+                              ? String(nameValue)
+                              : '';
+                      return {
+                        value: entryName,
+                        type: 'radialBar',
+                        id: `legend-${index}`,
+                        color: fillColor,
+                        dataKey: nameKey,
+                        payload: entry,
+                      };
+                    });
+                    return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+                  }}
+                />
+              </div>
             </ChartContext.Provider>
           </div>
         )}
