@@ -111,14 +111,11 @@ export function RadialChartRenderer({
 
   return (
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
-      <div
+      <ChartContainer
+        config={config}
         className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
-        style={showLegend ? { minHeight: 0 } : { height: '100%' }}
       >
-        <ChartContainer
-          config={config}
-          className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}
-        >
+        <div className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}>
           <RadialBarChart
             data={enrichedData}
             innerRadius={innerRadius}
@@ -152,43 +149,38 @@ export function RadialChartRenderer({
               })}
             </RadialBar>
           </RadialBarChart>
-        </ChartContainer>
+        </div>
         {showLegend && (
           <div className="shrink-0 py-2">
-            {/* Use ChartContainer but override height style */}
-            <div style={{ height: 'auto' }} className="w-full">
-              <ChartContainer config={config} className="w-full">
-                <ChartLegend
-                  content={() => {
-                    // For RadialBarChart, create custom payload from data
-                    const customPayload = enrichedData.map((entry, index) => {
-                      const fillColor = (entry.fill as string) || getChartColor(index);
-                      const nameValue = entry[nameKey];
-                      const entryName =
-                        nameValue == null
-                          ? ''
-                          : typeof nameValue === 'string'
-                            ? nameValue
-                            : typeof nameValue === 'number' || typeof nameValue === 'boolean'
-                              ? String(nameValue)
-                              : '';
-                      return {
-                        value: entryName,
-                        type: 'radialBar',
-                        id: `legend-${index}`,
-                        color: fillColor,
-                        dataKey: nameKey,
-                        payload: entry,
-                      };
-                    });
-                    return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
-                  }}
-                />
-              </ChartContainer>
-            </div>
+            <ChartLegend
+              content={() => {
+                // For RadialBarChart, create custom payload from data
+                const customPayload = enrichedData.map((entry, index) => {
+                  const fillColor = (entry.fill as string) || getChartColor(index);
+                  const nameValue = entry[nameKey];
+                  const entryName =
+                    nameValue == null
+                      ? ''
+                      : typeof nameValue === 'string'
+                        ? nameValue
+                        : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+                          ? String(nameValue)
+                          : '';
+                  return {
+                    value: entryName,
+                    type: 'radialBar',
+                    id: `legend-${index}`,
+                    color: fillColor,
+                    dataKey: nameKey,
+                    payload: entry,
+                  };
+                });
+                return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+              }}
+            />
           </div>
         )}
-      </div>
+      </ChartContainer>
     </div>
   );
 }
