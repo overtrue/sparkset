@@ -109,10 +109,6 @@ export function RadialChartRenderer({
     });
   }, [data, config, nameKey, valueKey]);
 
-  // Calculate available height for chart when legend is shown
-  // Estimate legend height (28px + 16px padding = 44px)
-  const legendHeight = showLegend ? 44 : 0;
-
   return (
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
       <div
@@ -125,10 +121,10 @@ export function RadialChartRenderer({
           style={
             showLegend
               ? {
-                  height: `calc(100% - ${legendHeight}px)`,
+                  height: 'calc(100% - 44px)',
                   minHeight: 0,
                 }
-              : { height: '100%' }
+              : undefined
           }
         >
           <RadialBarChart
