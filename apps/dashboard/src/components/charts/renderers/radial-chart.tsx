@@ -163,7 +163,7 @@ export function RadialChartRenderer({
           </RadialBarChart>
         </ChartContainer>
         {showLegend && (
-          <div className="shrink-0 py-2">
+          <div className="shrink-0 py-2" style={{ maxHeight: '44px', overflow: 'hidden' }}>
             <ChartContainer config={config} className="w-full" style={{ height: 'auto' }}>
               <ChartLegend
                 content={() => {
