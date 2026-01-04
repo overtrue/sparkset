@@ -113,7 +113,7 @@ export function RadialChartRenderer({
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
       <div
         className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
-        style={showLegend ? { minHeight: 0 } : { height: '100%' }}
+        style={showLegend ? { minHeight: 0, overflow: 'hidden' } : { height: '100%' }}
       >
         <ChartContainer
           config={config}
@@ -123,6 +123,7 @@ export function RadialChartRenderer({
               ? {
                   height: 'calc(100% - 44px)',
                   minHeight: 0,
+                  maxHeight: 'calc(100% - 44px)',
                 }
               : undefined
           }
