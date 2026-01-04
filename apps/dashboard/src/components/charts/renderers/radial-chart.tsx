@@ -139,7 +139,6 @@ export function RadialChartRenderer({
               endAngle={endAngle}
               cx="50%"
               cy="50%"
-              legend={false}
             >
               {showGrid && <PolarGrid />}
 
