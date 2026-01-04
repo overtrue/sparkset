@@ -45,33 +45,35 @@ export function RadialChartRenderer({
 
   // Convert to numbers for Recharts RadialBarChart
   // Recharts expects numbers (pixels), not percentage strings
-  // Calculate radius based on container size for better responsiveness
+  // Calculate radius based on chart container size (not including legend) for accurate sizing
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 400, height: 400 });
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [chartContainerSize, setChartContainerSize] = useState({ width: 400, height: 400 });
 
   useEffect(() => {
     const updateSize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
+      // Measure the chart container, not the entire container (which includes legend)
+      if (chartContainerRef.current) {
+        const { width, height } = chartContainerRef.current.getBoundingClientRect();
         const size = Math.min(width, height);
-        setContainerSize({ width: size, height: size });
+        setChartContainerSize({ width: size, height: size });
       }
     };
 
     updateSize();
     const resizeObserver = new ResizeObserver(updateSize);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+    if (chartContainerRef.current) {
+      resizeObserver.observe(chartContainerRef.current);
     }
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [showLegend]); // Re-measure when legend visibility changes
 
-  // Calculate radius as percentage of container size
+  // Calculate radius as percentage of chart container size (excluding legend)
   // Values 0-100 are treated as percentage, values > 100 are treated as pixels
-  const minSize = Math.min(containerSize.width, containerSize.height);
+  const minSize = Math.min(chartContainerSize.width, chartContainerSize.height);
   // Default to percentage calculation (0-100 range)
   // If value > 100, treat as absolute pixels; otherwise as percentage
   const innerRadius =
@@ -115,8 +117,8 @@ export function RadialChartRenderer({
         className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
         style={showLegend ? { minHeight: 0, overflow: 'hidden' } : { height: '100%' }}
       >
-        <ChartContainer
-          config={config}
+        <div
+          ref={chartContainerRef}
           className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}
           style={
             showLegend
@@ -125,43 +127,45 @@ export function RadialChartRenderer({
                   minHeight: 0,
                   maxHeight: 'calc(100% - 52px)',
                 }
-              : undefined
+              : { height: '100%' }
           }
         >
-          <RadialBarChart
-            data={enrichedData}
-            innerRadius={innerRadius}
-            outerRadius={outerRadius}
-            startAngle={startAngle}
-            endAngle={endAngle}
-            cx="50%"
-            cy="50%"
-            legend={false}
-          >
-            {showGrid && <PolarGrid />}
-
-            {showTooltip && (
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel nameKey={nameKey} />}
-              />
-            )}
-
-            <RadialBar
-              dataKey={valueKey}
-              nameKey={nameKey}
-              cornerRadius={4}
-              background={{ fill: 'transparent' }}
-              label={false}
-              isAnimationActive={false}
+          <ChartContainer config={config} className="w-full h-full">
+            <RadialBarChart
+              data={enrichedData}
+              innerRadius={innerRadius}
+              outerRadius={outerRadius}
+              startAngle={startAngle}
+              endAngle={endAngle}
+              cx="50%"
+              cy="50%"
+              legend={false}
             >
-              {enrichedData.map((entry, index) => {
-                const fillColor = (entry.fill as string) || getChartColor(index);
-                return <Cell key={`cell-${index}`} fill={fillColor} />;
-              })}
-            </RadialBar>
-          </RadialBarChart>
-        </ChartContainer>
+              {showGrid && <PolarGrid />}
+
+              {showTooltip && (
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel nameKey={nameKey} />}
+                />
+              )}
+
+              <RadialBar
+                dataKey={valueKey}
+                nameKey={nameKey}
+                cornerRadius={4}
+                background={{ fill: 'transparent' }}
+                label={false}
+                isAnimationActive={false}
+              >
+                {enrichedData.map((entry, index) => {
+                  const fillColor = (entry.fill as string) || getChartColor(index);
+                  return <Cell key={`cell-${index}`} fill={fillColor} />;
+                })}
+              </RadialBar>
+            </RadialBarChart>
+          </ChartContainer>
+        </div>
         {showLegend && (
           <div
             className="shrink-0 relative"
