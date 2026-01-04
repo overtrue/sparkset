@@ -3,6 +3,7 @@
 import type { ChartConfig } from '@/components/ui/chart';
 import {
   ChartContainer,
+  ChartContext,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
@@ -14,7 +15,6 @@ import { Cell, PolarGrid, RadialBar, RadialBarChart } from 'recharts';
 import type { ChartStyleConfig } from '../types';
 import { getChartColor } from '../types';
 import { enrichPieData } from '../utils';
-import * as React from 'react';
 
 export interface RadialChartRendererProps {
   data: Record<string, unknown>[];
@@ -164,7 +164,8 @@ export function RadialChartRenderer({
         </ChartContainer>
         {showLegend && (
           <div className="shrink-0 py-2" style={{ maxHeight: '44px', overflow: 'hidden' }}>
-            <ChartContainer config={config} className="w-full" style={{ height: 'auto' }}>
+            {/* Provide ChartContext manually for legend without ResponsiveContainer */}
+            <ChartContext.Provider value={{ config }}>
               <ChartLegend
                 content={() => {
                   // For RadialBarChart, create custom payload from data
@@ -191,7 +192,7 @@ export function RadialChartRenderer({
                   return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
                 }}
               />
-            </ChartContainer>
+            </ChartContext.Provider>
           </div>
         )}
       </div>
