@@ -110,71 +110,76 @@ export function RadialChartRenderer({
 
   return (
     <div ref={containerRef} className={cn('mx-auto flex h-full w-full flex-col', className)}>
-      <ChartContainer config={config} className={cn('w-full', showLegend ? 'flex-1' : 'h-full')}>
-        <RadialBarChart
-          data={enrichedData}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          cx="50%"
-          cy="50%"
-          legend={false}
-        >
-          {showGrid && <PolarGrid />}
-
-          {showTooltip && (
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel nameKey={nameKey} />}
-            />
-          )}
-
-          <RadialBar
-            dataKey={valueKey}
-            nameKey={nameKey}
-            cornerRadius={4}
-            background={{ fill: 'transparent' }}
-            label={false}
-            isAnimationActive={false}
+      <ChartContainer
+        config={config}
+        className={cn('flex w-full flex-col', showLegend ? 'flex-1' : 'h-full')}
+      >
+        <div className={cn('w-full', showLegend ? 'flex-1' : 'h-full')}>
+          <RadialBarChart
+            data={enrichedData}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            startAngle={startAngle}
+            endAngle={endAngle}
+            cx="50%"
+            cy="50%"
+            legend={false}
           >
-            {enrichedData.map((entry, index) => {
-              const fillColor = (entry.fill as string) || getChartColor(index);
-              return <Cell key={`cell-${index}`} fill={fillColor} />;
-            })}
-          </RadialBar>
-        </RadialBarChart>
-      </ChartContainer>
-      {showLegend && (
-        <div className="shrink-0">
-          <ChartLegend
-            content={() => {
-              // For RadialBarChart, create custom payload from data
-              const customPayload = enrichedData.map((entry, index) => {
+            {showGrid && <PolarGrid />}
+
+            {showTooltip && (
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel nameKey={nameKey} />}
+              />
+            )}
+
+            <RadialBar
+              dataKey={valueKey}
+              nameKey={nameKey}
+              cornerRadius={4}
+              background={{ fill: 'transparent' }}
+              label={false}
+              isAnimationActive={false}
+            >
+              {enrichedData.map((entry, index) => {
                 const fillColor = (entry.fill as string) || getChartColor(index);
-                const nameValue = entry[nameKey];
-                const entryName =
-                  nameValue == null
-                    ? ''
-                    : typeof nameValue === 'string'
-                      ? nameValue
-                      : typeof nameValue === 'number' || typeof nameValue === 'boolean'
-                        ? String(nameValue)
-                        : '';
-                return {
-                  value: entryName,
-                  type: 'radialBar',
-                  id: `legend-${index}`,
-                  color: fillColor,
-                  dataKey: nameKey,
-                  payload: entry,
-                };
-              });
-              return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
-            }}
-          />
+                return <Cell key={`cell-${index}`} fill={fillColor} />;
+              })}
+            </RadialBar>
+          </RadialBarChart>
         </div>
-      )}
+        {showLegend && (
+          <div className="shrink-0">
+            <ChartLegend
+              content={() => {
+                // For RadialBarChart, create custom payload from data
+                const customPayload = enrichedData.map((entry, index) => {
+                  const fillColor = (entry.fill as string) || getChartColor(index);
+                  const nameValue = entry[nameKey];
+                  const entryName =
+                    nameValue == null
+                      ? ''
+                      : typeof nameValue === 'string'
+                        ? nameValue
+                        : typeof nameValue === 'number' || typeof nameValue === 'boolean'
+                          ? String(nameValue)
+                          : '';
+                  return {
+                    value: entryName,
+                    type: 'radialBar',
+                    id: `legend-${index}`,
+                    color: fillColor,
+                    dataKey: nameKey,
+                    payload: entry,
+                  };
+                });
+                return <ChartLegendContent nameKey={nameKey} payload={customPayload} />;
+              }}
+            />
+          </div>
+        )}
+      </ChartContainer>
     </div>
   );
 }
