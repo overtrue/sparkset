@@ -1,7 +1,16 @@
 /**
  * BI Chart Module Frontend Type Definitions
- * Copied from backend for frontend type safety
+ * Extended with new chart system types
  */
+
+// Re-export types from chart components for convenience
+export type {
+  ChartCategory,
+  ChartVariant,
+  ChartStyleConfig,
+  ChartSpec,
+  ChartRenderResult,
+} from '@/components/charts/types';
 
 export interface Dataset {
   id: number;
@@ -22,45 +31,11 @@ export interface Chart {
   datasetId: number;
   title: string;
   description?: string;
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
-  specJson: ChartSpec;
+  chartType: 'area' | 'bar' | 'line' | 'pie' | 'radar' | 'radial' | 'table';
+  specJson: import('@/components/charts/types').ChartSpec;
   ownerId: number;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface ChartSpec {
-  specVersion: '1.0';
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
-  encoding: {
-    x?: { field: string; type: string; label?: string };
-    y?: {
-      field: string;
-      type: 'quantitative';
-      agg: 'sum' | 'avg' | 'min' | 'max' | 'count';
-      label?: string;
-      color?: string;
-    }[];
-    series?: { field: string; type: string };
-  };
-  transform?: { op: string; [key: string]: unknown }[];
-  style?: {
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    showGrid?: boolean;
-    stacked?: boolean;
-    smooth?: boolean;
-    aspectRatio?: number;
-  };
-  rechartsOverrides?: Record<string, unknown>;
-}
-
-export interface ChartRenderResult {
-  chartType: ChartSpec['chartType'];
-  data: unknown[];
-  config: Record<string, { label: string; color?: string }>;
-  rechartsProps: Record<string, unknown>;
-  warnings?: string[];
 }
 
 export type ChartConfig = Record<

@@ -25,7 +25,8 @@ export type ShadcnChartConfig = Record<
 // ChartSpec（适配 shadcn）
 export interface ChartSpec {
   specVersion: '1.0';
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  chartType: 'line' | 'bar' | 'area' | 'pie' | 'radar' | 'radial' | 'table';
+  variant?: string;
 
   // 字段映射
   encoding: {
@@ -54,6 +55,12 @@ export interface ChartSpec {
     stacked?: boolean;
     smooth?: boolean;
     aspectRatio?: number;
+    horizontal?: boolean;
+    gradient?: boolean;
+    showDots?: boolean;
+    curveType?: string;
+    innerRadius?: number;
+    outerRadius?: number;
   };
 
   // Recharts 高级配置
@@ -63,8 +70,10 @@ export interface ChartSpec {
 // 前端渲染结果
 export interface ChartRenderResult {
   chartType: ChartSpec['chartType'];
+  variant?: string;
   data: unknown[];
   config: ShadcnChartConfig;
+  style?: ChartSpec['style'];
   rechartsProps: Record<string, unknown>;
   warnings?: string[];
 }

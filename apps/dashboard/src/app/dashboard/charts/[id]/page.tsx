@@ -1,6 +1,7 @@
 'use client';
 
 import { ChartRenderer } from '@/components/charts/renderer';
+import { buildConfig, transformData } from '@/components/charts/utils';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import type { ChartConfig } from '@/components/ui/chart';
 import { Link, useRouter } from '@/i18n/client-routing';
 import { chartsApi } from '@/lib/api/charts';
 import { datasetsApi } from '@/lib/api/datasets';
-import type { ChartSpec } from '@/types/chart';
+import type { ChartSpec } from '@/components/charts/types';
 import { RiArrowLeftLine, RiDeleteBin2Line, RiEditLine, RiRefreshLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { use, useEffect, useState } from 'react';
@@ -21,99 +22,17 @@ interface Props {
   }>;
 }
 
-// Helper: Transform data based on spec (same as ChartBuilder)
-function transformData(
-  rows: Record<string, unknown>[],
-  spec: ChartSpec,
-  chartType: string,
-): unknown[] {
-  if (chartType === 'table') {
-    return rows;
-  }
-
-  if (chartType === 'pie' && spec.encoding?.x && spec.encoding?.y) {
-    const xField = spec.encoding.x.field;
-    const yFields = spec.encoding.y;
-
-    const grouped: Record<string, Record<string, number>> = {};
-
-    rows.forEach((row) => {
-      const xValue = String(row[xField]);
-      if (!grouped[xValue]) {
-        grouped[xValue] = {};
-      }
-
-      yFields.forEach((yField) => {
-        const value = Number(row[yField.field]) || 0;
-        if (!grouped[xValue][yField.field]) {
-          grouped[xValue][yField.field] = 0;
-        }
-
-        switch (yField.agg) {
-          case 'sum':
-            grouped[xValue][yField.field] += value;
-            break;
-          case 'count':
-            grouped[xValue][yField.field] += 1;
-            break;
-          case 'min':
-            if (!grouped[xValue][yField.field] || value < grouped[xValue][yField.field]) {
-              grouped[xValue][yField.field] = value;
-            }
-            break;
-          case 'max':
-            if (value > grouped[xValue][yField.field]) {
-              grouped[xValue][yField.field] = value;
-            }
-            break;
-          case 'avg':
-            if (!grouped[xValue][`${yField.field}_sum`]) {
-              grouped[xValue][`${yField.field}_sum`] = 0;
-              grouped[xValue][`${yField.field}_count`] = 0;
-            }
-            grouped[xValue][`${yField.field}_sum`] += value;
-            grouped[xValue][`${yField.field}_count`] += 1;
-            break;
-        }
-      });
-    });
-
-    return Object.entries(grouped).map(([xValue, values]) => {
-      const result: Record<string, unknown> = { [xField]: xValue };
-
-      if (spec.encoding?.y) {
-        spec.encoding.y.forEach((yField) => {
-          if (yField.agg === 'avg') {
-            const sum = values[`${yField.field}_sum`] || 0;
-            const count = values[`${yField.field}_count`] || 1;
-            result[yField.field] = sum / count;
-          } else {
-            result[yField.field] = values[yField.field];
-          }
-        });
-      }
-
-      return result;
-    });
-  }
-
-  return rows;
-}
-
-// Helper: Build chart config (same as ChartBuilder)
-function buildConfig(spec: ChartSpec): ChartConfig {
-  const config: ChartConfig = {};
-
-  if (spec.encoding?.y) {
-    spec.encoding.y.forEach((yField) => {
-      config[yField.field] = {
-        label: yField.label || yField.field,
-        color: yField.color || 'var(--chart-1)',
-      };
-    });
-  }
-
-  return config;
+interface ChartData {
+  id: number;
+  title: string;
+  description?: string;
+  chartType: 'area' | 'bar' | 'line' | 'pie' | 'radar' | 'radial' | 'table';
+  specJson: ChartSpec;
+  datasetId: number;
+  dataset?: {
+    name: string;
+  };
+  createdAt: string;
 }
 
 export default function ChartDetailPage({ params }: Props) {
@@ -123,9 +42,8 @@ export default function ChartDetailPage({ params }: Props) {
   const id = Number(unwrappedParams.id);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [chartData, setChartData] = useState<any>(null);
-  const [previewData, setPreviewData] = useState<unknown[]>([]);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [previewData, setPreviewData] = useState<Record<string, unknown>[]>([]);
   const [previewConfig, setPreviewConfig] = useState<ChartConfig>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -134,16 +52,14 @@ export default function ChartDetailPage({ params }: Props) {
     const loadData = async () => {
       try {
         const chartResult = await chartsApi.get(id);
-        setChartData(chartResult);
+        setChartData(chartResult as ChartData);
 
-        // Generate preview using same logic as ChartBuilder
+        // Generate preview using shared utility functions
         if (chartResult.specJson && chartResult.datasetId) {
           const previewResult = await datasetsApi.preview(chartResult.datasetId);
-          const transformedData = transformData(
-            previewResult.rows,
-            chartResult.specJson,
-            chartResult.chartType,
-          );
+
+          // Use shared transform and build functions
+          const transformedData = transformData(previewResult.rows, chartResult.specJson);
           const config = buildConfig(chartResult.specJson);
 
           setPreviewData(transformedData);
@@ -230,27 +146,27 @@ export default function ChartDetailPage({ params }: Props) {
         }
       />
 
-      {/* Configuration info - single line display */}
-      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+      {/* Configuration info */}
+      <div className="flex flex-wrap gap-4 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
         <span>
           {t('Chart Type')}：
-          <span className="text-foreground font-medium">{chartData.chartType}</span>
+          <span className="font-medium text-foreground">{chartData.chartType}</span>
         </span>
         <span>
           {t('Dataset')}：
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             {chartData.dataset?.name || chartData.datasetId}
           </span>
         </span>
         <span>
           {t('Created At')}：
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             {new Date(chartData.createdAt).toLocaleDateString()}
           </span>
         </span>
       </div>
 
-      {/* Chart display - using ChartRenderer with same data processing logic as edit page */}
+      {/* Chart display */}
       <Card>
         <CardHeader>
           <CardTitle>{t('Live Preview')}</CardTitle>
@@ -261,8 +177,10 @@ export default function ChartDetailPage({ params }: Props) {
         <CardContent>
           <ChartRenderer
             chartType={chartData.chartType}
+            variant={chartData.specJson.variant}
             data={previewData}
             config={previewConfig}
+            style={chartData.specJson.style}
             className="w-full"
           />
         </CardContent>

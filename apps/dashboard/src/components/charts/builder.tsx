@@ -14,53 +14,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslations } from '@/i18n/use-translations';
 import { datasetsApi } from '@/lib/api/datasets';
-import type { ChartSpec, Dataset } from '@/types/chart';
+import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RiAddLine, RiDeleteBinLine, RiMagicLine, RiPlayLine } from '@remixicon/react';
-import { useTranslations } from '@/i18n/use-translations';
 import * as React from 'react';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+
+import { ChartSelector, ChartVariantSelector } from './chart-selector';
+import {
+  categoryRequiresCategoryField,
+  categorySupportsMultipleY,
+  getCategoryFromVariant,
+  getDefaultStyle,
+  getDefaultVariant,
+} from './registry';
 import { ChartRenderer } from './renderer';
+import type { ChartCategory, ChartSpec, ChartStyleConfig, ChartVariant } from './types';
+import { getChartColor } from './types';
+import { buildConfigFromFormData, transformData } from './utils';
 
-// Form validation schema
-const formSchema = z.object({
-  datasetId: z.number().min(1, 'Please select a dataset'),
-  title: z
-    .string()
-    .min(1, 'Please enter chart title')
-    .max(128, 'Chart title cannot exceed 128 characters'),
-  description: z.string().optional(),
-  chartType: z.enum(['line', 'bar', 'area', 'pie', 'table']),
-  xField: z.string().min(1, 'Please select X-Axis field'),
-  yFields: z
-    .array(
-      z.object({
-        field: z.string().min(1, 'Field name cannot be empty'),
-        agg: z.enum(['sum', 'avg', 'min', 'max', 'count']),
-        label: z.string().optional(),
-        color: z.string().optional(),
-      }),
-    )
-    .min(1, 'At least one Y-Axis field is required'),
-  showLegend: z.boolean().optional(),
-  showTooltip: z.boolean().optional(),
-  showGrid: z.boolean().optional(),
-  stacked: z.boolean().optional(),
-  smooth: z.boolean().optional(),
-  aspectRatio: z.number().min(0.5).max(3).optional(),
-});
+// ============================================================================
+// Types
+// ============================================================================
 
-type FormData = z.infer<typeof formSchema>;
+export interface Dataset {
+  id: number;
+  name: string;
+  schemaJson: { name: string; type: string }[];
+}
 
 export interface ChartSaveData {
   datasetId: number;
   title: string;
   description?: string;
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  chartType: ChartCategory;
   spec: ChartSpec;
 }
 
@@ -77,9 +70,52 @@ interface ChartBuilderProps {
   initialDatasetId?: number;
   initialTitle?: string;
   initialDescription?: string;
-  autoPreview?: boolean; // Auto-trigger preview on mount
-  showActions?: boolean; // Show action buttons in preview panel
+  autoPreview?: boolean;
+  showActions?: boolean;
 }
+
+// ============================================================================
+// Form Schema
+// ============================================================================
+
+const formSchema = z.object({
+  datasetId: z.number().min(1, 'Please select a dataset'),
+  title: z
+    .string()
+    .min(1, 'Please enter chart title')
+    .max(128, 'Chart title cannot exceed 128 characters'),
+  description: z.string().optional(),
+  chartType: z.enum(['area', 'bar', 'line', 'pie', 'radar', 'radial', 'table']),
+  variant: z.string().optional(),
+  xField: z.string().min(1, 'Please select X-Axis field'),
+  yFields: z
+    .array(
+      z.object({
+        field: z.string().min(1, 'Field name cannot be empty'),
+        agg: z.enum(['sum', 'avg', 'min', 'max', 'count']),
+        label: z.string().optional(),
+        color: z.string().optional(),
+      }),
+    )
+    .min(1, 'At least one Y-Axis field is required'),
+  // Style options
+  showLegend: z.boolean().optional(),
+  showTooltip: z.boolean().optional(),
+  showGrid: z.boolean().optional(),
+  stacked: z.boolean().optional(),
+  showDots: z.boolean().optional(),
+  gradient: z.boolean().optional(),
+  horizontal: z.boolean().optional(),
+  curveType: z.enum(['monotone', 'linear', 'step', 'natural']).optional(),
+  innerRadius: z.number().optional(),
+  outerRadius: z.number().optional(),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderProps>(
   function ChartBuilder(
@@ -97,10 +133,14 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
   ) {
     const t = useTranslations();
     const formRef = React.useRef<HTMLFormElement>(null);
-    const [previewData, setPreviewData] = React.useState<unknown[]>([]);
+    const [previewData, setPreviewData] = React.useState<Record<string, unknown>[]>([]);
     const [previewConfig, setPreviewConfig] = React.useState<ChartConfig>({});
     const [isPreviewLoading, setIsPreviewLoading] = React.useState(false);
     const [selectedDataset, setSelectedDataset] = React.useState<Dataset | null>(null);
+
+    // Initialize form with default values
+    const defaultChartType = initialSpec?.chartType || 'bar';
+    const defaultVariant = initialSpec?.variant || getDefaultVariant(defaultChartType);
 
     const {
       control,
@@ -109,88 +149,87 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       setValue,
       formState: { errors, isSubmitting },
     } = useForm<FormData>({
-      mode: 'onChange', // Real-time validation
+      mode: 'onChange',
       resolver: zodResolver(formSchema),
       defaultValues: {
         datasetId: initialDatasetId || 0,
-        title: initialTitle || initialSpec?.encoding?.x?.label || '',
+        title: initialTitle || '',
         description: initialDescription || '',
-        chartType: initialSpec?.chartType || 'line',
+        chartType: defaultChartType,
+        variant: defaultVariant,
         xField: initialSpec?.encoding?.x?.field || '',
         yFields: initialSpec?.encoding?.y || [
-          { field: '', agg: 'sum', label: '', color: 'var(--chart-1)' },
+          { field: '', agg: 'sum', label: '', color: getChartColor(0) },
         ],
         showLegend: initialSpec?.style?.showLegend ?? true,
         showTooltip: initialSpec?.style?.showTooltip ?? true,
         showGrid: initialSpec?.style?.showGrid ?? true,
         stacked: initialSpec?.style?.stacked ?? false,
-        smooth: initialSpec?.style?.smooth ?? false,
-        aspectRatio: initialSpec?.style?.aspectRatio ?? 1.5,
+        showDots: initialSpec?.style?.showDots ?? false,
+        gradient: initialSpec?.style?.gradient ?? false,
+        horizontal: initialSpec?.style?.horizontal ?? false,
+        curveType: initialSpec?.style?.curveType || 'monotone',
+        innerRadius: initialSpec?.style?.innerRadius ?? 60,
+        outerRadius: initialSpec?.style?.outerRadius ?? 80,
       },
     });
 
     const chartType = watch('chartType');
+    const variant = watch('variant') as ChartVariant | undefined;
     const datasetId = watch('datasetId');
     const yFields = watch('yFields');
     const title = watch('title');
     const xField = watch('xField');
 
-    // Calculate form validity manually based on actual values
-    // This is more reliable than isValid which may require all fields to be "touched"
-    // Use JSON.stringify for yFields to detect deep changes in array
+    // Get category config for dynamic options
+    const supportsMultipleY = categorySupportsMultipleY(chartType);
+    const requiresCategory = categoryRequiresCategoryField(chartType);
+
+    // Calculate form validity
     const yFieldsKey = React.useMemo(() => JSON.stringify(yFields), [yFields]);
     const isFormValid = React.useMemo(() => {
-      const valid =
+      return (
         datasetId > 0 &&
         title.trim().length > 0 &&
         title.trim().length <= 128 &&
         xField.trim().length > 0 &&
         yFields.length > 0 &&
-        yFields.every((y) => y.field && y.field.trim().length > 0);
-
-      // Debug logging (remove in production)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Form validity check:', {
-          datasetId,
-          title: title.trim(),
-          titleLength: title.trim().length,
-          xField: xField.trim(),
-          xFieldLength: xField.trim().length,
-          yFields,
-          yFieldsKey,
-          yFieldsValid: yFields.every((y) => y.field && y.field.trim().length > 0),
-          isValid: valid,
-        });
-      }
-
-      return valid;
+        yFields.every((y) => y.field && y.field.trim().length > 0)
+      );
     }, [datasetId, title, xField, yFieldsKey]);
 
-    // Submit handler - defined before useImperativeHandle
+    // Submit handler
     const onSubmit = React.useCallback<SubmitHandler<FormData>>(
       async (data) => {
         try {
+          const style: ChartStyleConfig = {
+            showLegend: data.showLegend,
+            showTooltip: data.showTooltip,
+            showGrid: data.showGrid,
+            stacked: data.stacked,
+            showDots: data.showDots,
+            gradient: data.gradient,
+            horizontal: data.horizontal,
+            curveType: data.curveType,
+            innerRadius: data.innerRadius,
+            outerRadius: data.outerRadius,
+          };
+
           const spec: ChartSpec = {
             specVersion: '1.0',
             chartType: data.chartType,
+            variant: data.variant as ChartVariant,
             encoding: {
               x: { field: data.xField, type: 'nominal', label: data.xField },
-              y: data.yFields.map((y) => ({
+              y: data.yFields.map((y, index) => ({
                 field: y.field,
-                type: 'quantitative',
+                type: 'quantitative' as const,
                 agg: y.agg,
                 label: y.label || y.field,
-                color: y.color,
+                color: y.color || getChartColor(index),
               })),
             },
-            style: {
-              showLegend: data.showLegend,
-              showTooltip: data.showTooltip,
-              showGrid: data.showGrid,
-              stacked: data.stacked,
-              smooth: data.smooth,
-              aspectRatio: data.aspectRatio,
-            },
+            style,
           };
 
           await onSave({
@@ -209,7 +248,6 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     );
 
     // Expose form submission to parent
-    // Include isFormValid in dependencies to ensure ref updates when validity changes
     React.useImperativeHandle(
       ref,
       () => ({
@@ -225,22 +263,11 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                 }
               },
               (errors) => {
-                // Handle validation errors
-                // react-hook-form errors structure: { fieldName: { type: string, message: string } }
                 const errorMessages: string[] = [];
                 Object.keys(errors).forEach((fieldName) => {
                   const error = errors[fieldName as keyof typeof errors];
-                  if (error) {
-                    if (typeof error === 'object' && 'message' in error && error.message) {
-                      errorMessages.push(error.message);
-                    } else if (Array.isArray(error)) {
-                      // Handle array fields like yFields
-                      error.forEach((item, index) => {
-                        if (item && typeof item === 'object' && 'message' in item && item.message) {
-                          errorMessages.push(`${fieldName}[${index}]: ${item.message}`);
-                        }
-                      });
-                    }
+                  if (error && typeof error === 'object' && 'message' in error && error.message) {
+                    errorMessages.push(String(error.message));
                   }
                 });
 
@@ -257,7 +284,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
         isSubmitting,
         isValid: isFormValid,
       }),
-      [handleSubmit, onSubmit, isSubmitting, isFormValid],
+      [handleSubmit, onSubmit, isSubmitting, isFormValid, t],
     );
 
     // Load dataset schema when selected
@@ -273,43 +300,57 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     // Auto-trigger preview on mount for edit mode
     React.useEffect(() => {
       if (autoPreview && initialDatasetId && initialSpec) {
-        // Small delay to ensure form is initialized
         setTimeout(() => {
           void generatePreview();
         }, 100);
       }
     }, [autoPreview, initialDatasetId, initialSpec]);
 
+    // Update variant and style when chart type changes
+    // Only reset variant if current variant doesn't belong to the new category
+    React.useEffect(() => {
+      const currentVariant = watch('variant') as ChartVariant | undefined;
+      // Check if current variant belongs to the new chart type
+      const currentVariantCategory = currentVariant ? getCategoryFromVariant(currentVariant) : null;
+
+      // Only set new default variant if current variant doesn't match the category
+      if (currentVariantCategory !== chartType) {
+        const newDefaultVariant = getDefaultVariant(chartType);
+        setValue('variant', newDefaultVariant);
+        // Note: style will be updated by the variant useEffect below
+      }
+    }, [chartType, setValue, watch]);
+
+    // Update style fields when variant changes manually (user clicks variant selector)
+    React.useEffect(() => {
+      if (variant) {
+        const variantStyle = getDefaultStyle(variant);
+        // Reset all style fields to their default values when variant changes
+        // Use the variant's default style value, or fall back to sensible defaults
+        setValue('horizontal', variantStyle.horizontal ?? false);
+        setValue('stacked', variantStyle.stacked ?? false);
+        setValue('showDots', variantStyle.showDots ?? false);
+        setValue('gradient', variantStyle.gradient ?? false);
+        setValue(
+          'curveType',
+          (variantStyle.curveType as 'monotone' | 'linear' | 'step' | 'natural') ?? 'monotone',
+        );
+        setValue('innerRadius', variantStyle.innerRadius ?? 0);
+        setValue('outerRadius', variantStyle.outerRadius ?? 80);
+      }
+    }, [variant, setValue]);
+
     // Add Y field
     const addYField = () => {
       const current = watch('yFields');
-      const colors = [
-        'var(--chart-1)',
-        'var(--chart-2)',
-        'var(--chart-3)',
-        'var(--chart-4)',
-        'var(--chart-5)',
-      ];
-      const nextColor = colors[current.length % colors.length];
+      const nextColor = getChartColor(current.length);
       setValue('yFields', [...current, { field: '', agg: 'sum', label: '', color: nextColor }]);
-    };
-
-    // Remove Y field (unused but kept for potential future use)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const removeYField = (index: number) => {
-      const current = watch('yFields');
-      if (current.length <= 1) return;
-      setValue(
-        'yFields',
-        current.filter((_, i) => i !== index),
-      );
     };
 
     // Generate preview
     const generatePreview = async () => {
       const formData = watch();
 
-      // Validate
       if (!formData.datasetId || !formData.xField || formData.yFields.length === 0) {
         toast.error(t('Please complete the chart configuration'));
         return;
@@ -318,12 +359,27 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       setIsPreviewLoading(true);
 
       try {
-        // Get dataset data
         const result = await datasetsApi.preview(formData.datasetId);
 
-        // Transform data based on spec
-        const transformedData = transformData(result.rows, formData);
-        const config = buildConfig(formData);
+        // Build spec for transformation
+        const spec: ChartSpec = {
+          specVersion: '1.0',
+          chartType: formData.chartType,
+          variant: formData.variant as ChartVariant,
+          encoding: {
+            x: { field: formData.xField, type: 'nominal' },
+            y: formData.yFields.map((y) => ({
+              field: y.field,
+              type: 'quantitative' as const,
+              agg: y.agg,
+              label: y.label || y.field,
+              color: y.color,
+            })),
+          },
+        };
+
+        const transformedData = transformData(result.rows, spec);
+        const config = buildConfigFromFormData(formData.yFields);
 
         setPreviewData(transformedData);
         setPreviewConfig(config);
@@ -336,10 +392,43 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
       }
     };
 
+    // Get aspect ratio class based on chart type
+    const getChartAspectClass = (type: ChartCategory): string => {
+      switch (type) {
+        case 'pie':
+        case 'radar':
+        case 'radial':
+          return 'aspect-square h-[350px]';
+        case 'table':
+          return 'min-h-[200px]';
+        default:
+          return 'aspect-[16/9] h-[350px]';
+      }
+    };
+
+    // Get current style config for preview
+    const previewStyle: ChartStyleConfig = {
+      showLegend: watch('showLegend'),
+      showTooltip: watch('showTooltip'),
+      showGrid: watch('showGrid'),
+      stacked: watch('stacked'),
+      showDots: watch('showDots'),
+      gradient: watch('gradient'),
+      horizontal: watch('horizontal'),
+      curveType: watch('curveType'),
+      innerRadius: watch('innerRadius'),
+      outerRadius: watch('outerRadius'),
+    };
+
+    // Get fields by type
+    const numericFields =
+      selectedDataset?.schemaJson.filter((f) => f.type === 'quantitative') || [];
+    const allFields = selectedDataset?.schemaJson || [];
+
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Configuration Panel - 1/3 width */}
-        <div className="lg:col-span-1 space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Configuration Panel */}
+        <div className="space-y-6 lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>{t('Chart Configuration')}</CardTitle>
@@ -397,11 +486,11 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                           placeholder={t('e.g.: Sales Trend Analysis')}
                           maxLength={128}
                         />
-                        <div className="flex justify-between items-center">
+                        <div className="flex items-center justify-between">
                           {errors.title && (
                             <p className="text-sm text-destructive">{errors.title.message}</p>
                           )}
-                          <p className="text-xs text-muted-foreground ml-auto">
+                          <p className="ml-auto text-xs text-muted-foreground">
                             {field.value?.length || 0}/128
                           </p>
                         </div>
@@ -425,37 +514,52 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   />
                 </div>
 
-                {/* Chart Type */}
+                <Separator />
+
+                {/* Chart Type Selection */}
                 <div className="space-y-2">
                   <Label>{t('Chart Type')}</Label>
                   <Controller
                     name="chartType"
                     control={control}
                     render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('Select chart type')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="line">{t('Line Chart')}</SelectItem>
-                          <SelectItem value="bar">{t('Bar Chart')}</SelectItem>
-                          <SelectItem value="area">{t('Area Chart')}</SelectItem>
-                          <SelectItem value="pie">{t('Pie Chart')}</SelectItem>
-                          <SelectItem value="table">{t('Table')}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <ChartSelector
+                        value={variant}
+                        onChange={(newVariant, newCategory) => {
+                          field.onChange(newCategory);
+                          setValue('variant', newVariant);
+                        }}
+                      />
                     )}
                   />
                 </div>
 
-                {/* Dataset Schema - Show when dataset selected */}
+                {/* Chart Variant Selection */}
+                <div className="space-y-2">
+                  <Label>{t('Chart Style')}</Label>
+                  <Controller
+                    name="variant"
+                    control={control}
+                    render={({ field }) => (
+                      <ChartVariantSelector
+                        category={chartType}
+                        value={field.value as ChartVariant}
+                        onChange={(v) => field.onChange(v)}
+                      />
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Dataset Schema */}
                 {selectedDataset && (
-                  <div className="space-y-2 p-3 bg-muted rounded-md">
+                  <div className="space-y-2 rounded-md bg-muted/50 p-3">
                     <Label className="text-xs text-muted-foreground">{t('Available Fields')}</Label>
                     <div className="flex flex-wrap gap-1">
                       {selectedDataset.schemaJson.map((field) => (
-                        <Badge key={field.name} variant="secondary">
-                          {field.name} ({field.type})
+                        <Badge key={field.name} variant="secondary" className="text-xs">
+                          {field.name} ({field.type === 'quantitative' ? 'num' : 'str'})
                         </Badge>
                       ))}
                     </div>
@@ -464,17 +568,23 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* X Field */}
                 <div className="space-y-2">
-                  <Label>{t('X-Axis Field')}</Label>
+                  <Label>{requiresCategory ? t('Category Field') : t('X-Axis Field')}</Label>
                   <Controller
                     name="xField"
                     control={control}
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('Select X-Axis field')} />
+                          <SelectValue
+                            placeholder={
+                              requiresCategory
+                                ? t('Select category field')
+                                : t('Select X-Axis field')
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {selectedDataset?.schemaJson.map((f) => (
+                          {allFields.map((f) => (
                             <SelectItem key={f.name} value={f.name}>
                               {f.name}
                             </SelectItem>
@@ -490,106 +600,108 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
 
                 {/* Y Fields */}
                 <div className="space-y-2">
-                  <Label>{t('Y-Axis Field')}</Label>
+                  <Label>{requiresCategory ? t('Value Field') : t('Y-Axis Field')}</Label>
                   <Controller
                     name="yFields"
                     control={control}
                     render={({ field }) => (
                       <div className="space-y-2">
                         {field.value.map((yField, index) => (
-                          <div key={index} className="flex gap-2 items-start p-2 border rounded-md">
-                            <div className="flex-1 space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <select
-                                  value={yField.field}
-                                  onChange={(e) => {
-                                    const updated = [...field.value];
-                                    updated[index] = { ...updated[index], field: e.target.value };
+                          <div key={index} className="rounded-md border bg-muted/30 p-3">
+                            <div className="flex items-center gap-2">
+                              {/* Field selector */}
+                              <Select
+                                value={yField.field}
+                                onValueChange={(val) => {
+                                  const updated = [...field.value];
+                                  updated[index] = { ...updated[index], field: val };
+                                  field.onChange(updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-9 flex-1">
+                                  <SelectValue placeholder={t('Select field')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {numericFields.map((f) => (
+                                    <SelectItem key={f.name} value={f.name}>
+                                      {f.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {/* Aggregation selector */}
+                              <Select
+                                value={yField.agg}
+                                onValueChange={(val) => {
+                                  const updated = [...field.value];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    agg: val as 'sum' | 'avg' | 'min' | 'max' | 'count',
+                                  };
+                                  field.onChange(updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-9 w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="sum">{t('Sum')}</SelectItem>
+                                  <SelectItem value="avg">{t('Average')}</SelectItem>
+                                  <SelectItem value="min">{t('Min')}</SelectItem>
+                                  <SelectItem value="max">{t('Max')}</SelectItem>
+                                  <SelectItem value="count">{t('Count')}</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              {/* Delete button */}
+                              {supportsMultipleY && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const updated = field.value.filter((_, i) => i !== index);
                                     field.onChange(updated);
                                   }}
-                                  className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
+                                  disabled={field.value.length <= 1}
+                                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
                                 >
-                                  <option value="">{t('Select field')}</option>
-                                  {selectedDataset?.schemaJson
-                                    .filter((f) => f.type === 'quantitative')
-                                    .map((f) => (
-                                      <option key={f.name} value={f.name}>
-                                        {f.name}
-                                      </option>
-                                    ))}
-                                </select>
+                                  <RiDeleteBinLine className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
 
-                                <select
-                                  value={yField.agg}
-                                  onChange={(e) => {
-                                    const updated = [...field.value];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                      agg: e.target.value as any,
-                                    };
-                                    field.onChange(updated);
-                                  }}
-                                  className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
-                                >
-                                  <option value="sum">{t('Sum')}</option>
-                                  <option value="avg">{t('Average')}</option>
-                                  <option value="min">{t('Min')}</option>
-                                  <option value="max">{t('Max')}</option>
-                                  <option value="count">{t('Count')}</option>
-                                </select>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-2">
+                            {/* Label input - only show for multiple Y fields */}
+                            {supportsMultipleY && field.value.length > 1 && (
+                              <div className="mt-2">
                                 <Input
-                                  placeholder={t('Label (optional)')}
+                                  placeholder={t('Display label (optional)')}
                                   value={yField.label || ''}
                                   onChange={(e) => {
                                     const updated = [...field.value];
                                     updated[index] = { ...updated[index], label: e.target.value };
                                     field.onChange(updated);
                                   }}
-                                  className="text-xs"
-                                />
-                                <Input
-                                  type="color"
-                                  value={yField.color || 'var(--chart-1)'}
-                                  onChange={(e) => {
-                                    const updated = [...field.value];
-                                    updated[index] = { ...updated[index], color: e.target.value };
-                                    field.onChange(updated);
-                                  }}
-                                  className="h-8"
+                                  className="h-8 text-sm"
                                 />
                               </div>
-                            </div>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const updated = field.value.filter((_, i) => i !== index);
-                                field.onChange(updated);
-                              }}
-                              disabled={field.value.length <= 1}
-                              className="text-destructive hover:bg-destructive/10"
-                            >
-                              <RiDeleteBinLine className="h-4 w-4" />
-                            </Button>
+                            )}
                           </div>
                         ))}
 
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={addYField}
-                          className="w-full"
-                        >
-                          <RiAddLine className="h-4 w-4" />
-                          {t('Add Y-Axis Field')}
-                        </Button>
+                        {supportsMultipleY && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addYField}
+                            className="w-full"
+                          >
+                            <RiAddLine className="h-4 w-4" />
+                            {t('Add Field')}
+                          </Button>
+                        )}
                       </div>
                     )}
                   />
@@ -598,9 +710,12 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                   )}
                 </div>
 
+                <Separator />
+
                 {/* Style Options */}
-                <div className="space-y-3 pt-2 border-t">
-                  <Label>{t('Style Options')}</Label>
+                <div className="space-y-3">
+                  <Label>{t('Display Options')}</Label>
+
                   <div className="grid grid-cols-2 gap-2">
                     <Controller
                       name="showLegend"
@@ -624,65 +739,142 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
                       )}
                     />
 
-                    <Controller
-                      name="showGrid"
-                      control={control}
-                      render={({ field }) => (
-                        <label className="flex items-center gap-2 text-sm">
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          {t('Show Grid')}
-                        </label>
-                      )}
-                    />
+                    {['area', 'bar', 'line'].includes(chartType) && (
+                      <Controller
+                        name="showGrid"
+                        control={control}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            {t('Show Grid')}
+                          </label>
+                        )}
+                      />
+                    )}
 
-                    <Controller
-                      name="stacked"
-                      control={control}
-                      render={({ field }) => (
-                        <label className="flex items-center gap-2 text-sm">
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          {t('Stacked Mode')}
-                        </label>
-                      )}
-                    />
+                    {['area', 'bar'].includes(chartType) && (
+                      <Controller
+                        name="stacked"
+                        control={control}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            {t('Stacked')}
+                          </label>
+                        )}
+                      />
+                    )}
 
-                    <Controller
-                      name="smooth"
-                      control={control}
-                      render={({ field }) => (
-                        <label className="flex items-center gap-2 text-sm">
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                          {t('Smooth Curve')}
-                        </label>
-                      )}
-                    />
+                    {['area', 'line'].includes(chartType) && (
+                      <Controller
+                        name="showDots"
+                        control={control}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            {t('Show Dots')}
+                          </label>
+                        )}
+                      />
+                    )}
+
+                    {chartType === 'area' && (
+                      <Controller
+                        name="gradient"
+                        control={control}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            {t('Gradient Fill')}
+                          </label>
+                        )}
+                      />
+                    )}
+
+                    {chartType === 'bar' && (
+                      <Controller
+                        name="horizontal"
+                        control={control}
+                        render={({ field }) => (
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            {t('Horizontal')}
+                          </label>
+                        )}
+                      />
+                    )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{t('Aspect Ratio (0,5 - 3)')}</Label>
-                    <Controller
-                      name="aspectRatio"
-                      control={control}
-                      render={({ field }) => (
-                        <Input
-                          type="number"
-                          min="0.5"
-                          max="3"
-                          step="0.1"
-                          value={field.value}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                  {/* Curve Type for Line/Area */}
+                  {['area', 'line'].includes(chartType) && (
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t('Curve Type')}</Label>
+                      <Controller
+                        name="curveType"
+                        control={control}
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monotone">{t('Smooth')}</SelectItem>
+                              <SelectItem value="linear">{t('Linear')}</SelectItem>
+                              <SelectItem value="step">{t('Step')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* Pie/Radial specific options */}
+                  {['pie', 'radial'].includes(chartType) && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Inner Radius')}</Label>
+                        <Controller
+                          name="innerRadius"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={field.value}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              className="h-8"
+                            />
+                          )}
                         />
-                      )}
-                    />
-                  </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t('Outer Radius')}</Label>
+                        <Controller
+                          name="outerRadius"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              type="number"
+                              min="0"
+                              max="150"
+                              value={field.value}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              className="h-8"
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </form>
             </CardContent>
           </Card>
         </div>
 
-        {/* Preview Panel - 2/3 width */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Preview Panel */}
+        <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div>
@@ -701,17 +893,26 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
               </Button>
             </CardHeader>
             <CardContent>
-              {previewData.length > 0 && previewConfig && Object.keys(previewConfig).length > 0 ? (
-                <ChartRenderer
-                  chartType={chartType}
-                  data={previewData}
-                  config={previewConfig}
-                  className="w-full"
-                />
+              {previewData.length > 0 && Object.keys(previewConfig).length > 0 ? (
+                <div className={cn('w-full', getChartAspectClass(chartType))}>
+                  <ChartRenderer
+                    chartType={chartType}
+                    variant={variant}
+                    data={previewData}
+                    config={previewConfig}
+                    style={previewStyle}
+                    className="h-full w-full"
+                  />
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-[350px] border-2 border-dashed rounded-lg text-muted-foreground">
+                <div
+                  className={cn(
+                    'flex items-center justify-center rounded-lg border-2 border-dashed text-muted-foreground',
+                    getChartAspectClass(chartType),
+                  )}
+                >
                   <div className="text-center">
-                    <RiMagicLine className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <RiMagicLine className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>{t('Configure chart and generate preview')}</p>
                   </div>
                 </div>
@@ -742,94 +943,3 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     );
   },
 );
-
-// Helper: Transform data based on form data
-function transformData(rows: Record<string, unknown>[], formData: FormData): unknown[] {
-  const { xField, yFields } = formData;
-
-  if (formData.chartType === 'table') {
-    return rows;
-  }
-
-  if (formData.chartType === 'pie') {
-    // For pie chart, aggregate by xField
-    const grouped: Record<string, Record<string, number>> = {};
-
-    rows.forEach((row) => {
-      const xValue = String(row[xField]);
-      if (!grouped[xValue]) {
-        grouped[xValue] = {};
-      }
-
-      yFields.forEach((yField) => {
-        const value = Number(row[yField.field]) || 0;
-        if (!grouped[xValue][yField.field]) {
-          grouped[xValue][yField.field] = 0;
-        }
-
-        // Apply aggregation
-        switch (yField.agg) {
-          case 'sum':
-            grouped[xValue][yField.field] += value;
-            break;
-          case 'count':
-            grouped[xValue][yField.field] += 1;
-            break;
-          case 'min':
-            if (!grouped[xValue][yField.field] || value < grouped[xValue][yField.field]) {
-              grouped[xValue][yField.field] = value;
-            }
-            break;
-          case 'max':
-            if (value > grouped[xValue][yField.field]) {
-              grouped[xValue][yField.field] = value;
-            }
-            break;
-          case 'avg':
-            // For avg, we need to track sum and count
-            if (!grouped[xValue][`${yField.field}_sum`]) {
-              grouped[xValue][`${yField.field}_sum`] = 0;
-              grouped[xValue][`${yField.field}_count`] = 0;
-            }
-            grouped[xValue][`${yField.field}_sum`] += value;
-            grouped[xValue][`${yField.field}_count`] += 1;
-            break;
-        }
-      });
-    });
-
-    // Convert to array and handle avg
-    return Object.entries(grouped).map(([xValue, values]) => {
-      const result: Record<string, unknown> = { [xField]: xValue };
-
-      yFields.forEach((yField) => {
-        if (yField.agg === 'avg') {
-          const sum = values[`${yField.field}_sum`] || 0;
-          const count = values[`${yField.field}_count`] || 1;
-          result[yField.field] = sum / count;
-        } else {
-          result[yField.field] = values[yField.field];
-        }
-      });
-
-      return result;
-    });
-  }
-
-  // For line, bar, area - return raw data or aggregated
-  return rows;
-}
-
-// Helper: Build chart config (shadcn/ui compatible)
-function buildConfig(formData: FormData): ChartConfig {
-  const config: ChartConfig = {};
-
-  formData.yFields.forEach((yField) => {
-    config[yField.field] = {
-      label: yField.label || yField.field,
-      color: yField.color || 'var(--chart-1)',
-    };
-  });
-
-  return config;
-}

@@ -140,21 +140,78 @@ export interface ResultSet {
 // Chart Types
 // ============================================================================
 
+// Extended chart types with radar and radial support
+export type ChartType = 'line' | 'bar' | 'area' | 'pie' | 'radar' | 'radial' | 'table';
+
+// Chart variant types
+export type ChartVariant =
+  | 'area-default'
+  | 'area-linear'
+  | 'area-step'
+  | 'area-stacked'
+  | 'area-gradient'
+  | 'bar-default'
+  | 'bar-horizontal'
+  | 'bar-stacked'
+  | 'bar-grouped'
+  | 'bar-negative'
+  | 'line-default'
+  | 'line-linear'
+  | 'line-step'
+  | 'line-dots'
+  | 'line-multiple'
+  | 'pie-default'
+  | 'pie-donut'
+  | 'pie-donut-text'
+  | 'pie-label'
+  | 'pie-legend'
+  | 'radar-default'
+  | 'radar-dots'
+  | 'radar-grid-circle'
+  | 'radar-grid-filled'
+  | 'radar-multiple'
+  | 'radial-default'
+  | 'radial-label'
+  | 'radial-grid'
+  | 'radial-text'
+  | 'radial-stacked'
+  | 'table-default';
+
 export interface Chart {
   id: number;
   datasetId: number;
   title: string;
   description?: string;
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  chartType: ChartType;
   specJson: ChartSpec;
   ownerId: number;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface ChartStyleConfig {
+  showLegend?: boolean;
+  showTooltip?: boolean;
+  showGrid?: boolean;
+  stacked?: boolean;
+  smooth?: boolean;
+  aspectRatio?: number;
+  curveType?: 'monotone' | 'linear' | 'step' | 'natural';
+  showDots?: boolean;
+  gradient?: boolean;
+  horizontal?: boolean;
+  innerRadius?: number;
+  outerRadius?: number;
+  paddingAngle?: number;
+  showLabels?: boolean;
+  gridType?: 'polygon' | 'circle';
+  fillOpacity?: number;
+}
+
 export interface ChartSpec {
   specVersion: '1.0';
-  chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  chartType: ChartType;
+  variant?: ChartVariant;
   encoding: {
     x?: { field: string; type: string; label?: string };
     y?: {
@@ -165,24 +222,21 @@ export interface ChartSpec {
       color?: string;
     }[];
     series?: { field: string; type: string };
+    category?: { field: string; label?: string };
+    value?: { field: string; label?: string };
   };
   transform?: { op: string; [key: string]: unknown }[];
-  style?: {
-    showLegend?: boolean;
-    showTooltip?: boolean;
-    showGrid?: boolean;
-    stacked?: boolean;
-    smooth?: boolean;
-    aspectRatio?: number;
-  };
+  style?: ChartStyleConfig;
   rechartsOverrides?: Record<string, unknown>;
 }
 
 export interface ChartRenderResult {
-  chartType: ChartSpec['chartType'];
+  chartType: ChartType;
+  variant?: ChartVariant;
   data: unknown[];
   config: Record<string, { label: string; color?: string }>;
   rechartsProps: Record<string, unknown>;
+  style?: ChartStyleConfig;
   warnings?: string[];
 }
 
@@ -199,7 +253,7 @@ export interface CreateChartDto {
   datasetId: number;
   title: string;
   description?: string;
-  chartType: ChartSpec['chartType'];
+  chartType: ChartType;
   spec: ChartSpec;
 }
 

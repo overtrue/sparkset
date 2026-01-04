@@ -1,17 +1,28 @@
 'use client';
 
 import { ChartRenderer } from '@/components/charts/renderer';
+import type { ChartCategory, ChartStyleConfig, ChartVariant } from '@/components/charts/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { chartsApi } from '@/lib/api/charts';
-import type { ChartRenderResult } from '@/types/chart';
 import type { ChartWidgetConfig } from '@/types/dashboard';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
 
+interface ChartRenderResult {
+  chartType: ChartCategory;
+  variant?: ChartVariant;
+  data: unknown[];
+  config: ChartConfig;
+  rechartsProps?: Record<string, unknown>;
+  style?: ChartStyleConfig;
+  warnings?: string[];
+}
+
 interface ChartWidgetProps {
   config: ChartWidgetConfig;
-  refreshKey?: number; // 当这个 key 变化时，会重新加载数据
+  refreshKey?: number;
 }
 
 export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
@@ -25,7 +36,7 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
       setLoading(true);
       setError(null);
       const result = await chartsApi.render(config.chartId, false);
-      setChartData(result);
+      setChartData(result as ChartRenderResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('Failed to load chart'));
     } finally {
@@ -39,7 +50,7 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center p-4">
+      <div className="flex h-full items-center justify-center p-4">
         <div className="w-full space-y-2">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
@@ -59,20 +70,22 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
 
   if (!chartData) {
     return (
-      <div className="h-full flex items-center justify-center p-4 text-muted-foreground">
+      <div className="flex h-full items-center justify-center p-4 text-muted-foreground">
         {t('No data')}
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full p-4">
+    <div className="h-full w-full p-2">
       <ChartRenderer
         chartType={chartData.chartType}
+        variant={chartData.variant}
         data={chartData.data}
         config={chartData.config}
+        style={chartData.style}
         rechartsProps={chartData.rechartsProps}
-        className="h-full"
+        className="h-full w-full"
       />
     </div>
   );

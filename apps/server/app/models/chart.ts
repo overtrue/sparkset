@@ -21,7 +21,7 @@ export default class Chart extends BaseModel {
   declare description: string | null;
 
   @column()
-  declare chartType: 'line' | 'bar' | 'area' | 'pie' | 'table';
+  declare chartType: 'line' | 'bar' | 'area' | 'pie' | 'radar' | 'radial' | 'table';
 
   @column({ prepare: (value) => JSON.stringify(value) })
   declare specJson: ChartSpec;

@@ -8,10 +8,11 @@ const createSchema = z.object({
   datasetId: z.number().int().positive(),
   title: z.string().min(1).max(128),
   description: z.string().nullable().optional(),
-  chartType: z.enum(['line', 'bar', 'area', 'pie', 'table']),
+  chartType: z.enum(['line', 'bar', 'area', 'pie', 'radar', 'radial', 'table']),
   spec: z.object({
     specVersion: z.literal('1.0'),
-    chartType: z.enum(['line', 'bar', 'area', 'pie', 'table']),
+    chartType: z.enum(['line', 'bar', 'area', 'pie', 'radar', 'radial', 'table']),
+    variant: z.string().optional(),
     encoding: z.object({
       x: z
         .object({
@@ -51,6 +52,12 @@ const createSchema = z.object({
         stacked: z.boolean().optional(),
         smooth: z.boolean().optional(),
         aspectRatio: z.number().optional(),
+        horizontal: z.boolean().optional(),
+        gradient: z.boolean().optional(),
+        showDots: z.boolean().optional(),
+        curveType: z.string().optional(),
+        innerRadius: z.number().optional(),
+        outerRadius: z.number().optional(),
       })
       .optional(),
     rechartsOverrides: z.record(z.string(), z.unknown()).optional(),

@@ -1,12 +1,13 @@
 'use client';
 
 import { chartsApi } from '@/lib/api/charts';
-import type { ChartSpec, Dataset } from '@/types/chart';
+import type { ChartSpec as ApiChartSpec } from '@/types/api';
 import { useTranslations } from '@/i18n/use-translations';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ChartBuilder, type ChartBuilderHandle, type ChartSaveData } from './builder';
+import { ChartBuilder, type ChartBuilderHandle, type ChartSaveData, type Dataset } from './builder';
+import type { ChartSpec } from './types';
 
 interface ChartBuilderClientProps {
   datasets: Dataset[];
@@ -46,6 +47,17 @@ export function ChartBuilderClient({
     try {
       setIsSaving(true);
 
+      // Convert local ChartSpec to API ChartSpec
+      const apiSpec: ApiChartSpec = {
+        specVersion: data.spec.specVersion,
+        chartType: data.spec.chartType,
+        variant: data.spec.variant,
+        encoding: data.spec.encoding,
+        transform: data.spec.transform,
+        style: data.spec.style,
+        rechartsOverrides: data.spec.rechartsOverrides,
+      };
+
       if (chartId) {
         // Update existing chart
         await chartsApi.update(chartId, {
@@ -53,7 +65,7 @@ export function ChartBuilderClient({
           title: data.title,
           description: data.description,
           chartType: data.chartType,
-          spec: data.spec,
+          spec: apiSpec,
         });
         toast.success(t('Chart updated successfully'));
       } else {
@@ -63,7 +75,7 @@ export function ChartBuilderClient({
           title: data.title,
           description: data.description,
           chartType: data.chartType,
-          spec: data.spec,
+          spec: apiSpec,
         });
         toast.success(t('Chart created successfully'));
       }
