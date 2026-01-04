@@ -120,15 +120,7 @@ export function RadialChartRenderer({
         <div
           ref={chartContainerRef}
           className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}
-          style={
-            showLegend
-              ? {
-                  height: 'calc(100% - 52px)',
-                  minHeight: 0,
-                  maxHeight: 'calc(100% - 52px)',
-                }
-              : { height: '100%' }
-          }
+          style={showLegend ? { minHeight: 0 } : { height: '100%' }}
         >
           <ChartContainer config={config} className="w-full h-full">
             <RadialBarChart
@@ -166,10 +158,9 @@ export function RadialChartRenderer({
         </div>
         {showLegend && (
           <div
-            className="shrink-0 relative"
+            className="shrink-0 relative w-full"
             style={{
-              height: '44px',
-              overflow: 'hidden',
+              minHeight: '44px',
               paddingTop: '8px',
               paddingBottom: '8px',
               marginTop: '8px',
@@ -178,22 +169,23 @@ export function RadialChartRenderer({
             {/* Provide ChartContext manually for legend without ResponsiveContainer */}
             <ChartContext.Provider value={{ config }}>
               <div
+                className="w-full"
                 style={{
                   position: 'relative',
                   width: '100%',
-                  height: '100%',
                 }}
               >
                 <style
                   dangerouslySetInnerHTML={{
                     __html: `
                       .recharts-legend-wrapper {
-                        position: absolute !important;
-                        left: 50% !important;
-                        transform: translateX(-50%) !important;
-                        bottom: 0 !important;
-                        width: auto !important;
+                        position: relative !important;
+                        left: auto !important;
+                        transform: none !important;
+                        bottom: auto !important;
+                        width: 100% !important;
                         right: auto !important;
+                        max-width: 100% !important;
                       }
                     `,
                   }}
