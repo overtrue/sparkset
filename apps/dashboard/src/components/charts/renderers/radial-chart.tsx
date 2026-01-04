@@ -114,7 +114,9 @@ export function RadialChartRenderer({
       <ChartContainer
         config={config}
         className={cn('flex w-full flex-col', showLegend ? 'flex-1 min-h-0' : 'h-full')}
-        style={showLegend ? { height: '100%', minHeight: 0 } : { height: '100%' }}
+        style={
+          showLegend ? { height: '100%', minHeight: 0, overflow: 'hidden' } : { height: '100%' }
+        }
       >
         <div className={cn('w-full', showLegend ? 'flex-1 min-h-0' : 'h-full')}>
           <RadialBarChart
