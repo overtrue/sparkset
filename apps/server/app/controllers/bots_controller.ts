@@ -25,14 +25,7 @@ export default class BotsController {
       const result = await botService.listBots(page, perPage);
 
       return response.ok({
-        data: result.data,
-        meta: {
-          ...result.meta,
-          current_page: result.meta.page,
-          last_page: result.meta.lastPage,
-          from: (result.meta.page - 1) * result.meta.perPage + 1,
-          to: Math.min(result.meta.page * result.meta.perPage, result.meta.total),
-        },
+        items: result.data,
       });
     } catch (error) {
       return response.internalServerError({
