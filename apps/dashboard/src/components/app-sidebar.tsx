@@ -22,6 +22,7 @@ import {
   RiGithubLine,
   RiHeart2Line,
   RiPlayLine,
+  RiRobot2Line,
   RiSparkling2Line,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
@@ -55,6 +56,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         { title: t('Charts'), url: '/dashboard/charts', icon: RiBarChartLine },
         { title: t('Dashboards'), url: '/dashboard/dashboards', icon: RiDashboardLine },
         { title: t('Actions'), url: '/dashboard/actions', icon: RiFlashlightLine },
+        { title: t('Bots'), url: '/dashboard/bots', icon: RiRobot2Line },
         { title: t('Datasources'), url: '/dashboard/datasources', icon: RiDatabase2Line },
         { title: t('AI Providers'), url: '/dashboard/ai-providers', icon: RiSparkling2Line },
       ],
