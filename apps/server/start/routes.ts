@@ -161,6 +161,7 @@ router
     router.delete('/:id', [BotsController, 'destroy']);
     router.post('/:id/regenerate-token', [BotsController, 'regenerateToken']);
     router.post('/:id/test', [BotsController, 'test']);
+    router.get('/:id/events', [BotsController, 'events']);
   })
   .prefix('/api/bots')
   .middleware([apiAuthMiddleware]);

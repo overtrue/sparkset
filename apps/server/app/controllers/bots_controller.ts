@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http';
 import { botService } from '../services/bot_service.js';
 import { createBotValidator, updateBotValidator } from '../validators/bot.js';
 import { toId } from '../utils/validation.js';
+import BotEvent from '../models/bot_event.js';
 
 interface AuthContext {
   auth?: {
@@ -248,6 +249,68 @@ export default class BotsController {
       console.error('Bot test error:', error);
       return response.internalServerError({
         message: error instanceof Error ? error.message : 'Failed to test bot',
+      });
+    }
+  }
+
+  /**
+   * 获取 Bot 事件列表
+   * GET /api/bots/:id/events
+   * 用于获取 bot 处理的事件列表
+   */
+  async events(ctx: HttpContext & AuthContext) {
+    try {
+      const { params, request, response } = ctx;
+      const id = toId(params.id);
+      if (!id) {
+        return response.badRequest({ message: 'Invalid bot ID' });
+      }
+
+      // 验证 bot 存在
+      const bot = await botService.getBot(id);
+      if (!bot) {
+        return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+
+      // 获取分页参数
+      const page = request.input('page', 1);
+      const limit = request.input('limit', 20);
+      const status = request.input('status');
+      const fromDate = request.input('from_date');
+
+      // 构建查询
+      let query = BotEvent.query().where('bot_id', id);
+
+      // 应用状态过滤
+      if (status) {
+        query = query.where('status', status);
+      }
+
+      // 应用日期过滤
+      if (fromDate) {
+        query = query.where('created_at', '>=', fromDate);
+      }
+
+      // 按创建时间排序（最新的在前）
+      query = query.orderBy('created_at', 'desc');
+
+      // 获取分页结果
+      const events = await query.paginate(page, limit);
+
+      return response.ok({
+        items: events.all(),
+        pagination: {
+          total: events.total,
+          perPage: events.perPage,
+          currentPage: events.currentPage,
+          lastPage: events.lastPage,
+        },
+      });
+    } catch (error) {
+      const { response } = ctx;
+      console.error('Bot events error:', error);
+      return response.internalServerError({
+        message: error instanceof Error ? error.message : 'Failed to fetch bot events',
       });
     }
   }
