@@ -45,13 +45,14 @@ export default class BotsController {
    * 创建新 Bot
    * POST /api/bots
    */
-  async store({ request, response }: HttpContext & AuthContext) {
+  async store(ctx: HttpContext & AuthContext) {
     try {
+      const { request, response } = ctx;
       // 验证请求数据
       const payload = createBotValidator.parse(request.body());
 
       // 获取当前用户 ID
-      const user = (response as unknown as AuthContext).auth?.user;
+      const user = (ctx as unknown as AuthContext).auth?.user;
       if (!user) {
         return response.unauthorized({ message: 'Not authenticated' });
       }
@@ -63,6 +64,7 @@ export default class BotsController {
         data: bot.serialize(),
       });
     } catch (error) {
+      const { response } = ctx;
       if (error instanceof Error && error.message.includes('validation')) {
         return response.badRequest({
           message: 'Validation failed',
@@ -105,8 +107,9 @@ export default class BotsController {
    * 更新 Bot
    * PUT /api/bots/:id
    */
-  async update({ params, request, response }: HttpContext & AuthContext) {
+  async update(ctx: HttpContext & AuthContext) {
     try {
+      const { params, request, response } = ctx;
       const id = toId(params.id);
       if (!id) {
         return response.badRequest({ message: 'Invalid bot ID' });
@@ -116,7 +119,7 @@ export default class BotsController {
       const payload = updateBotValidator.parse(request.body());
 
       // 获取当前用户 ID
-      const user = (response as unknown as AuthContext).auth?.user;
+      const user = (ctx as unknown as AuthContext).auth?.user;
       if (!user) {
         return response.unauthorized({ message: 'Not authenticated' });
       }
@@ -128,6 +131,7 @@ export default class BotsController {
         data: bot.serialize(),
       });
     } catch (error) {
+      const { response } = ctx;
       if (error instanceof Error && error.message.includes('not found')) {
         return response.notFound({ message: error.message });
       }
@@ -147,15 +151,16 @@ export default class BotsController {
    * 删除 Bot
    * DELETE /api/bots/:id
    */
-  async destroy({ params, response }: HttpContext & AuthContext) {
+  async destroy(ctx: HttpContext & AuthContext) {
     try {
+      const { params, response } = ctx;
       const id = toId(params.id);
       if (!id) {
         return response.badRequest({ message: 'Invalid bot ID' });
       }
 
       // 获取当前用户 ID
-      const user = (response as unknown as AuthContext).auth?.user;
+      const user = (ctx as unknown as AuthContext).auth?.user;
       if (!user) {
         return response.unauthorized({ message: 'Not authenticated' });
       }
@@ -164,6 +169,7 @@ export default class BotsController {
 
       return response.noContent();
     } catch (error) {
+      const { response } = ctx;
       if (error instanceof Error && error.message.includes('not found')) {
         return response.notFound({ message: error.message });
       }
@@ -177,15 +183,16 @@ export default class BotsController {
    * 重新生成 Webhook Token
    * POST /api/bots/:id/regenerate-token
    */
-  async regenerateToken({ params, response }: HttpContext & AuthContext) {
+  async regenerateToken(ctx: HttpContext & AuthContext) {
     try {
+      const { params, response } = ctx;
       const id = toId(params.id);
       if (!id) {
         return response.badRequest({ message: 'Invalid bot ID' });
       }
 
       // 获取当前用户 ID
-      const user = (response as unknown as AuthContext).auth?.user;
+      const user = (ctx as unknown as AuthContext).auth?.user;
       if (!user) {
         return response.unauthorized({ message: 'Not authenticated' });
       }
@@ -202,6 +209,7 @@ export default class BotsController {
         },
       });
     } catch (error) {
+      const { response } = ctx;
       if (error instanceof Error && error.message.includes('not found')) {
         return response.notFound({ message: error.message });
       }
