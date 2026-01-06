@@ -19,7 +19,7 @@ interface TokenManagerProps {
 export function TokenManager({ bot, onTokenRegenerated }: TokenManagerProps) {
   const t = useTranslations();
   const { trigger: regenerateToken } = useRegenerateToken();
-  const [showToken, setShowToken] = useState(false);
+  const [showToken, setShowToken] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
