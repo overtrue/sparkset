@@ -12,6 +12,7 @@ import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
 import { TokenManager } from '@/components/bots/token-manager';
 import { EventLogs } from '@/components/bots/event-logs';
+import { BotTestPanel } from '@/components/bots/test-panel';
 import { RiArrowLeftLine, RiEdit2Line } from '@remixicon/react';
 import { useParams } from 'next/navigation';
 import { useMemo } from 'react';
@@ -156,6 +157,9 @@ export default function BotDetailPage() {
 
       {/* Event Logs */}
       <EventLogs botId={bot.id} events={[]} isLoading={false} />
+
+      {/* Test Panel */}
+      <BotTestPanel bot={bot} />
     </div>
   );
 }

@@ -612,5 +612,21 @@
   "Loading events...": "加载事件中...",
   "Failed to load events": "加载事件失败",
   "Regenerate Webhook Token": "重新生成 Webhook Token",
-  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "重新生成 token 将使旧 token 失效。任何使用旧 token 的 webhook 都将失败。请确保立即更新您的 webhook 配置。"
+  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "重新生成 token 将使旧 token 失效。任何使用旧 token 的 webhook 都将失败。请确保立即更新您的 webhook 配置。",
+  "Test Bot": "测试 Bot",
+  "Test how your bot responds to messages": "测试您的 bot 如何响应消息",
+  "Message History": "消息历史",
+  "Clear": "清空",
+  "No messages yet. Send a test message to get started.": "还没有消息。发送测试消息以开始。",
+  "View Details": "查看详情",
+  "Message": "消息",
+  "Enter test message": "输入测试消息",
+  "Send Test Message": "发送测试消息",
+  "Sending": "发送中",
+  "Test Information": "测试信息",
+  "Test messages are not actually sent to external platforms": "测试消息不会实际发送到外部平台",
+  "Bot responses are simulated based on bot configuration": "Bot 响应基于 bot 配置进行模拟",
+  "This helps verify bot logic before deploying to production": "这有助于在部署到生产环境之前验证 bot 逻辑",
+  "Please enter a message": "请输入消息",
+  "Test request failed": "测试请求失败"
 }

@@ -160,6 +160,7 @@ router
     router.put('/:id', [BotsController, 'update']);
     router.delete('/:id', [BotsController, 'destroy']);
     router.post('/:id/regenerate-token', [BotsController, 'regenerateToken']);
+    router.post('/:id/test', [BotsController, 'test']);
   })
   .prefix('/api/bots')
   .middleware([apiAuthMiddleware]);

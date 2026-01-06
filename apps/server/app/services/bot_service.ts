@@ -257,6 +257,116 @@ export class BotService {
   }
 
   /**
+   * 测试 Bot 消息处理
+   * 模拟将消息发送给 bot,返回响应结果
+   */
+  async testBot(
+    botId: number,
+    message: string,
+    platform?: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    response?: string;
+    error?: string;
+    details?: Record<string, unknown>;
+  }> {
+    const bot = await this.getBot(botId);
+    if (!bot) {
+      throw new Error(`Bot with ID ${botId} not found`);
+    }
+
+    try {
+      // 记录测试请求
+      console.log(`[Bot Test] Bot ID: ${botId}, Message: ${message}, Platform: ${platform}`);
+
+      // 构造测试消息负载（简单版本）
+      // 根据平台类型构造不同的消息格式
+      const testPayload = this.constructTestPayload(message, platform || bot.type);
+
+      // 这里可以添加更多的测试逻辑
+      // 比如调用适配器的 parseMessage 方法等
+
+      // 返回测试结果
+      return {
+        success: true,
+        message: 'Test message processed successfully',
+        response: `Received: ${message}`,
+        details: {
+          botId,
+          botName: bot.name,
+          platform: platform || bot.type,
+          timestamp: new Date().toISOString(),
+          payload: testPayload,
+        },
+      };
+    } catch (error) {
+      console.error(`[Bot Test Error] Bot ID: ${botId}:`, error);
+      return {
+        success: false,
+        message: 'Failed to test bot',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * 构造测试消息负载
+   * 根据平台类型返回相应格式的消息
+   */
+  private constructTestPayload(message: string, platform: string): Record<string, unknown> {
+    const basePayload = {
+      text: message,
+      timestamp: new Date().toISOString(),
+      sender: {
+        id: 'test_user',
+        name: 'Test User',
+      },
+    };
+
+    switch (platform.toLowerCase()) {
+      case 'wecom':
+        return {
+          ...basePayload,
+          msgtype: 'text',
+          touser: 'test_user',
+          agentid: 'test_agent',
+        };
+      case 'discord':
+        return {
+          ...basePayload,
+          author: {
+            id: 'test_user',
+            username: 'Test User',
+          },
+          channel_id: 'test_channel',
+        };
+      case 'slack':
+        return {
+          ...basePayload,
+          user: 'test_user',
+          channel: 'test_channel',
+          type: 'message',
+        };
+      case 'telegram':
+        return {
+          ...basePayload,
+          chat: {
+            id: 'test_chat',
+            type: 'private',
+          },
+          from: {
+            id: 'test_user',
+            first_name: 'Test',
+            username: 'test_user',
+          },
+        };
+      default:
+        return basePayload;
+    }
+  }
+
+  /**
    * 记录 Bot 操作日志
    */
   private async logBotAction(

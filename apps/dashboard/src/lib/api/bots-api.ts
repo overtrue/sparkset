@@ -46,6 +46,23 @@ export async function regenerateToken(id: number): Promise<{ token: string }> {
   return apiPost(`/api/bots/${id}/regenerate-token`, {});
 }
 
+export async function testBot(
+  id: number,
+  message: string,
+  platform?: string,
+): Promise<{
+  success: boolean;
+  message: string;
+  response?: string;
+  error?: string;
+  details?: Record<string, unknown>;
+}> {
+  return apiPost(`/api/bots/${id}/test`, {
+    message,
+    platform,
+  });
+}
+
 // Bot Events
 export async function fetchBotEvents(
   botId: number,

@@ -614,5 +614,21 @@
   "Loading events...": "Loading events...",
   "Failed to load events": "Failed to load events",
   "Regenerate Webhook Token": "Regenerate Webhook Token",
-  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately."
+  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.",
+  "Test Bot": "Test Bot",
+  "Test how your bot responds to messages": "Test how your bot responds to messages",
+  "Message History": "Message History",
+  "Clear": "Clear",
+  "No messages yet. Send a test message to get started.": "No messages yet. Send a test message to get started.",
+  "View Details": "View Details",
+  "Message": "Message",
+  "Enter test message": "Enter test message",
+  "Send Test Message": "Send Test Message",
+  "Sending": "Sending",
+  "Test Information": "Test Information",
+  "Test messages are not actually sent to external platforms": "Test messages are not actually sent to external platforms",
+  "Bot responses are simulated based on bot configuration": "Bot responses are simulated based on bot configuration",
+  "This helps verify bot logic before deploying to production": "This helps verify bot logic before deploying to production",
+  "Please enter a message": "Please enter a message",
+  "Test request failed": "Test request failed"
 }

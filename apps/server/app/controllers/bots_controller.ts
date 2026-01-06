@@ -203,4 +203,52 @@ export default class BotsController {
       });
     }
   }
+
+  /**
+   * 测试 Bot 消息处理
+   * POST /api/bots/:id/test
+   * 用于测试 bot 对特定消息的响应
+   */
+  async test(ctx: HttpContext & AuthContext) {
+    try {
+      const { params, request, response } = ctx;
+      const id = toId(params.id);
+      if (!id) {
+        return response.badRequest({ message: 'Invalid bot ID' });
+      }
+
+      // 获取当前用户 ID
+      const user = (ctx as unknown as AuthContext).auth?.user;
+      if (!user) {
+        return response.unauthorized({ message: 'Not authenticated' });
+      }
+
+      // 获取 bot
+      const bot = await botService.getBot(id);
+      if (!bot) {
+        return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+
+      // 获取请求体中的测试消息
+      const { message, platform } = request.body() as {
+        message: string;
+        platform?: string;
+      };
+
+      if (!message) {
+        return response.badRequest({ message: 'Message is required' });
+      }
+
+      // 调用测试服务
+      const result = await botService.testBot(id, message, platform);
+
+      return response.ok(result);
+    } catch (error) {
+      const { response } = ctx;
+      console.error('Bot test error:', error);
+      return response.internalServerError({
+        message: error instanceof Error ? error.message : 'Failed to test bot',
+      });
+    }
+  }
 }
