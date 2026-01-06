@@ -100,7 +100,7 @@ export default function BotsPage() {
       accessorKey: 'platform',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Platform')} />,
       cell: ({ row }) => {
-        const platform = row.getValue('platform');
+        const platform = row.original.platform;
         return <Badge variant="outline">{PLATFORM_LABELS[platform] || platform}</Badge>;
       },
       size: 120,
