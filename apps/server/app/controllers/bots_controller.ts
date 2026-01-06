@@ -314,4 +314,50 @@ export default class BotsController {
       });
     }
   }
+
+  /**
+   * 重放 Bot 事件
+   * POST /api/bots/:botId/events/:eventId/replay
+   * 用于重新处理之前的事件
+   */
+  async replayEvent(ctx: HttpContext & AuthContext) {
+    try {
+      const { params, response } = ctx;
+      const botId = toId(params.botId);
+      const eventId = toId(params.eventId);
+
+      if (!botId || !eventId) {
+        return response.badRequest({ message: 'Invalid bot or event ID' });
+      }
+
+      // 验证 bot 存在
+      const bot = await botService.getBot(botId);
+      if (!bot) {
+        return response.notFound({ message: `Bot with ID ${botId} not found` });
+      }
+
+      // 获取原始事件
+      const event = await BotEvent.findOrFail(eventId);
+
+      if (event.botId !== botId) {
+        return response.badRequest({ message: 'Event does not belong to this bot' });
+      }
+
+      // 重放事件 - 重新处理该消息
+      const result = await botService.testBot(botId, event.content, undefined);
+
+      return response.ok({
+        message: 'Event replayed successfully',
+        originalEventId: event.id,
+        newEventId: result.eventId,
+        originalContent: event.content,
+      });
+    } catch (error) {
+      const { response } = ctx;
+      console.error('Bot event replay error:', error);
+      return response.internalServerError({
+        message: error instanceof Error ? error.message : 'Failed to replay bot event',
+      });
+    }
+  }
 }

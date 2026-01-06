@@ -676,5 +676,8 @@
   "Clear All": "清空全部",
   "Result": "结果",
   "Error": "错误",
-  "WeChat Work": "企业微信"
+  "WeChat Work": "企业微信",
+  "Replay Event": "重放事件",
+  "Replaying": "重放中",
+  "Event replayed successfully": "事件重放成功"
 }

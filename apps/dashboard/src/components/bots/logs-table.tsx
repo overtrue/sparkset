@@ -28,6 +28,7 @@ import type { BotEvent } from '@/types/api';
 
 interface LogsTableProps {
   events: BotEvent[];
+  botId?: number;
   isLoading?: boolean;
   error?: unknown;
   onRefresh?: () => void;
@@ -37,7 +38,14 @@ interface LogsTableProps {
 type SortField = 'createdAt' | 'status' | 'externalUserId';
 type SortOrder = 'asc' | 'desc';
 
-export function LogsTable({ events, isLoading, error, onRefresh, onExport }: LogsTableProps) {
+export function LogsTable({
+  events,
+  botId,
+  isLoading,
+  error,
+  onRefresh,
+  onExport,
+}: LogsTableProps) {
   const t = useTranslations();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -290,7 +298,13 @@ export function LogsTable({ events, isLoading, error, onRefresh, onExport }: Log
       </CardContent>
 
       {/* Event Details Modal */}
-      <EventDetailsModal event={selectedEvent} open={modalOpen} onOpenChange={setModalOpen} />
+      <EventDetailsModal
+        event={selectedEvent}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        botId={botId}
+        onReplaySuccess={onRefresh}
+      />
     </Card>
   );
 }

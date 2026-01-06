@@ -12,20 +12,30 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
-import { RiClipboardLine, RiCheckLine } from '@remixicon/react';
+import { RiClipboardLine, RiCheckLine, RiRefreshLine } from '@remixicon/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import type { BotEvent } from '@/types/api';
+import { replayBotEvent } from '@/lib/api/bots-api';
 
 interface EventDetailsModalProps {
   event: BotEvent | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  botId?: number;
+  onReplaySuccess?: () => void;
 }
 
-export function EventDetailsModal({ event, open, onOpenChange }: EventDetailsModalProps) {
+export function EventDetailsModal({
+  event,
+  open,
+  onOpenChange,
+  botId,
+  onReplaySuccess,
+}: EventDetailsModalProps) {
   const t = useTranslations();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [replaying, setReplaying] = useState(false);
 
   if (!event) return null;
 
@@ -34,6 +44,25 @@ export function EventDetailsModal({ event, open, onOpenChange }: EventDetailsMod
     setCopiedField(fieldName);
     toast.success(t('Copied to clipboard'));
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleReplay = async () => {
+    if (!botId) {
+      toast.error(t('Bot ID is required'));
+      return;
+    }
+
+    setReplaying(true);
+    try {
+      await replayBotEvent(botId, event.id);
+      toast.success(t('Event replayed successfully'));
+      onReplaySuccess?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('Failed to replay event'));
+    } finally {
+      setReplaying(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -200,6 +229,25 @@ export function EventDetailsModal({ event, open, onOpenChange }: EventDetailsMod
             </div>
           </div>
         </ScrollArea>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 justify-end pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t('Close')}
+          </Button>
+          {botId && (
+            <Button
+              onClick={() => {
+                void handleReplay();
+              }}
+              disabled={replaying}
+              className="gap-2"
+            >
+              <RiRefreshLine className={`h-4 w-4 ${replaying ? 'animate-spin' : ''}`} />
+              {replaying ? t('Replaying') : t('Replay Event')}
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

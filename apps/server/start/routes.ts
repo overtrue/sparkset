@@ -162,6 +162,7 @@ router
     router.post('/:id/regenerate-token', [BotsController, 'regenerateToken']);
     router.post('/:id/test', [BotsController, 'test']);
     router.get('/:id/events', [BotsController, 'events']);
+    router.post('/:botId/events/:eventId/replay', [BotsController, 'replayEvent']);
   })
   .prefix('/api/bots')
   .middleware([apiAuthMiddleware]);

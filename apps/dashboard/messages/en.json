@@ -678,5 +678,8 @@
   "Clear All": "Clear All",
   "Result": "Result",
   "Error": "Error",
-  "WeChat Work": "WeChat Work"
+  "WeChat Work": "WeChat Work",
+  "Replay Event": "Replay Event",
+  "Replaying": "Replaying",
+  "Event replayed successfully": "Event replayed successfully"
 }

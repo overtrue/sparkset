@@ -106,3 +106,15 @@ export async function fetchBotLogs(
 
   return apiGet(`/api/bots/${botId}/logs?${params.toString()}`);
 }
+
+export async function replayBotEvent(
+  botId: number,
+  eventId: number,
+): Promise<{
+  message: string;
+  originalEventId: number;
+  newEventId: number;
+  originalContent: string;
+}> {
+  return apiPost(`/api/bots/${botId}/events/${eventId}/replay`, {});
+}

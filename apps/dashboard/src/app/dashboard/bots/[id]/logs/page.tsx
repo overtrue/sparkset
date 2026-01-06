@@ -113,6 +113,7 @@ export default function BotLogsPage() {
 
       <LogsTable
         events={logsData?.items || []}
+        botId={botId ?? undefined}
         isLoading={logsLoading}
         error={logsError}
         onRefresh={handleRefresh}
