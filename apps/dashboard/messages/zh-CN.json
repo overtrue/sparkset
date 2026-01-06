@@ -595,5 +595,20 @@
   "Webhook Events": "Webhook 事件",
   "No events yet": "暂无事件",
   "Event ID": "事件 ID",
-  "Timestamp": "时间戳"
+  "Timestamp": "时间戳",
+  "Token copied to clipboard": "Token 已复制到剪贴板",
+  "Webhook URL copied to clipboard": "Webhook 地址已复制到剪贴板",
+  "Regenerate token? Old token will be invalidated.": "重新生成 token？旧 token 将失效。",
+  "Token regenerated successfully": "Token 重新生成成功",
+  "Failed to regenerate token": "重新生成 token 失败",
+  "Use this token to authenticate webhook requests": "使用此 token 来验证 webhook 请求",
+  "Show": "显示",
+  "Hide": "隐藏",
+  "Configure this URL as your webhook endpoint in your bot platform settings": "在您的 bot 平台设置中配置此 URL 作为 webhook 端点",
+  "Regenerating...": "重新生成中...",
+  "Regenerating will invalidate the old token. Update your webhook configuration immediately.": "重新生成将使旧 token 失效。请立即更新您的 webhook 配置。",
+  "Latest": "最新的",
+  "webhook event(s)": "个 webhook 事件",
+  "Loading events...": "加载事件中...",
+  "Failed to load events": "加载事件失败"
 }

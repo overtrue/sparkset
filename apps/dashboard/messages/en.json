@@ -597,5 +597,20 @@
   "Webhook Events": "Webhook Events",
   "No events yet": "No events yet",
   "Event ID": "Event ID",
-  "Timestamp": "Timestamp"
+  "Timestamp": "Timestamp",
+  "Token copied to clipboard": "Token copied to clipboard",
+  "Webhook URL copied to clipboard": "Webhook URL copied to clipboard",
+  "Regenerate token? Old token will be invalidated.": "Regenerate token? Old token will be invalidated.",
+  "Token regenerated successfully": "Token regenerated successfully",
+  "Failed to regenerate token": "Failed to regenerate token",
+  "Use this token to authenticate webhook requests": "Use this token to authenticate webhook requests",
+  "Show": "Show",
+  "Hide": "Hide",
+  "Configure this URL as your webhook endpoint in your bot platform settings": "Configure this URL as your webhook endpoint in your bot platform settings",
+  "Regenerating...": "Regenerating...",
+  "Regenerating will invalidate the old token. Update your webhook configuration immediately.": "Regenerating will invalidate the old token. Update your webhook configuration immediately.",
+  "Latest": "Latest",
+  "webhook event(s)": "webhook event(s)",
+  "Loading events...": "Loading events...",
+  "Failed to load events": "Failed to load events"
 }
