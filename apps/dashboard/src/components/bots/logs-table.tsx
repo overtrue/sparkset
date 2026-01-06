@@ -21,7 +21,9 @@ import {
   RiSearchLine,
   RiRefreshLine,
   RiDownloadCloud2Line,
+  RiEye2Line,
 } from '@remixicon/react';
+import { EventDetailsModal } from './event-details-modal';
 import type { BotEvent } from '@/types/api';
 
 interface LogsTableProps {
@@ -41,6 +43,8 @@ export function LogsTable({ events, isLoading, error, onRefresh, onExport }: Log
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [selectedEvent, setSelectedEvent] = useState<BotEvent | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Filter and sort events
   const filteredEvents = useMemo(() => {
@@ -242,6 +246,9 @@ export function LogsTable({ events, isLoading, error, onRefresh, onExport }: Log
                         ))}
                     </button>
                   </th>
+                  <th className="text-left py-3 px-3 font-medium text-muted-foreground">
+                    {t('Actions')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -262,6 +269,18 @@ export function LogsTable({ events, isLoading, error, onRefresh, onExport }: Log
                         {event.status}
                       </Badge>
                     </td>
+                    <td className="py-3 px-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setModalOpen(true);
+                        }}
+                      >
+                        <RiEye2Line className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -269,6 +288,9 @@ export function LogsTable({ events, isLoading, error, onRefresh, onExport }: Log
           </div>
         )}
       </CardContent>
+
+      {/* Event Details Modal */}
+      <EventDetailsModal event={selectedEvent} open={modalOpen} onOpenChange={setModalOpen} />
     </Card>
   );
 }

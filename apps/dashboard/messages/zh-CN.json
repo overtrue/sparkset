@@ -652,5 +652,17 @@
   "Page": "页",
   "total": "条记录",
   "Previous": "上一页",
-  "Next": "下一页"
+  "Next": "下一页",
+  "Event Details": "事件详情",
+  "View detailed information about this webhook event": "查看此 webhook 事件的详细信息",
+  "Message Content": "消息内容",
+  "Copy Content": "复制内容",
+  "Action Result": "操作结果",
+  "Copy Result": "复制结果",
+  "Platform Details": "平台详情",
+  "Copy Details": "复制详情",
+  "Raw JSON": "原始 JSON",
+  "Copy Raw JSON": "复制原始 JSON",
+  "Copied to clipboard": "已复制到剪贴板",
+  "Actions": "操作"
 }

@@ -654,5 +654,17 @@
   "Page": "Page",
   "total": "total",
   "Previous": "Previous",
-  "Next": "Next"
+  "Next": "Next",
+  "Event Details": "Event Details",
+  "View detailed information about this webhook event": "View detailed information about this webhook event",
+  "Message Content": "Message Content",
+  "Copy Content": "Copy Content",
+  "Action Result": "Action Result",
+  "Copy Result": "Copy Result",
+  "Platform Details": "Platform Details",
+  "Copy Details": "Copy Details",
+  "Raw JSON": "Raw JSON",
+  "Copy Raw JSON": "Copy Raw JSON",
+  "Copied to clipboard": "Copied to clipboard",
+  "Actions": "Actions"
 }
