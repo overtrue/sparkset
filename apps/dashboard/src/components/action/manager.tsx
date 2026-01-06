@@ -419,7 +419,9 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         searchKey="name"
         searchPlaceholder={t('Search Actions')}
         enableRowSelection
-        onDeleteSelected={handleDeleteSelected}
+        onDeleteSelected={(rows) => {
+          void handleDeleteSelected(rows);
+        }}
         deleteConfirmTitle={t('Delete Action')}
         deleteConfirmDescription={(count) => t('confirmDeleteSelectedActions', { count })}
         emptyMessage={t('No Actions yet, click Create New in the top right')}
@@ -442,7 +444,11 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 : t('Fill in the information to create a new Action')}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
+          >
             <div className="grid gap-4 py-4 sm:grid-cols-2">
               {/* 左侧：基本信息 */}
               <div className="space-y-4">
@@ -509,7 +515,9 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleGenerateSQL}
+                        onClick={() => {
+                          void handleGenerateSQL();
+                        }}
                         disabled={!canGenerateSQL}
                         className="h-7 text-xs"
                       >

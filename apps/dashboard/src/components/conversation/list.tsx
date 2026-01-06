@@ -97,7 +97,9 @@ export function ConversationList({ conversations }: ConversationListProps) {
           <Collapsible
             key={conversation.id}
             open={isExpanded}
-            onOpenChange={() => handleToggle(conversation.id)}
+            onOpenChange={() => {
+              void handleToggle(conversation.id);
+            }}
           >
             <Card className="shadow-none">
               <CollapsibleTrigger asChild>

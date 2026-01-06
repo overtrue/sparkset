@@ -101,7 +101,12 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-6"
+        >
           {/* Bot Name */}
           <div className="space-y-2">
             <Label htmlFor="name">{t('Bot Name')}</Label>
