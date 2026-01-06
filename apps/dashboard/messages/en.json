@@ -666,5 +666,17 @@
   "Raw JSON": "Raw JSON",
   "Copy Raw JSON": "Copy Raw JSON",
   "Copied to clipboard": "Copied to clipboard",
-  "Actions": "Actions"
+  "Actions": "Actions",
+  "Batch Testing": "Batch Testing",
+  "Send multiple test messages and track results for each message": "Send multiple test messages and track results for each message",
+  "Batch Test": "Batch Test",
+  "Enter test message": "Enter test message",
+  "No messages added yet": "No messages added yet",
+  "Total": "Total",
+  "Run All Tests": "Run All Tests",
+  "Testing...": "Testing...",
+  "Clear All": "Clear All",
+  "Result": "Result",
+  "Error": "Error",
+  "WeChat Work": "WeChat Work"
 }

@@ -664,5 +664,17 @@
   "Raw JSON": "原始 JSON",
   "Copy Raw JSON": "复制原始 JSON",
   "Copied to clipboard": "已复制到剪贴板",
-  "Actions": "操作"
+  "Actions": "操作",
+  "Batch Testing": "批量测试",
+  "Send multiple test messages and track results for each message": "发送多个测试消息并跟踪每个消息的结果",
+  "Batch Test": "批量测试",
+  "Enter test message": "输入测试消息",
+  "No messages added yet": "还没有添加消息",
+  "Total": "总数",
+  "Run All Tests": "运行所有测试",
+  "Testing...": "测试中...",
+  "Clear All": "清空全部",
+  "Result": "结果",
+  "Error": "错误",
+  "WeChat Work": "企业微信"
 }
