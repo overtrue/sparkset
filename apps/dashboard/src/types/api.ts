@@ -23,6 +23,16 @@ export interface TestConnectionResult {
 
 export interface ApiListResponse<T> {
   items: T[];
+  pagination?: {
+    total: number;
+    perPage: number;
+    currentPage: number;
+    lastPage: number;
+  };
+}
+
+export interface ApiListResponseWithTotal<T> extends ApiListResponse<T> {
+  total: number;
 }
 
 // ============================================================================
@@ -547,8 +557,12 @@ export interface BotEvent {
   externalUserId: string;
   externalUserName?: string;
   content: string;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   internalUserId?: number;
+  actionResult?: Record<string, unknown>;
+  errorMessage?: string;
+  processingTimeMs?: number;
+  retryCount?: number;
   platformDetails?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;

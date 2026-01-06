@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from '@/i18n/client-routing';
-import { useBot } from '@/lib/api/bots-hooks';
+import { useBot, useBotEvents } from '@/lib/api/bots-hooks';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
 import { TokenManager } from '@/components/bots/token-manager';
@@ -33,6 +33,11 @@ export default function BotDetailPage() {
   const [showTestDrawer, setShowTestDrawer] = useState(false);
 
   const { data: bot, error, isLoading } = useBot(botId);
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = useBotEvents(botId, 1, 10);
 
   if (isLoading) {
     return (
@@ -80,6 +85,10 @@ export default function BotDetailPage() {
             <Button onClick={() => setShowTestDrawer(true)} variant="secondary">
               <RiPlayCircleLine className="h-4 w-4" />
               {t('Test Bot')}
+            </Button>
+            <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/logs`)} variant="outline">
+              <RiEdit2Line className="h-4 w-4" />
+              {t('View Logs')}
             </Button>
             <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/edit`)} variant="outline">
               <RiEdit2Line className="h-4 w-4" />
@@ -161,7 +170,12 @@ export default function BotDetailPage() {
       </div>
 
       {/* Event Logs */}
-      <EventLogs botId={bot.id} events={[]} isLoading={false} />
+      <EventLogs
+        botId={bot.id}
+        events={eventsData?.items || []}
+        isLoading={eventsLoading}
+        error={eventsError}
+      />
 
       {/* Test Drawer */}
       <BotTestDrawer bot={bot} open={showTestDrawer} onOpenChange={setShowTestDrawer} />
