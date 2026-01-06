@@ -53,9 +53,7 @@ export default class BotsController {
       // 创建 Bot
       const bot = await botService.createBot(payload, user.id);
 
-      return response.created({
-        data: bot.serialize(),
-      });
+      return response.created(bot.serialize());
     } catch (error) {
       const { response } = ctx;
       if (error instanceof Error && error.message.includes('validation')) {
@@ -86,9 +84,7 @@ export default class BotsController {
         return response.notFound({ message: `Bot with ID ${id} not found` });
       }
 
-      return response.ok({
-        data: bot.serialize(),
-      });
+      return response.ok(bot.serialize());
     } catch (error) {
       return response.internalServerError({
         message: error instanceof Error ? error.message : 'Failed to fetch bot',
@@ -120,9 +116,7 @@ export default class BotsController {
       // 更新 Bot
       const bot = await botService.updateBot(id, payload, user.id);
 
-      return response.ok({
-        data: bot.serialize(),
-      });
+      return response.ok(bot.serialize());
     } catch (error) {
       const { response } = ctx;
       if (error instanceof Error && error.message.includes('not found')) {
@@ -196,10 +190,8 @@ export default class BotsController {
       const webhookUrl = await botService.getWebhookUrlForBot(id);
 
       return response.ok({
-        data: {
-          webhookToken: newToken,
-          webhookUrl,
-        },
+        webhookToken: newToken,
+        webhookUrl,
       });
     } catch (error) {
       const { response } = ctx;
