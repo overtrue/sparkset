@@ -6,11 +6,12 @@ import { ErrorState } from '@/components/error-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from '@/i18n/client-routing';
 import { useBot } from '@/lib/api/bots-hooks';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
+import { TokenManager } from '@/components/bots/token-manager';
+import { EventLogs } from '@/components/bots/event-logs';
 import { RiArrowLeftLine, RiEdit2Line } from '@remixicon/react';
 import { useParams } from 'next/navigation';
 import { useMemo } from 'react';
@@ -85,6 +86,9 @@ export default function BotDetailPage() {
         }
       />
 
+      {/* Token Manager */}
+      <TokenManager bot={bot} />
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Basic Info Card */}
         <Card>
@@ -149,37 +153,8 @@ export default function BotDetailPage() {
         </Card>
       </div>
 
-      {/* Tabs for Logs and Events */}
-      <Tabs defaultValue="events" className="w-full">
-        <TabsList>
-          <TabsTrigger value="events">{t('Events')}</TabsTrigger>
-          <TabsTrigger value="logs">{t('Logs')}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="events" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('Recent Events')}</CardTitle>
-              <CardDescription>{t('Webhook events for this bot')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{t('Events view coming soon')}</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="logs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('Audit Logs')}</CardTitle>
-              <CardDescription>{t('History of changes to this bot')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{t('Logs view coming soon')}</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Event Logs */}
+      <EventLogs botId={bot.id} events={[]} isLoading={false} />
     </div>
   );
 }
