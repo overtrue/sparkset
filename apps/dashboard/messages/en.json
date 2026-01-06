@@ -581,5 +581,21 @@
   "Recent Events": "Recent Events",
   "Audit Logs": "Audit Logs",
   "Events": "Events",
-  "Logs": "Logs"
+  "Logs": "Logs",
+  "Manage Actions": "Manage Actions",
+  "out of": "out of",
+  "actions selected": "actions selected",
+  "Search actions...": "Search actions...",
+  "No actions found": "No actions found",
+  "Selected Actions": "Selected Actions",
+  "Save Changes": "Save Changes",
+  "Reset": "Reset",
+  "Webhook Token": "Webhook Token",
+  "Token": "Token",
+  "Regenerate": "Regenerate",
+  "Bot Webhook URL": "Bot Webhook URL",
+  "Webhook Events": "Webhook Events",
+  "No events yet": "No events yet",
+  "Event ID": "Event ID",
+  "Timestamp": "Timestamp"
 }

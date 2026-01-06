@@ -579,5 +579,21 @@
   "Recent Events": "最近事件",
   "Audit Logs": "审计日志",
   "Events": "事件",
-  "Logs": "日志"
+  "Logs": "日志",
+  "Manage Actions": "管理 Action",
+  "out of": "个",
+  "actions selected": "已选择",
+  "Search actions...": "搜索 Action...",
+  "No actions found": "未找到 Action",
+  "Selected Actions": "已选择的 Action",
+  "Save Changes": "保存更改",
+  "Reset": "重置",
+  "Webhook Token": "Webhook Token",
+  "Token": "Token",
+  "Regenerate": "重新生成",
+  "Bot Webhook URL": "Bot Webhook 地址",
+  "Webhook Events": "Webhook 事件",
+  "No events yet": "暂无事件",
+  "Event ID": "事件 ID",
+  "Timestamp": "时间戳"
 }
