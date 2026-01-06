@@ -9,6 +9,7 @@
 */
 
 import type { ApplicationService } from '@adonisjs/core/types';
+import { registerBotAdapters } from '../adapters/index.js';
 
 export default class AppProvider {
   constructor(protected app: ApplicationService) {}
@@ -22,8 +23,10 @@ export default class AppProvider {
   /**
    * The application has been booted
    */
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  async boot() {}
+  async boot() {
+    // Initialize all available Bot adapters
+    registerBotAdapters();
+  }
 
   /**
    * The application has been started

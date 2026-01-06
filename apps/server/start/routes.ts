@@ -22,6 +22,7 @@ const ChartsController = () => import('#controllers/charts_controller');
 const DashboardsController = () => import('#controllers/dashboards_controller');
 const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
 const BotsController = () => import('#controllers/bots_controller');
+const WebhooksController = () => import('#controllers/webhooks_controller');
 
 // Public routes
 router.get('/health', [HealthController, 'handle']);
@@ -162,3 +163,10 @@ router
   })
   .prefix('/api/bots')
   .middleware([apiAuthMiddleware]);
+
+// Webhook routes (public - no authentication required)
+router
+  .group(() => {
+    router.post('/:botId/:token', [WebhooksController, 'handleBotWebhook']);
+  })
+  .prefix('/webhooks/bot');
