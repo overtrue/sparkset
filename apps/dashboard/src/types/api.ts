@@ -493,19 +493,21 @@ export interface RegisterRequest {
 // Bot Types
 // ============================================================================
 
-export type BotPlatform = 'wecom' | 'discord' | 'slack' | 'telegram';
+export type BotPlatform = 'wecom' | 'discord' | 'slack' | 'telegram' | 'custom';
 
 export interface Bot {
   id: number;
   name: string;
   description?: string;
-  platform: BotPlatform;
+  type: BotPlatform;
   webhookToken: string;
-  webhookUrl?: string;
+  webhookUrl: string;
   enabledActions: number[];
   enableQuery: boolean;
   aiProviderId?: number;
   aiProvider?: AIProviderDTO;
+  isActive: boolean;
+  isVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -513,10 +515,15 @@ export interface Bot {
 export interface CreateBotDto {
   name: string;
   description?: string;
-  platform: BotPlatform;
+  type: BotPlatform;
+  webhookUrl: string;
   enabledActions?: number[];
   enableQuery?: boolean;
   aiProviderId?: number;
+  adapterConfig?: unknown;
+  rateLimit?: number;
+  maxRetries?: number;
+  requestTimeout?: number;
 }
 
 export interface UpdateBotDto {
@@ -525,6 +532,12 @@ export interface UpdateBotDto {
   enabledActions?: number[];
   enableQuery?: boolean;
   aiProviderId?: number;
+  adapterConfig?: unknown;
+  isActive?: boolean;
+  isVerified?: boolean;
+  rateLimit?: number;
+  maxRetries?: number;
+  requestTimeout?: number;
 }
 
 export interface BotEvent {

@@ -21,6 +21,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   discord: 'Discord',
   slack: 'Slack',
   telegram: 'Telegram',
+  custom: 'Custom',
 };
 
 export default function BotDetailPage() {
@@ -99,7 +100,7 @@ export default function BotDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">{t('Platform')}</p>
               <Badge variant="outline" className="mt-1">
-                {PLATFORM_LABELS[bot.platform] || bot.platform}
+                {PLATFORM_LABELS[bot.type] || bot.type}
               </Badge>
             </div>
 

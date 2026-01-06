@@ -30,6 +30,7 @@ const PLATFORMS: { value: BotPlatform; label: string }[] = [
   { value: 'discord', label: 'Discord' },
   { value: 'slack', label: 'Slack' },
   { value: 'telegram', label: 'Telegram' },
+  { value: 'custom', label: 'Custom' },
 ];
 
 export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
@@ -41,7 +42,7 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
   const [formData, setFormData] = useState({
     name: bot?.name || '',
     description: bot?.description || '',
-    platform: (bot?.platform || 'wecom') as BotPlatform,
+    type: (bot?.type || 'wecom') as BotPlatform,
     enableQuery: bot?.enableQuery ?? true,
   });
 
@@ -68,11 +69,13 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
         await updateBot({ id: bot.id, data: updateData });
         toast.success(t('Bot updated successfully'));
       } else {
-        // Create new bot
+        // Create new bot - generate webhook URL
+        const webhookUrl = `${window.location.origin}/api/webhooks/bot/[id]/${Math.random().toString(36).substr(2, 9)}`;
         const createData: CreateBotDto = {
           name: formData.name,
           description: formData.description,
-          platform: formData.platform,
+          type: formData.type,
+          webhookUrl,
           enableQuery: formData.enableQuery,
         };
         await createBot(createData);
@@ -130,14 +133,12 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
           {/* Platform - only shown for new bots */}
           {!bot && (
             <div className="space-y-2">
-              <Label htmlFor="platform">{t('Platform')}</Label>
+              <Label htmlFor="type">{t('Platform')}</Label>
               <Select
-                value={formData.platform}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, platform: value as BotPlatform })
-                }
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value as BotPlatform })}
               >
-                <SelectTrigger id="platform" disabled={submitting || isLoading}>
+                <SelectTrigger id="type" disabled={submitting || isLoading}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -28,6 +28,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   discord: 'Discord',
   slack: 'Slack',
   telegram: 'Telegram',
+  custom: 'Custom',
 };
 
 export default function BotsPage() {
@@ -97,10 +98,10 @@ export default function BotsPage() {
       size: 150,
     },
     {
-      accessorKey: 'platform',
+      accessorKey: 'type',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Platform')} />,
       cell: ({ row }) => {
-        const platform = row.original.platform;
+        const platform = row.original.type;
         return <Badge variant="outline">{PLATFORM_LABELS[platform] || platform}</Badge>;
       },
       size: 120,
