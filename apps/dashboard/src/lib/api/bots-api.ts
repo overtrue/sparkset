@@ -23,27 +23,27 @@ export async function fetchBots(
     params.append('search', search);
   }
 
-  return apiGet(`/bots?${params.toString()}`);
+  return apiGet(`/api/bots?${params.toString()}`);
 }
 
 export async function fetchBotById(id: number): Promise<Bot> {
-  return apiGet(`/bots/${id}`);
+  return apiGet(`/api/bots/${id}`);
 }
 
 export async function createBot(data: CreateBotDto): Promise<Bot> {
-  return apiPost('/bots', data);
+  return apiPost('/api/bots', data);
 }
 
 export async function updateBot(id: number, data: UpdateBotDto): Promise<Bot> {
-  return apiPut(`/bots/${id}`, data);
+  return apiPut(`/api/bots/${id}`, data);
 }
 
 export async function deleteBot(id: number): Promise<void> {
-  return apiDelete(`/bots/${id}`);
+  return apiDelete(`/api/bots/${id}`);
 }
 
 export async function regenerateToken(id: number): Promise<{ token: string }> {
-  return apiPost(`/bots/${id}/regenerate-token`, {});
+  return apiPost(`/api/bots/${id}/regenerate-token`, {});
 }
 
 // Bot Events
@@ -62,7 +62,7 @@ export async function fetchBotEvents(
     params.append('status', status);
   }
 
-  return apiGet(`/bots/${botId}/events?${params.toString()}`);
+  return apiGet(`/api/bots/${botId}/events?${params.toString()}`);
 }
 
 // Bot Logs
@@ -81,5 +81,5 @@ export async function fetchBotLogs(
     params.append('action', action);
   }
 
-  return apiGet(`/bots/${botId}/logs?${params.toString()}`);
+  return apiGet(`/api/bots/${botId}/logs?${params.toString()}`);
 }

@@ -16,38 +16,38 @@ import {
 export function useBots(page = 1, limit = 10, search?: string) {
   return useSWR(
     search
-      ? `/bots?page=${page}&limit=${limit}&search=${search}`
-      : `/bots?page=${page}&limit=${limit}`,
+      ? `/api/bots?page=${page}&limit=${limit}&search=${search}`
+      : `/api/bots?page=${page}&limit=${limit}`,
     () => fetchBots(page, limit, search),
   );
 }
 
 export function useBot(id: number | null) {
-  return useSWR(id ? `/bots/${id}` : null, () => fetchBotById(id!));
+  return useSWR(id ? `/api/bots/${id}` : null, () => fetchBotById(id!));
 }
 
 export function useBotEvents(botId: number | null, page = 1, limit = 20) {
-  return useSWR(botId ? `/bots/${botId}/events?page=${page}&limit=${limit}` : null, () =>
+  return useSWR(botId ? `/api/bots/${botId}/events?page=${page}&limit=${limit}` : null, () =>
     fetchBotEvents(botId!, page, limit),
   );
 }
 
 export function useBotLogs(botId: number | null, page = 1, limit = 20) {
-  return useSWR(botId ? `/bots/${botId}/logs?page=${page}&limit=${limit}` : null, () =>
+  return useSWR(botId ? `/api/bots/${botId}/logs?page=${page}&limit=${limit}` : null, () =>
     fetchBotLogs(botId!, page, limit),
   );
 }
 
 // Mutations
 export function useCreateBot() {
-  return useSWRMutation('/bots', async (_, { arg }: { arg: CreateBotDto }) => {
+  return useSWRMutation('/api/bots', async (_, { arg }: { arg: CreateBotDto }) => {
     return createBot(arg);
   });
 }
 
 export function useUpdateBot() {
   return useSWRMutation(
-    '/bots',
+    '/api/bots',
     async (_, { arg }: { arg: { id: number; data: UpdateBotDto } }) => {
       return updateBot(arg.id, arg.data);
     },
@@ -55,13 +55,13 @@ export function useUpdateBot() {
 }
 
 export function useDeleteBot() {
-  return useSWRMutation('/bots', async (_, { arg }: { arg: number }) => {
+  return useSWRMutation('/api/bots', async (_, { arg }: { arg: number }) => {
     return deleteBot(arg);
   });
 }
 
 export function useRegenerateToken() {
-  return useSWRMutation('/bots', async (_, { arg }: { arg: number }) => {
+  return useSWRMutation('/api/bots', async (_, { arg }: { arg: number }) => {
     return regenerateToken(arg);
   });
 }
