@@ -53,14 +53,20 @@ export async function testBot(
 ): Promise<{
   success: boolean;
   message: string;
-  response?: string;
+  eventId?: number;
   error?: string;
-  details?: Record<string, unknown>;
 }> {
   return apiPost(`/api/bots/${id}/test`, {
     message,
     platform,
   });
+}
+
+export async function fetchBotEventsByDate(botId: number, fromDate: string): Promise<BotEvent[]> {
+  const params = new URLSearchParams({
+    from_date: fromDate,
+  });
+  return apiGet(`/api/bots/${botId}/events?${params.toString()}`);
 }
 
 // Bot Events

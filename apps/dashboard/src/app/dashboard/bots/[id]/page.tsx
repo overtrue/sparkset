@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { LoadingState } from '@/components/loading-state';
 import { ErrorState } from '@/components/error-state';
@@ -12,10 +13,9 @@ import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
 import { TokenManager } from '@/components/bots/token-manager';
 import { EventLogs } from '@/components/bots/event-logs';
-import { BotTestPanel } from '@/components/bots/test-panel';
-import { RiArrowLeftLine, RiEdit2Line } from '@remixicon/react';
+import { BotTestDrawer } from '@/components/bots/test-drawer';
+import { RiArrowLeftLine, RiEdit2Line, RiPlayCircleLine } from '@remixicon/react';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
 
 const PLATFORM_LABELS: Record<string, string> = {
   wecom: 'WeChat Work',
@@ -30,6 +30,7 @@ export default function BotDetailPage() {
   const router = useRouter();
   const params = useParams();
   const botId = useMemo(() => (params?.id ? Number(params.id) : null), [params?.id]);
+  const [showTestDrawer, setShowTestDrawer] = useState(false);
 
   const { data: bot, error, isLoading } = useBot(botId);
 
@@ -76,6 +77,10 @@ export default function BotDetailPage() {
         description={bot.description || t('No description')}
         action={
           <div className="flex gap-2">
+            <Button onClick={() => setShowTestDrawer(true)} variant="secondary">
+              <RiPlayCircleLine className="h-4 w-4" />
+              {t('Test Bot')}
+            </Button>
             <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/edit`)} variant="outline">
               <RiEdit2Line className="h-4 w-4" />
               {t('Edit')}
@@ -158,8 +163,8 @@ export default function BotDetailPage() {
       {/* Event Logs */}
       <EventLogs botId={bot.id} events={[]} isLoading={false} />
 
-      {/* Test Panel */}
-      <BotTestPanel bot={bot} />
+      {/* Test Drawer */}
+      <BotTestDrawer bot={bot} open={showTestDrawer} onOpenChange={setShowTestDrawer} />
     </div>
   );
 }

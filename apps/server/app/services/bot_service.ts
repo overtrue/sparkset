@@ -258,7 +258,8 @@ export class BotService {
 
   /**
    * 测试 Bot 消息处理
-   * 模拟将消息发送给 bot,返回响应结果
+   * 通过调用实际的 webhook 端点来测试 bot
+   * 这会走完整的 bot 处理流程，包括消息解析、事件创建等
    */
   async testBot(
     botId: number,
@@ -267,9 +268,8 @@ export class BotService {
   ): Promise<{
     success: boolean;
     message: string;
-    response?: string;
+    eventId?: number;
     error?: string;
-    details?: Record<string, unknown>;
   }> {
     const bot = await this.getBot(botId);
     if (!bot) {
@@ -277,29 +277,55 @@ export class BotService {
     }
 
     try {
-      // 记录测试请求
-      console.log(`[Bot Test] Bot ID: ${botId}, Message: ${message}, Platform: ${platform}`);
-
-      // 构造测试消息负载（简单版本）
-      // 根据平台类型构造不同的消息格式
+      // 构造测试消息负载，模拟外部平台的请求
       const testPayload = this.constructTestPayload(message, platform || bot.type);
 
-      // 这里可以添加更多的测试逻辑
-      // 比如调用适配器的 parseMessage 方法等
+      console.log(`[Bot Test] Bot ID: ${botId}, Message: ${message}, Platform: ${platform}`);
+      console.log(`[Bot Test] Payload:`, JSON.stringify(testPayload, null, 2));
 
-      // 返回测试结果
-      return {
-        success: true,
-        message: 'Test message processed successfully',
-        response: `Received: ${message}`,
-        details: {
-          botId,
-          botName: bot.name,
-          platform: platform || bot.type,
-          timestamp: new Date().toISOString(),
-          payload: testPayload,
-        },
-      };
+      // 调用实际的 webhook 端点来处理测试消息
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3333';
+      const webhookUrl = `${baseUrl}/webhooks/bot/${botId}/${bot.webhookToken}`;
+      console.log(`[Bot Test] Calling webhook: ${webhookUrl}`);
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(testPayload),
+          signal: AbortSignal.timeout(10000),
+        });
+
+        const responseData = (await response
+          .json()
+          .catch(() => ({}) as Record<string, unknown>)) as Record<string, unknown>;
+        console.log(`[Bot Test] Webhook response (${response.status}):`, responseData);
+
+        // 从响应中获取事件 ID（如果有）
+        const eventId = responseData?.eventId || responseData?.event_id;
+
+        return {
+          success: true,
+          message: 'Test message sent to bot for processing',
+          eventId: eventId ? Number(eventId) : undefined,
+        };
+      } catch (fetchError) {
+        const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+
+        // 如果是超时或网络错误，返回失败
+        if (
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('fetch') ||
+          errorMessage.includes('abort')
+        ) {
+          throw new Error(`Webhook call failed: ${errorMessage}`);
+        }
+
+        // 其他错误也返回失败
+        throw fetchError;
+      }
     } catch (error) {
       console.error(`[Bot Test Error] Bot ID: ${botId}:`, error);
       return {
