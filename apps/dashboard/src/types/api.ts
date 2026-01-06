@@ -488,3 +488,67 @@ export interface RegisterRequest {
   email?: string;
   displayName?: string;
 }
+
+// ============================================================================
+// Bot Types
+// ============================================================================
+
+export type BotPlatform = 'wecom' | 'discord' | 'slack' | 'telegram';
+
+export interface Bot {
+  id: number;
+  name: string;
+  description?: string;
+  platform: BotPlatform;
+  webhookToken: string;
+  webhookUrl?: string;
+  enabledActions: number[];
+  enableQuery: boolean;
+  aiProviderId?: number;
+  aiProvider?: AIProviderDTO;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBotDto {
+  name: string;
+  description?: string;
+  platform: BotPlatform;
+  enabledActions?: number[];
+  enableQuery?: boolean;
+  aiProviderId?: number;
+}
+
+export interface UpdateBotDto {
+  name?: string;
+  description?: string;
+  enabledActions?: number[];
+  enableQuery?: boolean;
+  aiProviderId?: number;
+}
+
+export interface BotEvent {
+  id: number;
+  botId: number;
+  externalEventId: string;
+  externalUserId: string;
+  externalUserName?: string;
+  content: string;
+  status: 'pending' | 'completed' | 'failed';
+  internalUserId?: number;
+  platformDetails?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BotLog {
+  id: number;
+  botId: number;
+  eventId?: number;
+  action: string;
+  performedBy?: number;
+  changes?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
