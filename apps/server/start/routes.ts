@@ -21,6 +21,7 @@ const DatasetsController = () => import('#controllers/datasets_controller');
 const ChartsController = () => import('#controllers/charts_controller');
 const DashboardsController = () => import('#controllers/dashboards_controller');
 const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
+const BotsController = () => import('#controllers/bots_controller');
 
 // Public routes
 router.get('/health', [HealthController, 'handle']);
@@ -147,4 +148,17 @@ router
     router.delete('/:dashboardId/widgets/:id', [DashboardWidgetsController, 'destroy']);
   })
   .prefix('/api/dashboards')
+  .middleware([apiAuthMiddleware]);
+
+// Bot routes (requires authentication)
+router
+  .group(() => {
+    router.get('/', [BotsController, 'index']);
+    router.post('/', [BotsController, 'store']);
+    router.get('/:id', [BotsController, 'show']);
+    router.put('/:id', [BotsController, 'update']);
+    router.delete('/:id', [BotsController, 'destroy']);
+    router.post('/:id/regenerate-token', [BotsController, 'regenerateToken']);
+  })
+  .prefix('/api/bots')
   .middleware([apiAuthMiddleware]);
