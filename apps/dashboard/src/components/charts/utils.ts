@@ -71,7 +71,6 @@ function transformCategoricalData(
         const value = values[yField.field];
         // Debug: Log the value to verify it's correct
         if (process.env.NODE_ENV === 'development') {
-           
           console.log(
             '[transformCategoricalData] yField:',
             yField.field,

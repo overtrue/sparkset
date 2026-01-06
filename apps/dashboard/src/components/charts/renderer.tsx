@@ -114,7 +114,6 @@ export function ChartRenderer({
 
   // Debug: Log for radar charts
   if (chartType === 'radar' && process.env.NODE_ENV === 'development') {
-     
     console.log(
       '[ChartRenderer] Radar chart - nameKey:',
       nameKey,

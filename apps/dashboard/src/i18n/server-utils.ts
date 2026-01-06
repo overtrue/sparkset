@@ -21,11 +21,11 @@ export async function getLocaleFromRequest(): Promise<Locale> {
     const headerStore = await headers();
     const acceptLanguage = headerStore.get('accept-language');
     if (acceptLanguage) {
-      const languages = acceptLanguage.split(',').map(lang => {
+      const languages = acceptLanguage.split(',').map((lang) => {
         const [code, q = '1'] = lang.split(';');
         return {
           code: code.trim(),
-          quality: parseFloat(q.replace('q=', ''))
+          quality: parseFloat(q.replace('q=', '')),
         };
       });
 
