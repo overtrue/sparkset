@@ -610,5 +610,7 @@
   "Latest": "最新的",
   "webhook event(s)": "个 webhook 事件",
   "Loading events...": "加载事件中...",
-  "Failed to load events": "加载事件失败"
+  "Failed to load events": "加载事件失败",
+  "Regenerate Webhook Token": "重新生成 Webhook Token",
+  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "重新生成 token 将使旧 token 失效。任何使用旧 token 的 webhook 都将失败。请确保立即更新您的 webhook 配置。"
 }

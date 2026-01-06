@@ -612,5 +612,7 @@
   "Latest": "Latest",
   "webhook event(s)": "webhook event(s)",
   "Loading events...": "Loading events...",
-  "Failed to load events": "Failed to load events"
+  "Failed to load events": "Failed to load events",
+  "Regenerate Webhook Token": "Regenerate Webhook Token",
+  "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately.": "Regenerating the token will invalidate the old token. Any webhooks using the old token will fail. Make sure to update your webhook configuration immediately."
 }
