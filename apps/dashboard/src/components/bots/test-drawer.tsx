@@ -142,11 +142,13 @@ export function BotTestDrawer({
       return;
     }
 
+    const messageContent = input;
+
     // 添加发送消息
     const sentMsg: TestMessage = {
       id: `sent_${Date.now()}`,
       type: 'sent',
-      content: input,
+      content: messageContent,
       timestamp: new Date().toLocaleTimeString(),
     };
     setMessages((prev) => [...prev, sentMsg]);
@@ -157,7 +159,7 @@ export function BotTestDrawer({
     startPolling();
 
     try {
-      const response = await testBot(bot.id, input, selectedPlatform);
+      const response = await testBot(bot.id, messageContent, selectedPlatform);
 
       if (!response.success) {
         const errorMsg: TestMessage = {
