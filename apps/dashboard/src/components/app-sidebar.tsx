@@ -12,6 +12,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { Link, usePathname } from '@/i18n/client-routing';
+import { useTranslations } from '@/i18n/use-translations';
 import {
   RiBarChartLine,
   RiBookOpenLine,
@@ -25,8 +27,6 @@ import {
   RiRobot2Line,
   RiSparkling2Line,
 } from '@remixicon/react';
-import { useTranslations } from '@/i18n/use-translations';
-import { Link, usePathname } from '@/i18n/client-routing';
 import type { ComponentType } from 'react';
 import * as React from 'react';
 import { SearchForm } from './search-form';
@@ -90,7 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar {...props}>
       <SidebarHeader>
         <div className="flex items-center gap-2 p-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <RiSparkling2Line className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
