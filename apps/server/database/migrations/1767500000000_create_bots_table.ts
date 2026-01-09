@@ -59,7 +59,7 @@ export default class extends BaseSchema {
       table
         .foreign('default_data_source_id')
         .references('id')
-        .inTable('data_sources')
+        .inTable('datasources')
         .onDelete('SET NULL');
       table.foreign('ai_provider_id').references('id').inTable('ai_providers').onDelete('SET NULL');
       table.foreign('creator_id').references('id').inTable('users').onDelete('SET NULL');

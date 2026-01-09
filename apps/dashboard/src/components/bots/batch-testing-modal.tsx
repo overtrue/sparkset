@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,19 +27,10 @@ import {
   RiCloseLine,
   RiLoader4Line,
 } from '@remixicon/react';
-import { testBot } from '@/lib/api/bots-api';
 import { useTranslations } from '@/i18n/use-translations';
 import { toast } from 'sonner';
 import type { Bot, BotPlatform } from '@/types/api';
-
-interface BatchTestMessage {
-  id: string;
-  content: string;
-  platform?: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  result?: string;
-  error?: string;
-}
+import { useBatchTesting } from '@/hooks/use-batch-testing';
 
 interface BatchTestingModalProps {
   bot: Bot;
@@ -49,86 +40,50 @@ interface BatchTestingModalProps {
 
 export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModalProps) {
   const t = useTranslations();
-  const [messages, setMessages] = useState<BatchTestMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState(bot.type);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runningId, setRunningId] = useState<string | null>(null);
 
-  const addMessage = useCallback(() => {
+  const {
+    messages,
+    isRunning,
+    runningId,
+    stats,
+    addMessage: addBatchMessage,
+    removeMessage,
+    clearMessages,
+    runBatch,
+  } = useBatchTesting(bot.id, bot.type);
+
+  const handleAddMessage = () => {
     if (!newMessage.trim()) {
       toast.error(t('Please enter a message'));
       return;
     }
 
-    const id = Date.now().toString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id,
-        content: newMessage,
-        platform: selectedPlatform,
-        status: 'pending',
-      },
-    ]);
-    setNewMessage('');
-  }, [newMessage, selectedPlatform, t]);
+    const success = addBatchMessage(newMessage, selectedPlatform);
+    if (success) {
+      setNewMessage('');
+    }
+  };
 
-  const removeMessage = (id: string) => {
+  const handleClearAll = () => {
+    if (isRunning) {
+      toast.error(t('Cannot clear messages while testing'));
+      return;
+    }
+    clearMessages();
+  };
+
+  const handleRemoveMessage = (id: string) => {
     if (isRunning && runningId === id) {
       toast.error(t('Cannot remove message while testing'));
       return;
     }
-    setMessages((prev) => prev.filter((msg) => msg.id !== id));
+    removeMessage(id);
   };
 
-  const runBatch = async () => {
-    const pendingMessages = messages.filter((msg) => msg.status === 'pending');
-    if (pendingMessages.length === 0) {
-      toast.error(t('No pending messages to test'));
-      return;
-    }
-
-    setIsRunning(true);
-
-    for (const msg of messages) {
-      if (msg.status !== 'pending') continue;
-
-      setRunningId(msg.id);
-      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, status: 'running' } : m)));
-
-      try {
-        const result = await testBot(bot.id, msg.content, msg.platform);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msg.id
-              ? {
-                  ...m,
-                  status: result.success ? 'completed' : 'failed',
-                  result: result.message,
-                  error: result.error,
-                }
-              : m,
-          ),
-        );
-      } catch (error) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msg.id
-              ? {
-                  ...m,
-                  status: 'failed',
-                  error: error instanceof Error ? error.message : t('Unknown error'),
-                }
-              : m,
-          ),
-        );
-      }
-    }
-
-    setRunningId(null);
-    setIsRunning(false);
-    toast.success(t('Batch testing completed'));
+  const handleRunBatch = async () => {
+    await runBatch();
   };
 
   const getStatusIcon = (status: string) => {
@@ -142,13 +97,6 @@ export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModal
       default:
         return null;
     }
-  };
-
-  const stats = {
-    total: messages.length,
-    completed: messages.filter((m) => m.status === 'completed').length,
-    failed: messages.filter((m) => m.status === 'failed').length,
-    pending: messages.filter((m) => m.status === 'pending').length,
   };
 
   return (
@@ -190,7 +138,7 @@ export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModal
               />
 
               <Button
-                onClick={addMessage}
+                onClick={handleAddMessage}
                 disabled={isRunning || !newMessage.trim()}
                 variant="outline"
                 size="sm"
@@ -268,7 +216,7 @@ export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModal
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeMessage(msg.id)}
+                        onClick={() => handleRemoveMessage(msg.id)}
                         disabled={isRunning && runningId === msg.id}
                       >
                         <RiDeleteBin2Line className="h-4 w-4" />
@@ -284,7 +232,7 @@ export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModal
         {/* Actions */}
         <div className="flex gap-2 border-t pt-4">
           <Button
-            onClick={runBatch}
+            onClick={handleRunBatch}
             disabled={messages.length === 0 || isRunning}
             className="flex-1"
           >
@@ -301,7 +249,7 @@ export function BatchTestingModal({ bot, open, onOpenChange }: BatchTestingModal
             )}
           </Button>
 
-          <Button variant="outline" onClick={() => setMessages([])} disabled={isRunning}>
+          <Button variant="outline" onClick={handleClearAll} disabled={isRunning}>
             {t('Clear All')}
           </Button>
 

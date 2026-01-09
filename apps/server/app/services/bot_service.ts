@@ -4,6 +4,19 @@ import BotLog from '../models/bot_log.js';
 import type { CreateBotRequest, UpdateBotRequest } from '../types/bot.js';
 
 /**
+ * Field configuration for update operations
+ * Defines how each field should be compared and processed
+ */
+interface UpdateFieldConfig {
+  /** Field name in both data and bot objects */
+  name: keyof UpdateBotRequest & keyof Bot;
+  /** Comparison function - returns true if values are different */
+  isDifferent: (dataValue: unknown, botValue: unknown) => boolean;
+  /** Optional transformer for complex comparisons */
+  compareValue?: (value: unknown) => string;
+}
+
+/**
  * Bot 业务逻辑服务
  * 处理 Bot 的创建、更新、删除、查询等操作
  */
@@ -22,6 +35,68 @@ export class BotService {
   private getWebhookUrl(botId: number, token: string): string {
     const baseUrl = process.env.API_BASE_URL || 'http://localhost:3333';
     return `${baseUrl}/webhooks/bot/${botId}/${token}`;
+  }
+
+  /**
+   * Field configuration for update operations
+   * Defines comparison logic for each updatable field
+   */
+  private readonly updateFieldConfigs: UpdateFieldConfig[] = [
+    // Simple primitive fields
+    { name: 'name', isDifferent: (data, bot) => data !== bot },
+    { name: 'description', isDifferent: (data, bot) => data !== bot },
+    { name: 'defaultDataSourceId', isDifferent: (data, bot) => data !== bot },
+    { name: 'aiProviderId', isDifferent: (data, bot) => data !== bot },
+    { name: 'enableQuery', isDifferent: (data, bot) => data !== bot },
+    { name: 'isActive', isDifferent: (data, bot) => data !== bot },
+    { name: 'isVerified', isDifferent: (data, bot) => data !== bot },
+    { name: 'rateLimit', isDifferent: (data, bot) => data !== bot },
+    { name: 'maxRetries', isDifferent: (data, bot) => data !== bot },
+    { name: 'requestTimeout', isDifferent: (data, bot) => data !== bot },
+    // Complex fields requiring JSON comparison
+    {
+      name: 'adapterConfig',
+      isDifferent: (data, bot) => JSON.stringify(data) !== JSON.stringify(bot),
+    },
+    {
+      name: 'enabledActions',
+      isDifferent: (data, bot) => JSON.stringify(data) !== JSON.stringify(bot),
+    },
+    {
+      name: 'enabledDataSources',
+      isDifferent: (data, bot) => JSON.stringify(data) !== JSON.stringify(bot),
+    },
+  ];
+
+  /**
+   * Process field updates using configuration
+   * @param data - Update request data
+   * @param bot - Current bot instance
+   * @param changes - Object to collect changes
+   * @param fieldsToUpdate - Object to collect fields for update
+   */
+  private processFieldUpdates(
+    data: UpdateBotRequest,
+    bot: Bot,
+    changes: Record<string, { old: unknown; new: unknown }>,
+    fieldsToUpdate: Record<string, unknown>,
+  ): void {
+    for (const config of this.updateFieldConfigs) {
+      const dataValue = data[config.name];
+
+      // Skip if field is not provided in update data
+      if (dataValue === undefined) {
+        continue;
+      }
+
+      const botValue = bot[config.name];
+
+      // Check if values are different
+      if (config.isDifferent(dataValue, botValue)) {
+        changes[config.name] = { old: botValue, new: dataValue };
+        fieldsToUpdate[config.name] = dataValue;
+      }
+    }
   }
 
   /**
@@ -99,6 +174,7 @@ export class BotService {
 
   /**
    * 更新 Bot
+   * 使用配置驱动的字段处理，消除重复代码
    */
   async updateBot(botId: number, data: UpdateBotRequest, userId: number): Promise<Bot> {
     const bot = await this.getBot(botId);
@@ -106,78 +182,12 @@ export class BotService {
       throw new Error(`Bot with ID ${botId} not found`);
     }
 
-    // 记录变更
+    // 记录变更和待更新字段
     const changes: Record<string, { old: unknown; new: unknown }> = {};
     const fieldsToUpdate: Record<string, unknown> = {};
 
-    // 检查每个可更新的字段
-    if (data.name !== undefined && data.name !== bot.name) {
-      changes['name'] = { old: bot.name, new: data.name };
-      fieldsToUpdate['name'] = data.name;
-    }
-    if (data.description !== undefined && data.description !== bot.description) {
-      changes['description'] = { old: bot.description, new: data.description };
-      fieldsToUpdate['description'] = data.description;
-    }
-    if (
-      data.adapterConfig !== undefined &&
-      JSON.stringify(data.adapterConfig) !== JSON.stringify(bot.adapterConfig)
-    ) {
-      changes['adapterConfig'] = { old: bot.adapterConfig, new: data.adapterConfig };
-      fieldsToUpdate['adapterConfig'] = data.adapterConfig;
-    }
-    if (
-      data.enabledActions !== undefined &&
-      JSON.stringify(data.enabledActions) !== JSON.stringify(bot.enabledActions)
-    ) {
-      changes['enabledActions'] = { old: bot.enabledActions, new: data.enabledActions };
-      fieldsToUpdate['enabledActions'] = data.enabledActions;
-    }
-    if (
-      data.enabledDataSources !== undefined &&
-      JSON.stringify(data.enabledDataSources) !== JSON.stringify(bot.enabledDataSources)
-    ) {
-      changes['enabledDataSources'] = { old: bot.enabledDataSources, new: data.enabledDataSources };
-      fieldsToUpdate['enabledDataSources'] = data.enabledDataSources;
-    }
-    if (
-      data.defaultDataSourceId !== undefined &&
-      data.defaultDataSourceId !== bot.defaultDataSourceId
-    ) {
-      changes['defaultDataSourceId'] = {
-        old: bot.defaultDataSourceId,
-        new: data.defaultDataSourceId,
-      };
-      fieldsToUpdate['defaultDataSourceId'] = data.defaultDataSourceId;
-    }
-    if (data.aiProviderId !== undefined && data.aiProviderId !== bot.aiProviderId) {
-      changes['aiProviderId'] = { old: bot.aiProviderId, new: data.aiProviderId };
-      fieldsToUpdate['aiProviderId'] = data.aiProviderId;
-    }
-    if (data.enableQuery !== undefined && data.enableQuery !== bot.enableQuery) {
-      changes['enableQuery'] = { old: bot.enableQuery, new: data.enableQuery };
-      fieldsToUpdate['enableQuery'] = data.enableQuery;
-    }
-    if (data.isActive !== undefined && data.isActive !== bot.isActive) {
-      changes['isActive'] = { old: bot.isActive, new: data.isActive };
-      fieldsToUpdate['isActive'] = data.isActive;
-    }
-    if (data.isVerified !== undefined && data.isVerified !== bot.isVerified) {
-      changes['isVerified'] = { old: bot.isVerified, new: data.isVerified };
-      fieldsToUpdate['isVerified'] = data.isVerified;
-    }
-    if (data.rateLimit !== undefined && data.rateLimit !== bot.rateLimit) {
-      changes['rateLimit'] = { old: bot.rateLimit, new: data.rateLimit };
-      fieldsToUpdate['rateLimit'] = data.rateLimit;
-    }
-    if (data.maxRetries !== undefined && data.maxRetries !== bot.maxRetries) {
-      changes['maxRetries'] = { old: bot.maxRetries, new: data.maxRetries };
-      fieldsToUpdate['maxRetries'] = data.maxRetries;
-    }
-    if (data.requestTimeout !== undefined && data.requestTimeout !== bot.requestTimeout) {
-      changes['requestTimeout'] = { old: bot.requestTimeout, new: data.requestTimeout };
-      fieldsToUpdate['requestTimeout'] = data.requestTimeout;
-    }
+    // 使用配置系统处理所有字段更新
+    this.processFieldUpdates(data, bot, changes, fieldsToUpdate);
 
     // 应用更新
     if (Object.keys(fieldsToUpdate).length > 0) {

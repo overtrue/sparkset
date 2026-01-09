@@ -2,22 +2,23 @@ import { BaseSchema } from '@adonisjs/lucid/schema';
 
 export default class extends BaseSchema {
   // 表名数组，需要添加 creator_id 和 updater_id 的表
-  protected tables = [
-    'datasources',
-    'actions',
-    'ai_providers',
-    'table_schemas',
-    'column_definitions',
-    'dashboard_widgets',
-    'messages',
-    'datasets',
-    'charts',
-    'dashboards',
-  ];
+  protected tables = ['conversation_messages', 'datasets', 'charts', 'dashboards'];
 
   async up() {
     // 为每个表添加 creator_id 和 updater_id
     for (const tableName of this.tables) {
+      // Check if columns exist and drop them if they do
+      try {
+        await this.db.rawQuery(`ALTER TABLE \`${tableName}\` DROP COLUMN \`creator_id\``);
+      } catch {
+        // Column doesn't exist, ignore
+      }
+      try {
+        await this.db.rawQuery(`ALTER TABLE \`${tableName}\` DROP COLUMN \`updater_id\``);
+      } catch {
+        // Column doesn't exist, ignore
+      }
+
       this.schema.table(tableName, (table) => {
         // 添加 creator_id（创建者）
         table.integer('creator_id').unsigned().nullable();
@@ -38,7 +39,7 @@ export default class extends BaseSchema {
       const systemUser = await trx.from('users').where('uid', 'system:anonymous').first();
       if (systemUser) {
         for (const tableName of this.tables) {
-          const result = await trx.table(tableName).whereNull('creator_id').update({
+          const result = await trx.from(tableName).where('creator_id', null).update({
             creator_id: systemUser.id,
             updater_id: systemUser.id,
           });

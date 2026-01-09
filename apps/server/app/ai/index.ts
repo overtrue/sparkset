@@ -613,5 +613,5 @@ export async function testAIProviderConnection(options: {
 export type { ColumnDefinition, TableSchema } from '@sparkset/core';
 
 // 导出提示词构建函数
-export { buildActionPrompt, buildPrompt } from './prompt';
-export type { ActionPromptOptions, PromptOptions } from './prompt';
+export { buildActionPrompt, buildPrompt } from './prompt.js';
+export type { ActionPromptOptions, PromptOptions } from './prompt.js';
