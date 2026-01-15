@@ -33,7 +33,7 @@
     "@adonisjs/bodyparser": "^10.1.2",
     "@adonisjs/core": "^6.0.0",
     "@adonisjs/cors": "^2.2.1",
-    "@adonisjs/lucid": "^21.8.1",
+    "@adonisjs/lucid": "^21.8.2",
     "@adonisjs/session": "^7.7.1",
     "@adonisjs/validator": "^6.0.0",
     "@ai-sdk/anthropic": "beta",
