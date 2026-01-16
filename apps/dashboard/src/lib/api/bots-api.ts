@@ -49,16 +49,15 @@ export async function regenerateToken(id: number): Promise<{ token: string }> {
 export async function testBot(
   id: number,
   message: string,
-  platform?: string,
 ): Promise<{
   success: boolean;
-  message: string;
-  eventId?: number;
+  response: string;
+  actionResult?: unknown;
   error?: string;
+  processingTimeMs: number;
 }> {
   return apiPost(`/api/bots/${id}/test`, {
     message,
-    platform,
   });
 }
 
@@ -111,10 +110,13 @@ export async function replayBotEvent(
   botId: number,
   eventId: number,
 ): Promise<{
+  success: boolean;
   message: string;
   originalEventId: number;
-  newEventId: number;
   originalContent: string;
+  response: string;
+  error?: string;
+  processingTimeMs: number;
 }> {
   return apiPost(`/api/bots/${botId}/events/${eventId}/replay`, {});
 }

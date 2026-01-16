@@ -20,7 +20,7 @@ interface UseBatchTestingOptions {
 
 interface BatchTestResult {
   success: boolean;
-  message?: string;
+  response?: string;
   error?: string;
 }
 
@@ -67,7 +67,7 @@ export function useBatchTesting(
       const result = await testBot(botId, message.content, message.platform as BotPlatform);
       return {
         success: result.success,
-        message: result.message,
+        response: result.response,
         error: result.error,
       };
     } catch (error) {
@@ -100,7 +100,7 @@ export function useBatchTesting(
       // Update with final status in a single operation
       updateMessageStatus(msg.id, {
         status: result.success ? 'completed' : 'failed',
-        result: result.message,
+        result: result.response,
         error: result.error,
       });
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -19,17 +19,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RiSendPlaneLine, RiLoader4Line, RiCheckLine, RiCloseLine } from '@remixicon/react';
-import { testBot, fetchBotEvents } from '@/lib/api/bots-api';
+import { testBot } from '@/lib/api/bots-api';
 import { useTranslations } from '@/i18n/use-translations';
 import { toast } from 'sonner';
-import type { Bot, BotEvent } from '@/types/api';
+import type { Bot } from '@/types/api';
 
 interface TestMessage {
   id: string;
-  type: 'sent' | 'processing' | 'received' | 'error';
+  type: 'sent' | 'received' | 'error';
   content: string;
   timestamp: string;
-  event?: BotEvent;
+  processingTimeMs?: number;
 }
 
 const PLATFORM_OPTIONS = [
@@ -55,8 +55,6 @@ export function BotTestDrawer({
   const [selectedPlatform, setSelectedPlatform] = useState(bot.type);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastEventIdRef = useRef<number | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -67,92 +65,6 @@ export function BotTestDrawer({
       }, 0);
     }
   }, [messages]);
-
-  // 停止轮询
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }, []);
-
-  // 轮询获取新的事件
-  const pollForNewEvents = useCallback(async () => {
-    try {
-      const response = await fetchBotEvents(bot.id, 1, 50);
-      const events = response.items || [];
-
-      if (events && events.length > 0) {
-        const newEvents = lastEventIdRef.current
-          ? events.filter((e) => e.id > lastEventIdRef.current!)
-          : [];
-
-        if (newEvents.length > 0) {
-          let hasCompletedOrFailed = false;
-
-          newEvents.forEach((event) => {
-            const icon =
-              event.status === 'completed' ? '✓' : event.status === 'failed' ? '✕' : '...';
-
-            const newMsg: TestMessage = {
-              id: event.id.toString(),
-              type:
-                event.status === 'completed'
-                  ? 'received'
-                  : event.status === 'failed'
-                    ? 'error'
-                    : 'processing',
-              content:
-                event.status === 'completed'
-                  ? `[${icon}] Response: ${event.content || 'Processing completed'}`
-                  : event.status === 'failed'
-                    ? `[${icon}] Error: ${event.errorMessage || event.content || 'Processing failed'}`
-                    : `[${icon}] Processing... (${event.content || 'waiting'})`,
-              timestamp: new Date(event.createdAt).toLocaleTimeString(),
-              event,
-            };
-            setMessages((prev) => [...prev, newMsg]);
-
-            // 检查是否有已完成或失败的事件
-            if (event.status === 'completed' || event.status === 'failed') {
-              hasCompletedOrFailed = true;
-            }
-          });
-
-          // 更新最后的事件 ID
-          lastEventIdRef.current = Math.max(
-            ...newEvents.map((e) => e.id),
-            lastEventIdRef.current || 0,
-          );
-
-          // 如果有完成或失败的事件，停止轮询
-          if (hasCompletedOrFailed) {
-            stopPolling();
-            setIsLoading(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to poll for new events:', error);
-    }
-  }, [bot.id, stopPolling]);
-
-  // 开始轮询
-  const startPolling = useCallback(() => {
-    // 立即轮询一次
-    void pollForNewEvents();
-    // 然后每 500ms 轮询一次
-    pollingIntervalRef.current = setInterval(() => {
-      void pollForNewEvents();
-    }, 500);
-  }, [pollForNewEvents]);
-
-  // 清理轮询
-  useEffect(() => {
-    return () => {
-      stopPolling();
-    };
-  }, [stopPolling]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) {
@@ -173,35 +85,32 @@ export function BotTestDrawer({
     setInput('');
     setIsLoading(true);
 
-    // 开始轮询新事件
-    startPolling();
-
     try {
-      const response = await testBot(bot.id, messageContent, selectedPlatform);
+      // 直接调用 testBot，它现在是同步返回的
+      const response = await testBot(bot.id, messageContent);
 
       if (!response.success) {
+        // 显示错误消息
         const errorMsg: TestMessage = {
           id: `error_${Date.now()}`,
           type: 'error',
           content: response.error || 'Test failed',
           timestamp: new Date().toLocaleTimeString(),
+          processingTimeMs: response.processingTimeMs,
         };
         setMessages((prev) => [...prev, errorMsg]);
         toast.error(response.error || 'Test failed');
-        stopPolling();
       } else {
-        // 添加处理中的消息
-        const processingMsg: TestMessage = {
-          id: `processing_${Date.now()}`,
-          type: 'processing',
-          content: 'Message sent to webhook, waiting for processing...',
+        // 显示 bot 的响应
+        const receivedMsg: TestMessage = {
+          id: `received_${Date.now()}`,
+          type: 'received',
+          content: response.response,
           timestamp: new Date().toLocaleTimeString(),
+          processingTimeMs: response.processingTimeMs,
         };
-        setMessages((prev) => [...prev, processingMsg]);
-        toast.success(response.message);
-
-        // 设置最后事件 ID，开始监听新事件
-        lastEventIdRef.current = 0;
+        setMessages((prev) => [...prev, receivedMsg]);
+        toast.success('Response received');
       }
     } catch (error) {
       const errorMsg: TestMessage = {
@@ -212,7 +121,6 @@ export function BotTestDrawer({
       };
       setMessages((prev) => [...prev, errorMsg]);
       toast.error(t('Test request failed'));
-      stopPolling();
     } finally {
       setIsLoading(false);
     }
@@ -220,8 +128,6 @@ export function BotTestDrawer({
 
   const handleClearMessages = () => {
     setMessages([]);
-    lastEventIdRef.current = null;
-    stopPolling();
   };
 
   const handlePlatformChange = (value: string) => {
@@ -257,9 +163,6 @@ export function BotTestDrawer({
                       {/* Icon */}
                       <div className="mt-1 flex-shrink-0">
                         {msg.type === 'sent' && <div className="h-2 w-2 rounded-full bg-primary" />}
-                        {msg.type === 'processing' && (
-                          <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
-                        )}
                         {msg.type === 'received' && (
                           <RiCheckLine className="h-4 w-4 text-green-500" />
                         )}
@@ -273,30 +176,18 @@ export function BotTestDrawer({
                             ? 'bg-primary text-primary-foreground'
                             : msg.type === 'error'
                               ? 'bg-destructive/20 text-destructive'
-                              : msg.type === 'processing'
-                                ? 'bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-100'
-                                : 'bg-secondary text-secondary-foreground'
+                              : 'bg-secondary text-secondary-foreground'
                         }`}
                       >
-                        <p className="text-sm">{msg.content}</p>
+                        <p className="text-sm break-words">{msg.content}</p>
                         <p className="text-xs mt-1 opacity-70">{msg.timestamp}</p>
+                        {msg.processingTimeMs !== undefined && (
+                          <p className="text-xs mt-1 opacity-70">
+                            {t('Processing time')}: {msg.processingTimeMs}ms
+                          </p>
+                        )}
                       </div>
                     </div>
-
-                    {/* Show event details if available */}
-                    {msg.event && (
-                      <details className="ml-8 text-xs mt-1">
-                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                          {t('View Details')}
-                        </summary>
-                        <div className="mt-2 p-2 bg-muted rounded text-xs space-y-1 font-mono">
-                          <div>ID: {msg.event.id}</div>
-                          <div>Status: {msg.event.status}</div>
-                          <div>User: {msg.event.externalUserId}</div>
-                          <div>Created: {new Date(msg.event.createdAt).toLocaleString()}</div>
-                        </div>
-                      </details>
-                    )}
                   </div>
                 ))
               )}
@@ -364,7 +255,7 @@ export function BotTestDrawer({
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-2 space-y-1 text-xs text-blue-900 dark:text-blue-100">
               <p className="font-medium">{t('Test Information')}:</p>
               <ul className="space-y-0.5 ml-4 list-disc">
-                <li>{t('Test messages are sent to the real webhook endpoint')}</li>
+                <li>{t('Messages are processed synchronously through the bot engine')}</li>
                 <li>{t('Events are processed through the full bot pipeline')}</li>
                 <li>{t('Helpful for verifying bot logic before production')}</li>
               </ul>
