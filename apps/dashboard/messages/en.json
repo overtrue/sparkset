@@ -259,6 +259,7 @@
   "Live Preview": "Live Preview",
   "Loading": "Loading",
   "Loading…": "Loading…",
+  "Failed to load query resources": "Failed to load query resources",
   "Logout": "Logout",
   "Manage AI SDK v6 Provider configurations and set default Provider": "Manage AI SDK v6 Provider configurations and set default Provider",
   "Manage database connections and sync schema": "Manage database connections and sync schema",

@@ -1,23 +1,54 @@
-import { getLocaleFromRequest } from '@/i18n/server-utils';
-import { getDictionary } from '@/i18n/dictionaries';
+'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { QueryEmptyState } from '@/components/query/empty-state';
-import { fetchDatasources } from '@/lib/api/datasources-api';
-import { fetchAIProviders } from '@/lib/api/ai-providers-api';
+import { ErrorState } from '@/components/error-state';
+import { LoadingState } from '@/components/loading-state';
+import { useAIProviders } from '@/lib/api/ai-providers-hooks';
+import { useDatasources } from '@/lib/api/datasources-hooks';
+import { useTranslations } from '@/i18n/use-translations';
 import QueryRunner from './query-runner';
 
-const QueryPage = async () => {
-  const locale = await getLocaleFromRequest();
-  const dict = await getDictionary(locale);
-  const t = (key: string) => dict[key] || key;
+const QueryPage = () => {
+  const t = useTranslations();
+  const {
+    data: datasourcesResult,
+    error: datasourcesError,
+    isLoading: datasourcesLoading,
+  } = useDatasources();
+  const {
+    data: aiProvidersResult,
+    error: aiProvidersError,
+    isLoading: aiProvidersLoading,
+  } = useAIProviders();
+  const datasources = datasourcesResult?.items || [];
+  const aiProviders = aiProvidersResult?.items || [];
+  const isLoading = datasourcesLoading || aiProvidersLoading;
+  const error = datasourcesError || aiProvidersError;
 
-  const [datasourcesResult, aiProvidersResult] = await Promise.all([
-    fetchDatasources().catch(() => ({ items: [] })),
-    fetchAIProviders().catch(() => ({ items: [] })),
-  ]);
-  const datasources = datasourcesResult.items || [];
-  const aiProviders = aiProvidersResult.items || [];
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('Query')}
+          description={t('Query database using natural language, AI generates SQL automatically')}
+        />
+        <LoadingState message={t('Loading')} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t('Query')}
+          description={t('Query database using natural language, AI generates SQL automatically')}
+        />
+        <ErrorState error={error} title={t('Failed to load query resources')} />
+      </div>
+    );
+  }
 
   if (datasources.length === 0) {
     return (

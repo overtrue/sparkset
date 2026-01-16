@@ -259,6 +259,7 @@
   "Live Preview": "实时预览",
   "Loading": "加载中",
   "Loading…": "加载中…",
+  "Failed to load query resources": "查询资源加载失败",
   "Logout": "退出登录",
   "Manage AI SDK v6 Provider configurations and set default Provider": "管理 AI SDK v6 支持的 Provider 配置，设置默认 Provider",
   "Manage database connections and sync schema": "管理数据库连接，同步表结构信息",
