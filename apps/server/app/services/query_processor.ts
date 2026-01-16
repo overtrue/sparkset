@@ -94,16 +94,18 @@ export class BotQueryProcessor {
    * Get or create conversation for a bot event
    */
   private async getOrCreateConversation(event: BotEvent): Promise<Conversation> {
-    // In a real implementation, we might create a composite key of user_id + bot_id
-    // For now, use external_user_id from the bot event
-    // We could store bot_id and user_external_id in conversation title or metadata
-    void event;
+    // Use internalUserId from event if available, otherwise use default user (ID: 1)
+    // This is required because user_id is NOT NULL in the database
+    const userId = event.internalUserId ?? 1;
 
     // Create a new conversation for this interaction
-    // In Phase 2.4 enhancement, we could track by external_user_id
+    // In Phase 2.4 enhancement, this is handled by ConversationTracker
+    // but for backward compatibility, we keep this method working
     const conversation = await Conversation.create({
-      userId: null, // No associated sparkset user
-      title: null, // Will be auto-generated or left null
+      userId,
+      title: `Bot query: ${event.externalUserId}`,
+      botId: event.botId,
+      externalUserId: event.externalUserId,
     });
 
     return conversation;

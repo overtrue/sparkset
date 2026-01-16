@@ -290,34 +290,75 @@ export class BotService {
       throw new Error(`Bot with ID ${botId} not found`);
     }
 
+    const startTime = Date.now();
+
     try {
-      // 简化方案：直接导入和使用 BotProcessor
-      // 完整的依赖注入将在 Phase 2.2 中实现
-      void (await import('../services/bot_processor.js'));
+      // 动态导入 BotProcessor 和容器
+      const { BotProcessor } = await import('../services/bot_processor.js');
       const BotEvent = (await import('../models/bot_event.js')).default;
+      const app = (await import('@adonisjs/core/services/app')).default;
 
       console.log(`[Bot Test] Testing Bot ID: ${botId}, Message: "${message}"`);
 
-      // 对于现在的测试，返回简单的确认消息
-      // TODO: Phase 2.2 - 实现完整的依赖注入和处理流程
-      const processingTimeMs = 10;
-      const response = `[Bot: ${bot.name}] 已收到您的消息: "${message}"`;
-
-      // 创建事件记录（不需要完整的处理链）
+      // 创建测试事件记录
+      let botEvent: InstanceType<typeof BotEvent> | null = null;
       try {
-        await BotEvent.create({
+        botEvent = await BotEvent.create({
           botId: bot.id,
+          externalEventId: `test_${Date.now()}`,
+          content: message,
           externalUserId: 'test_user',
           externalUserName: 'Test User',
-          status: 'completed',
+          status: 'pending',
+          retryCount: 0,
+          maxRetries: bot.maxRetries,
         });
       } catch (eventError) {
         console.warn('[Bot Test] Failed to create event:', eventError);
       }
 
+      // 尝试从容器获取 BotProcessor
+      let botProcessor: InstanceType<typeof BotProcessor> | null = null;
+      try {
+        botProcessor = await app.container.make(BotProcessor);
+      } catch {
+        console.warn('[Bot Test] BotProcessor not available in container');
+      }
+
+      if (botProcessor && botEvent) {
+        // 使用完整的 BotProcessor 处理消息
+        const result = await botProcessor.process(bot, botEvent, {
+          userId: 1, // 测试用户 ID
+          text: message,
+          externalUserId: 'test_user',
+          externalUserName: 'Test User',
+        });
+
+        // 更新事件状态
+        await botEvent
+          .merge({
+            status: result.success ? 'completed' : 'failed',
+            actionResult: result.actionResult || null,
+            errorMessage: result.error || null,
+            processingTimeMs: result.processingTimeMs,
+          })
+          .save();
+
+        return {
+          success: result.success,
+          response: result.response || result.error || '',
+          actionResult: result.actionResult,
+          error: result.error,
+          processingTimeMs: result.processingTimeMs,
+        };
+      }
+
+      // BotProcessor 不可用时的降级处理
+      const processingTimeMs = Date.now() - startTime;
       return {
-        success: true,
-        response,
+        success: false,
+        response: '',
+        error: 'BotProcessor 未配置。请确保数据库连接正常且服务已正确初始化。',
         processingTimeMs,
       };
     } catch (error) {
@@ -326,7 +367,7 @@ export class BotService {
         success: false,
         response: '',
         error: error instanceof Error ? error.message : 'Unknown error',
-        processingTimeMs: 0,
+        processingTimeMs: Date.now() - startTime,
       };
     }
   }

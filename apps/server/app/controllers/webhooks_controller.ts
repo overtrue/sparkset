@@ -7,7 +7,7 @@
  */
 
 import type { HttpContext } from '@adonisjs/core/http';
-import { inject } from '@adonisjs/core';
+import app from '@adonisjs/core/services/app';
 import { botAdapterRegistry } from '../adapters/bot_adapter_registry.js';
 import {
   BotProcessor,
@@ -18,16 +18,18 @@ import Bot from '../models/bot.js';
 import BotEvent from '../models/bot_event.js';
 import { toId } from '../utils/validation.js';
 
-@inject()
 export default class WebhooksController {
   /**
-   * BotProcessor 实例（通过依赖注入）
-   * 如果注入失败，回退到简化版本
+   * 获取 BotProcessor 实例
+   * 从 IoC 容器获取，如果不可用则返回 null
    */
-  private injectedProcessor: BotProcessor | null;
-
-  constructor(botProcessor?: BotProcessor) {
-    this.injectedProcessor = botProcessor ?? null;
+  private async getBotProcessor(): Promise<BotProcessor | null> {
+    try {
+      return await app.container.make(BotProcessor);
+    } catch {
+      // BotProcessor 未注册或创建失败
+      return null;
+    }
   }
 
   /**
@@ -234,9 +236,10 @@ export default class WebhooksController {
 
       // Phase 2.6: 使用完整的 BotProcessor（如果可用）
       let result;
-      if (this.injectedProcessor) {
+      const botProcessor = await this.getBotProcessor();
+      if (botProcessor) {
         // 使用完整的处理器（带会话追踪、意图识别等）
-        result = await this.injectedProcessor.process(bot, event, input);
+        result = await botProcessor.process(bot, event, input);
       } else {
         // 回退到简化版本
         result = await simpleBotProcessor.process(bot, input);
