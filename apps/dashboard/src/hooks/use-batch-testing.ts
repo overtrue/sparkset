@@ -64,7 +64,7 @@ export function useBatchTesting(
 
   const executeTest = async (message: BatchTestMessage): Promise<BatchTestResult> => {
     try {
-      const result = await testBot(botId, message.content, message.platform as BotPlatform);
+      const result = await testBot(botId, message.content);
       return {
         success: result.success,
         response: result.response,
