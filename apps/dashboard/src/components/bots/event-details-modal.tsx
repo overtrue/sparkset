@@ -65,12 +65,11 @@ export function EventDetailsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 min-h-0 overflow-auto">
           <CodeViewer
             code={JSON.stringify(event, null, 2)}
             language="json"
             showLineNumbers={true}
-            className="max-h-[60vh]"
           />
         </div>
 
