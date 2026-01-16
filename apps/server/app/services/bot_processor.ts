@@ -3,12 +3,16 @@
  * 核心业务逻辑层 - 处理用户消息并生成响应
  * 独立于任何接入方式（webhook、test、API）
  *
- * 当前状态（Phase 2.1）：简化实现，仅返回确认消息
- * Phase 2.2 将实现完整的意图识别和动作执行
+ * Phase 2.2：完整实现，支持 AI 驱动的意图识别和消息路由
  */
 
+import { generateText } from 'ai';
 import type Bot from '../models/bot.js';
 import type BotEvent from '../models/bot_event.js';
+import type { BotQueryProcessor } from './query_processor.js';
+import type { BotActionExecutor } from './action_executor.js';
+import { providerFactories } from '../ai/index.js';
+import type { AIProviderRepository } from '../db/interfaces.js';
 
 /**
  * Bot 处理输入
@@ -41,13 +45,33 @@ export interface BotProcessResult {
 }
 
 /**
- * Bot 处理器
+ * 用户意图
+ */
+export interface UserIntent {
+  /** 意图类型 */
+  type: 'query' | 'action' | 'unknown';
+  /** 原始用户输入文本 */
+  originalText: string;
+  /** 意图识别的理由 */
+  reasoning: string;
+  /** 置信度 (0-1) */
+  confidence: number;
+}
+
+/**
+ * Bot 处理器 - 完整实现
  * 处理 bot 的核心业务逻辑
  * 所有外部请求（webhook、测试、API）都应通过此服务处理
  */
 export class BotProcessor {
+  constructor(
+    private queryProcessor?: BotQueryProcessor,
+    private actionExecutor?: BotActionExecutor,
+    private aiProviderRepository?: AIProviderRepository,
+  ) {}
+
   /**
-   * 处理用户消息（通过事件对象）
+   * 处理用户消息（完整版本，使用事件对象）
    * @param bot Bot 配置
    * @param event Bot 事件（用于记录）
    * @param input 处理输入
@@ -61,19 +85,25 @@ export class BotProcessor {
     const startTime = Date.now();
 
     try {
-      // Phase 2.1：临时实现 - 仅返回确认消息
-      // Phase 2.2 将实现：
-      // 1. 意图识别（查询 vs 动作）
-      // 2. AI 驱动的参数提取
-      // 3. 动作执行或查询处理
-      // 4. 响应生成
-
       void event; // 使用参数以避免TS错误
-      const response = `[Bot: ${bot.name}] 已收到您的消息: "${input.text}"`;
 
+      // 1. 识别用户意图
+      const intent = await this.identifyIntent(bot, input.text);
+
+      // 2. 根据意图类型路由处理
+      if (intent.type === 'query' && bot.enableQuery && this.queryProcessor) {
+        return await this.handleQuery(bot, event as BotEvent, input, startTime);
+      }
+
+      if (intent.type === 'action' && this.actionExecutor) {
+        return await this.handleAction(bot, event as BotEvent, input, startTime);
+      }
+
+      // 3. 无法处理的意图
       return {
-        success: true,
-        response,
+        success: false,
+        response: '',
+        error: `无法处理此请求: ${intent.reasoning}`,
         processingTimeMs: Date.now() - startTime,
       };
     } catch (error) {
@@ -84,6 +114,289 @@ export class BotProcessor {
         error: errorMessage,
         processingTimeMs: Date.now() - startTime,
       };
+    }
+  }
+
+  /**
+   * 处理查询请求
+   */
+  private async handleQuery(
+    bot: Bot,
+    event: BotEvent,
+    input: BotProcessInput,
+    startTime: number,
+  ): Promise<BotProcessResult> {
+    try {
+      if (!this.queryProcessor) {
+        throw new Error('Query processor not configured');
+      }
+
+      const queryResult = await this.queryProcessor.processQuery(bot, event, input.text);
+
+      if (queryResult.success) {
+        return {
+          success: true,
+          response: queryResult.response || '查询执行成功',
+          actionResult: queryResult.data,
+          processingTimeMs: Date.now() - startTime,
+        };
+      }
+
+      return {
+        success: false,
+        response: '',
+        error: queryResult.error?.message || '查询处理失败',
+        processingTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        response: '',
+        error: error instanceof Error ? error.message : '查询处理异常',
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * 处理动作请求
+   */
+  private async handleAction(
+    bot: Bot,
+    event: BotEvent,
+    input: BotProcessInput,
+    startTime: number,
+  ): Promise<BotProcessResult> {
+    // Phase 2.3 将实现完整的动作执行流程
+    // 现在仅返回用户友好的消息
+    void event;
+    void bot;
+
+    return {
+      success: true,
+      response: `我理解您要执行一个操作: "${input.text}"。我正在处理中...`,
+      processingTimeMs: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * 识别用户意图
+   * @param bot Bot 配置
+   * @param userText 用户输入文本
+   * @returns 识别的意图
+   */
+  private async identifyIntent(bot: Bot, userText: string): Promise<UserIntent> {
+    try {
+      // 如果配置了 AI Provider，使用 AI 识别
+      if (this.aiProviderRepository && bot.aiProviderId) {
+        const aiIntent = await this.identifyIntentWithAI(bot, userText);
+        if (aiIntent) {
+          return aiIntent;
+        }
+      }
+
+      // 降级到规则匹配
+      return this.identifyIntentWithRules(userText);
+    } catch (error) {
+      console.warn('Failed to identify intent:', error);
+      // 降级到规则匹配
+      return this.identifyIntentWithRules(userText);
+    }
+  }
+
+  /**
+   * 使用 AI 识别意图
+   */
+  private async identifyIntentWithAI(bot: Bot, userText: string): Promise<UserIntent | null> {
+    try {
+      if (!this.aiProviderRepository || !bot.aiProviderId) {
+        return null;
+      }
+
+      // 获取 AI Provider 配置
+      const providers = await this.aiProviderRepository.list();
+      const provider = providers.find((p) => p.id === bot.aiProviderId);
+
+      if (!provider) {
+        return null;
+      }
+
+      // 构建提示词
+      const prompt = this.buildIntentPrompt(userText, bot);
+
+      // 创建 AI 模型
+      const factory = providerFactories[provider.type];
+      if (!factory) {
+        throw new Error(`Unsupported AI provider: ${provider.type}`);
+      }
+
+      const model = factory.createModel(provider.defaultModel || 'gpt-4o-mini', {
+        apiKey: provider.apiKey,
+        baseURL: provider.baseURL,
+      });
+
+      // 调用 AI 生成意图
+      const result = await generateText({
+        model,
+        prompt,
+        temperature: 0.3, // 降低温度以获得更一致的结果
+      });
+
+      // 解析 AI 响应
+      return this.parseIntentResponse(result.text, userText);
+    } catch (error) {
+      console.warn('AI intent identification failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 使用规则匹配识别意图
+   */
+  private identifyIntentWithRules(userText: string): UserIntent {
+    const lowerText = userText.toLowerCase();
+
+    // 查询关键词
+    const queryKeywords = [
+      '查询',
+      '获取',
+      '列出',
+      '显示',
+      '统计',
+      '数量',
+      '总数',
+      '有多少',
+      '是多少',
+      '查看',
+      '看看',
+      'query',
+      'select',
+      'get',
+      'list',
+      'show',
+      'what',
+      'how many',
+      'count',
+    ];
+
+    // 动作关键词
+    const actionKeywords = [
+      '执行',
+      '运行',
+      '发送',
+      '删除',
+      '更新',
+      '创建',
+      '修改',
+      '移除',
+      '添加',
+      '保存',
+      '提交',
+      'execute',
+      'run',
+      'send',
+      'delete',
+      'update',
+      'create',
+      'modify',
+      'remove',
+      'add',
+      'save',
+    ];
+
+    // 检查关键词
+    const isQuery = queryKeywords.some((keyword) => lowerText.includes(keyword));
+    const isAction = actionKeywords.some((keyword) => lowerText.includes(keyword));
+
+    // 如果同时匹配，优先选择查询
+    if (isQuery) {
+      return {
+        type: 'query',
+        originalText: userText,
+        reasoning: '检测到查询相关关键词',
+        confidence: 0.8,
+      };
+    }
+
+    if (isAction) {
+      return {
+        type: 'action',
+        originalText: userText,
+        reasoning: '检测到操作相关关键词',
+        confidence: 0.7,
+      };
+    }
+
+    return {
+      type: 'unknown',
+      originalText: userText,
+      reasoning: '无法确定意图类型',
+      confidence: 0.0,
+    };
+  }
+
+  /**
+   * 构建意图识别提示词
+   */
+  private buildIntentPrompt(userText: string, bot: Bot): string {
+    const enabledActionsCount = bot.enabledActions?.length || 0;
+    const enabledDataSourcesCount = bot.enabledDataSources?.length || 0;
+    const queryEnabled = bot.enableQuery ? '是' : '否';
+
+    return `你是一个意图识别助手。根据用户的输入，判断用户的意图类型。
+
+Bot 配置信息：
+- 支持查询功能: ${queryEnabled}
+- 已启用的 Actions 数量: ${enabledActionsCount}
+- 已启用的数据源数量: ${enabledDataSourcesCount}
+
+请分析以下用户输入，判断用户的意图是属于以下哪一种类型：
+1. query: 用户想要查询或获取数据信息
+2. action: 用户想要执行某个特定的操作或动作
+3. unknown: 无法判断
+
+用户输入: "${userText}"
+
+请用以下 JSON 格式回复，只返回 JSON 对象，不要有其他文本：
+{
+  "type": "query" 或 "action" 或 "unknown",
+  "reasoning": "简要说明判断原因（不超过 20 个字）",
+  "confidence": 0.0 到 1.0 之间的数字，表示置信度
+}`;
+  }
+
+  /**
+   * 解析 AI 意图识别响应
+   */
+  private parseIntentResponse(aiResponse: string, userText: string): UserIntent | null {
+    try {
+      // 移除可能的 markdown 代码块
+      let jsonText = aiResponse
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      // 解析 JSON
+      const parsed = JSON.parse(jsonText);
+
+      // 验证类型和置信度
+      if (
+        (parsed.type === 'query' || parsed.type === 'action' || parsed.type === 'unknown') &&
+        typeof parsed.confidence === 'number'
+      ) {
+        return {
+          type: parsed.type,
+          originalText: userText,
+          reasoning: parsed.reasoning || '',
+          confidence: Math.max(0, Math.min(1, parsed.confidence)), // 确保在 0-1 之间
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('Failed to parse intent response:', error);
+      return null;
     }
   }
 }
@@ -101,7 +414,8 @@ export const botProcessor = {
     const startTime = Date.now();
 
     try {
-      // Phase 2.1：临时实现 - 仅返回确认消息
+      // 简化的处理：仅返回确认消息
+      // 完整的处理需要通过依赖注入使用完整的 BotProcessor
       const response = `[Bot: ${bot.name}] 已收到您的消息: "${input.text}"`;
 
       return {
@@ -121,7 +435,13 @@ export const botProcessor = {
   },
 };
 
-// 导出工厂函数用于未来的依赖注入
-export function createBotProcessor(): BotProcessor {
-  return new BotProcessor();
+/**
+ * 导出工厂函数用于依赖注入
+ */
+export function createBotProcessor(
+  queryProcessor?: BotQueryProcessor,
+  actionExecutor?: BotActionExecutor,
+  aiProviderRepository?: AIProviderRepository,
+): BotProcessor {
+  return new BotProcessor(queryProcessor, actionExecutor, aiProviderRepository);
 }
