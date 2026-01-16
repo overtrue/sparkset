@@ -68,6 +68,14 @@ export function BotTestDrawer({
     }
   }, [messages]);
 
+  // 停止轮询
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  }, []);
+
   // 轮询获取新的事件
   const pollForNewEvents = useCallback(async () => {
     try {
@@ -80,6 +88,8 @@ export function BotTestDrawer({
           : [];
 
         if (newEvents.length > 0) {
+          let hasCompletedOrFailed = false;
+
           newEvents.forEach((event) => {
             const icon =
               event.status === 'completed' ? '✓' : event.status === 'failed' ? '✕' : '...';
@@ -92,11 +102,21 @@ export function BotTestDrawer({
                   : event.status === 'failed'
                     ? 'error'
                     : 'processing',
-              content: `[${icon}] Event ${event.id}: ${event.content || 'Processing...'} (${event.status})`,
+              content:
+                event.status === 'completed'
+                  ? `[${icon}] Response: ${event.content || 'Processing completed'}`
+                  : event.status === 'failed'
+                    ? `[${icon}] Error: ${event.errorMessage || event.content || 'Processing failed'}`
+                    : `[${icon}] Processing... (${event.content || 'waiting'})`,
               timestamp: new Date(event.createdAt).toLocaleTimeString(),
               event,
             };
             setMessages((prev) => [...prev, newMsg]);
+
+            // 检查是否有已完成或失败的事件
+            if (event.status === 'completed' || event.status === 'failed') {
+              hasCompletedOrFailed = true;
+            }
           });
 
           // 更新最后的事件 ID
@@ -104,12 +124,18 @@ export function BotTestDrawer({
             ...newEvents.map((e) => e.id),
             lastEventIdRef.current || 0,
           );
+
+          // 如果有完成或失败的事件，停止轮询
+          if (hasCompletedOrFailed) {
+            stopPolling();
+            setIsLoading(false);
+          }
         }
       }
     } catch (error) {
       console.error('Failed to poll for new events:', error);
     }
-  }, [bot.id]);
+  }, [bot.id, stopPolling]);
 
   // 开始轮询
   const startPolling = useCallback(() => {
@@ -120,14 +146,6 @@ export function BotTestDrawer({
       void pollForNewEvents();
     }, 500);
   }, [pollForNewEvents]);
-
-  // 停止轮询
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }, []);
 
   // 清理轮询
   useEffect(() => {
@@ -211,8 +229,8 @@ export function BotTestDrawer({
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="flex h-[90vh] max-w-2xl flex-col">
+    <Drawer open={open} onOpenChange={onOpenChange} direction="right">
+      <DrawerContent className="flex h-screen max-w-2xl flex-col">
         <DrawerHeader className="border-b">
           <DrawerTitle>{t('Test Bot')}</DrawerTitle>
           <DrawerDescription>
