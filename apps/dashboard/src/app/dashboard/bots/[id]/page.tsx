@@ -14,8 +14,7 @@ import { formatDateTime } from '@/lib/utils/date';
 import { TokenManager } from '@/components/bots/token-manager';
 import { EventLogs } from '@/components/bots/event-logs';
 import { BotTestDrawer } from '@/components/bots/test-drawer';
-import { BatchTestingModal } from '@/components/bots/batch-testing-modal';
-import { RiArrowLeftLine, RiEdit2Line, RiPlayCircleLine, RiGlobalLine } from '@remixicon/react';
+import { RiArrowLeftLine, RiEdit2Line, RiPlayCircleLine, RiFileListLine } from '@remixicon/react';
 import { useParams } from 'next/navigation';
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -32,7 +31,6 @@ export default function BotDetailPage() {
   const params = useParams();
   const botId = useMemo(() => (params?.id ? Number(params.id) : null), [params?.id]);
   const [showTestDrawer, setShowTestDrawer] = useState(false);
-  const [showBatchTestingModal, setShowBatchTestingModal] = useState(false);
 
   const { data: bot, error, isLoading } = useBot(botId);
   const {
@@ -88,12 +86,8 @@ export default function BotDetailPage() {
               <RiPlayCircleLine className="h-4 w-4" />
               {t('Test Bot')}
             </Button>
-            <Button onClick={() => setShowBatchTestingModal(true)} variant="secondary">
-              <RiGlobalLine className="h-4 w-4" />
-              {t('Batch Test')}
-            </Button>
             <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/logs`)} variant="outline">
-              <RiEdit2Line className="h-4 w-4" />
+              <RiFileListLine className="h-4 w-4" />
               {t('View Logs')}
             </Button>
             <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/edit`)} variant="outline">
@@ -185,13 +179,6 @@ export default function BotDetailPage() {
 
       {/* Test Drawer */}
       <BotTestDrawer bot={bot} open={showTestDrawer} onOpenChange={setShowTestDrawer} />
-
-      {/* Batch Testing Modal */}
-      <BatchTestingModal
-        bot={bot}
-        open={showBatchTestingModal}
-        onOpenChange={setShowBatchTestingModal}
-      />
     </div>
   );
 }

@@ -117,23 +117,16 @@ export class BotQueryProcessor {
    */
   private formatQueryResponse(queryResponse: QueryResponse): string {
     try {
-      // Start with a header
-      let response = '';
-
-      // If there's a summary from AI, use it
-      if (queryResponse.summary) {
-        response = queryResponse.summary;
-      } else if (queryResponse.rows && queryResponse.rows.length > 0) {
-        // Otherwise, format the data rows
-        response = this.formatDataRows(queryResponse.rows);
-      } else {
-        response = 'No data found for your query.';
+      // Always format data rows if available - this gives users the actual results
+      if (queryResponse.rows && queryResponse.rows.length > 0) {
+        return this.formatDataRows(queryResponse.rows);
       }
 
-      return response;
+      // No data found
+      return '查询未找到数据。';
     } catch (error) {
       void error;
-      return 'Unable to format response. Please try again.';
+      return '无法格式化响应，请重试。';
     }
   }
 
@@ -142,10 +135,28 @@ export class BotQueryProcessor {
    */
   private formatDataRows(rows: Record<string, unknown>[]): string {
     if (rows.length === 0) {
-      return 'No results.';
+      return '查询结果为空。';
     }
 
-    // For small result sets, show as text
+    // Single row with single value (e.g., COUNT(*) result)
+    // Return it in a more natural format
+    if (rows.length === 1) {
+      const row = rows[0];
+      const entries = Object.entries(row);
+
+      // Single value result (like "user_count: 6")
+      if (entries.length === 1) {
+        const [key, value] = entries[0];
+        // Format the key to be more readable
+        const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        return `${readableKey}: ${this.formatValue(value)}`;
+      }
+
+      // Single row with multiple columns
+      return entries.map(([key, value]) => `${key}: ${this.formatValue(value)}`).join('\n');
+    }
+
+    // For small result sets (2-5 rows), show all as text
     if (rows.length <= 5) {
       return rows
         .map((row, idx) => {
@@ -157,8 +168,8 @@ export class BotQueryProcessor {
         .join('\n');
     }
 
-    // For larger result sets, show summary
-    return `Found ${rows.length} results. Showing first 5:\n${rows
+    // For larger result sets, show summary with first 5
+    return `共 ${rows.length} 条结果，显示前 5 条：\n${rows
       .slice(0, 5)
       .map((row, idx) => {
         const entries = Object.entries(row)
