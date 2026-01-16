@@ -1,6 +1,7 @@
 'use client';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CreateDatasourceDialog } from '@/components/datasource/create-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import {
@@ -28,6 +29,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 export default function DatasourcesPage() {
   const t = useTranslations();
@@ -37,6 +39,7 @@ export default function DatasourcesPage() {
   const { trigger: setDefaultDatasource } = useSetDefaultDatasource();
   const { trigger: syncDatasource } = useSyncDatasource();
   const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const {
     items: datasources,
@@ -66,8 +69,14 @@ export default function DatasourcesPage() {
   };
 
   const handleCreateNew = () => {
-    // TODO: Navigate to create datasource page
-    toast.info('Create datasource page coming soon');
+    setCreateDialogOpen(true);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleDatasourceCreated = (_: Datasource) => {
+    toast.success(t('Datasource created successfully'));
+    mutate();
+    setCreateDialogOpen(false);
   };
 
   const handleViewDetails = (datasource: Datasource) => {
@@ -290,6 +299,12 @@ export default function DatasourcesPage() {
           variant={dialogState.variant}
         />
       )}
+
+      <CreateDatasourceDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={handleDatasourceCreated}
+      />
     </div>
   );
 }
