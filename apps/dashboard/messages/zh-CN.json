@@ -679,5 +679,6 @@
   "WeChat Work": "企业微信",
   "Replay Event": "重放事件",
   "Replaying": "重放中",
-  "Event replayed successfully": "事件重放成功"
+  "Event replayed successfully": "事件重放成功",
+  "Processing...": "处理中..."
 }

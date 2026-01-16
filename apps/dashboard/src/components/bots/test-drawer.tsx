@@ -11,13 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { RiSendPlaneLine, RiLoader4Line, RiCheckLine, RiCloseLine } from '@remixicon/react';
 import { testBot } from '@/lib/api/bots-api';
 import { useTranslations } from '@/i18n/use-translations';
@@ -26,19 +19,11 @@ import type { Bot } from '@/types/api';
 
 interface TestMessage {
   id: string;
-  type: 'sent' | 'received' | 'error';
+  type: 'sent' | 'received' | 'error' | 'pending';
   content: string;
   timestamp: string;
   processingTimeMs?: number;
 }
-
-const PLATFORM_OPTIONS = [
-  { value: 'wecom', label: 'WeChat Work' },
-  { value: 'discord', label: 'Discord' },
-  { value: 'slack', label: 'Slack' },
-  { value: 'telegram', label: 'Telegram' },
-  { value: 'custom', label: 'Custom' },
-];
 
 export function BotTestDrawer({
   bot,
@@ -52,7 +37,6 @@ export function BotTestDrawer({
   const t = useTranslations();
   const [messages, setMessages] = useState<TestMessage[]>([]);
   const [input, setInput] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState(bot.type);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +57,7 @@ export function BotTestDrawer({
     }
 
     const messageContent = input;
+    const pendingId = `pending_${Date.now()}`;
 
     // 添加发送消息
     const sentMsg: TestMessage = {
@@ -81,7 +66,16 @@ export function BotTestDrawer({
       content: messageContent,
       timestamp: new Date().toLocaleTimeString(),
     };
-    setMessages((prev) => [...prev, sentMsg]);
+
+    // 添加等待中的占位消息
+    const pendingMsg: TestMessage = {
+      id: pendingId,
+      type: 'pending',
+      content: t('Processing...'),
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    setMessages((prev) => [...prev, sentMsg, pendingMsg]);
     setInput('');
     setIsLoading(true);
 
@@ -89,6 +83,7 @@ export function BotTestDrawer({
       // 直接调用 testBot，它现在是同步返回的
       const response = await testBot(bot.id, messageContent);
 
+      // 移除 pending 消息并添加实际响应
       if (!response.success) {
         // 显示错误消息
         const errorMsg: TestMessage = {
@@ -98,7 +93,7 @@ export function BotTestDrawer({
           timestamp: new Date().toLocaleTimeString(),
           processingTimeMs: response.processingTimeMs,
         };
-        setMessages((prev) => [...prev, errorMsg]);
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(errorMsg));
         toast.error(response.error || 'Test failed');
       } else {
         // 显示 bot 的响应
@@ -109,7 +104,7 @@ export function BotTestDrawer({
           timestamp: new Date().toLocaleTimeString(),
           processingTimeMs: response.processingTimeMs,
         };
-        setMessages((prev) => [...prev, receivedMsg]);
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(receivedMsg));
         toast.success('Response received');
       }
     } catch (error) {
@@ -119,7 +114,7 @@ export function BotTestDrawer({
         content: error instanceof Error ? error.message : 'Request failed',
         timestamp: new Date().toLocaleTimeString(),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(errorMsg));
       toast.error(t('Test request failed'));
     } finally {
       setIsLoading(false);
@@ -128,10 +123,6 @@ export function BotTestDrawer({
 
   const handleClearMessages = () => {
     setMessages([]);
-  };
-
-  const handlePlatformChange = (value: string) => {
-    setSelectedPlatform(value as typeof selectedPlatform);
   };
 
   return (
@@ -163,6 +154,9 @@ export function BotTestDrawer({
                       {/* Icon */}
                       <div className="mt-1 flex-shrink-0">
                         {msg.type === 'sent' && <div className="h-2 w-2 rounded-full bg-primary" />}
+                        {msg.type === 'pending' && (
+                          <RiLoader4Line className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
                         {msg.type === 'received' && (
                           <RiCheckLine className="h-4 w-4 text-green-500" />
                         )}
@@ -176,11 +170,15 @@ export function BotTestDrawer({
                             ? 'bg-primary text-primary-foreground'
                             : msg.type === 'error'
                               ? 'bg-destructive/20 text-destructive'
-                              : 'bg-secondary text-secondary-foreground'
+                              : msg.type === 'pending'
+                                ? 'bg-muted text-muted-foreground'
+                                : 'bg-secondary text-secondary-foreground'
                         }`}
                       >
                         <p className="text-sm break-words">{msg.content}</p>
-                        <p className="text-xs mt-1 opacity-70">{msg.timestamp}</p>
+                        {msg.type !== 'pending' && (
+                          <p className="text-xs mt-1 opacity-70">{msg.timestamp}</p>
+                        )}
                         {msg.processingTimeMs !== undefined && (
                           <p className="text-xs mt-1 opacity-70">
                             {t('Processing time')}: {msg.processingTimeMs}ms
@@ -196,33 +194,6 @@ export function BotTestDrawer({
 
           {/* Input Area */}
           <div className="border-t bg-background p-4 space-y-3">
-            {/* Platform Selector and Clear Button */}
-            <div className="flex gap-2">
-              <Select value={selectedPlatform} onValueChange={handlePlatformChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLATFORM_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {messages.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearMessages}
-                  className="ml-auto"
-                >
-                  {t('Clear')}
-                </Button>
-              )}
-            </div>
-
             {/* Message Input */}
             <div className="flex gap-2">
               <Input
@@ -240,15 +211,16 @@ export function BotTestDrawer({
               />
               <Button onClick={handleSendMessage} disabled={isLoading || !input.trim()} size="sm">
                 {isLoading ? (
-                  <>
-                    <RiLoader4Line className="h-4 w-4 animate-spin" />
-                  </>
+                  <RiLoader4Line className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <RiSendPlaneLine className="h-4 w-4" />
-                  </>
+                  <RiSendPlaneLine className="h-4 w-4" />
                 )}
               </Button>
+              {messages.length > 0 && (
+                <Button variant="outline" size="sm" onClick={handleClearMessages}>
+                  {t('Clear')}
+                </Button>
+              )}
             </div>
 
             {/* Info */}
@@ -256,7 +228,6 @@ export function BotTestDrawer({
               <p className="font-medium">{t('Test Information')}:</p>
               <ul className="space-y-0.5 ml-4 list-disc">
                 <li>{t('Messages are processed synchronously through the bot engine')}</li>
-                <li>{t('Events are processed through the full bot pipeline')}</li>
                 <li>{t('Helpful for verifying bot logic before production')}</li>
               </ul>
             </div>
