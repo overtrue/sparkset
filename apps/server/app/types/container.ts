@@ -9,6 +9,7 @@ import type { ChartService } from '../services/chart_service';
 import type { ChartCompiler } from '../services/chart_compiler';
 import type { DashboardService } from '../services/dashboard_service';
 import type { DashboardWidgetService } from '../services/dashboard_widget_service';
+import type { BotProcessor } from '../services/bot_processor';
 import type { ActionExecutor, QueryExecutor } from '@sparkset/core';
 import type { Database } from '@adonisjs/lucid/database';
 
@@ -25,6 +26,7 @@ declare module '@adonisjs/core/types' {
     ChartCompiler: ChartCompiler;
     DashboardService: DashboardService;
     DashboardWidgetService: DashboardWidgetService;
+    BotProcessor: BotProcessor;
     'executors/query': QueryExecutor | undefined;
     'executors/action': ActionExecutor | undefined;
     'lucid.db': Database;

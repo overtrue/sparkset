@@ -37,6 +37,20 @@ export interface ConversationRepository {
     metadata?: unknown;
   }): Promise<Message>;
   messages(id: number): Promise<Message[]>;
+  /**
+   * Find conversation by bot ID and external user ID
+   * Used to maintain conversation continuity across sessions
+   */
+  findByBotAndExternalUser(botId: number, externalUserId: string): Promise<Conversation | null>;
+  /**
+   * Create a conversation with bot context
+   */
+  createWithBotContext(input: {
+    title?: string;
+    userId?: number;
+    botId: number;
+    externalUserId: string;
+  }): Promise<Conversation>;
 }
 
 /**

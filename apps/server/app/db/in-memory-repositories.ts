@@ -144,7 +144,10 @@ export class InMemoryActionRepository implements ActionRepository {
  * In-memory ConversationRepository implementation
  */
 export class InMemoryConversationRepository implements ConversationRepository {
-  private conversationsStore = new Map<number, Conversation>();
+  private conversationsStore = new Map<
+    number,
+    Conversation & { botId?: number; externalUserId?: string }
+  >();
   private messagesStore = new Map<number, Message[]>();
   private conversationId = 1;
   private messageId = 1;
@@ -163,6 +166,39 @@ export class InMemoryConversationRepository implements ConversationRepository {
       id: this.conversationId++,
       title: input.title,
       userId: input.userId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.conversationsStore.set(conv.id, conv);
+    this.messagesStore.set(conv.id, []);
+    return conv;
+  }
+
+  async findByBotAndExternalUser(
+    botId: number,
+    externalUserId: string,
+  ): Promise<Conversation | null> {
+    for (const conv of this.conversationsStore.values()) {
+      if (conv.botId === botId && conv.externalUserId === externalUserId) {
+        return conv;
+      }
+    }
+    return null;
+  }
+
+  async createWithBotContext(input: {
+    title?: string;
+    userId?: number;
+    botId: number;
+    externalUserId: string;
+  }): Promise<Conversation> {
+    const now = new Date();
+    const conv: Conversation & { botId?: number; externalUserId?: string } = {
+      id: this.conversationId++,
+      title: input.title,
+      userId: input.userId,
+      botId: input.botId,
+      externalUserId: input.externalUserId,
       createdAt: now,
       updatedAt: now,
     };

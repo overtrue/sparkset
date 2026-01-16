@@ -27,6 +27,22 @@ export interface ExtractedParameters {
   warnings: string[];
   /** Confidence score (0-1) */
   confidence: number;
+  /** Missing required parameters (Phase 2.7) */
+  missingRequired: MissingParameter[];
+}
+
+/**
+ * Information about a missing required parameter (Phase 2.7)
+ */
+export interface MissingParameter {
+  /** Parameter name */
+  name: string;
+  /** Parameter type */
+  type: string;
+  /** Parameter description for user prompt */
+  description?: string;
+  /** User-friendly label */
+  label?: string;
 }
 
 /**
@@ -49,6 +65,7 @@ export class ParameterExtractor {
         method: 'none',
         warnings: ['Action has no input schema'],
         confidence: 1,
+        missingRequired: [],
       };
     }
 
@@ -110,14 +127,16 @@ Respond ONLY with the JSON object, no explanations.`;
           method: 'ai',
           warnings: [],
           confidence: 0.9,
+          missingRequired: validated.missingRequired,
         };
       }
 
       return {
-        parameters: {},
+        parameters: validated.parameters,
         method: 'ai',
         warnings: validated.errors,
         confidence: 0.3,
+        missingRequired: validated.missingRequired,
       };
     } catch (error) {
       return {
@@ -125,6 +144,7 @@ Respond ONLY with the JSON object, no explanations.`;
         method: 'ai',
         warnings: [error instanceof Error ? error.message : 'AI extraction failed'],
         confidence: 0,
+        missingRequired: [],
       };
     }
   }
@@ -187,19 +207,27 @@ Respond ONLY with the JSON object, no explanations.`;
       method: 'pattern',
       warnings: [...warnings, ...validated.errors],
       confidence: Object.keys(parameters).length > 0 ? 0.6 : 0.1,
+      missingRequired: validated.missingRequired,
     };
   }
 
   /**
    * Validate parameters against action schema
+   * Phase 2.7: Now tracks missing required parameters for clarification questions
    * @private
    */
   private validateParameters(
     parameters: Record<string, unknown>,
     schema: ActionInputSchema,
-  ): { isValid: boolean; parameters: Record<string, unknown>; errors: string[] } {
+  ): {
+    isValid: boolean;
+    parameters: Record<string, unknown>;
+    errors: string[];
+    missingRequired: MissingParameter[];
+  } {
     const errors: string[] = [];
     const validated: Record<string, unknown> = {};
+    const missingRequired: MissingParameter[] = [];
 
     for (const paramDef of schema.parameters) {
       const value = parameters[paramDef.name];
@@ -207,6 +235,13 @@ Respond ONLY with the JSON object, no explanations.`;
       // Check required parameters
       if (paramDef.required && (value === undefined || value === null || value === '')) {
         errors.push(`Required parameter missing: ${paramDef.name}`);
+        // Phase 2.7: Track missing required parameters for clarification
+        missingRequired.push({
+          name: paramDef.name,
+          type: paramDef.type,
+          description: paramDef.description,
+          label: paramDef.label,
+        });
         continue;
       }
 
@@ -230,6 +265,7 @@ Respond ONLY with the JSON object, no explanations.`;
       isValid: errors.length === 0,
       parameters: validated,
       errors,
+      missingRequired,
     };
   }
 

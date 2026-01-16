@@ -30,6 +30,11 @@ import { ChartService } from '../services/chart_service.js';
 import { ChartCompiler } from '../services/chart_compiler.js';
 import { DashboardService } from '../services/dashboard_service.js';
 import { DashboardWidgetService } from '../services/dashboard_widget_service.js';
+import { BotProcessor, createBotProcessor } from '../services/bot_processor.js';
+import { BotQueryProcessor } from '../services/query_processor.js';
+import { BotActionExecutor } from '../services/action_executor.js';
+import { createParameterExtractor } from '../services/parameter_extractor.js';
+import { createConversationTracker } from '../services/conversation_tracker.js';
 
 /**
  * All services needed by the application
@@ -48,6 +53,7 @@ export interface Services {
   dashboardWidget: DashboardWidgetService;
   queryExecutor?: QueryExecutor;
   actionExecutor?: ActionExecutor;
+  botProcessor?: BotProcessor;
 }
 
 /**
@@ -176,6 +182,23 @@ export function createServices(options: ServiceFactoryOptions): Services {
   const dashboardService = new DashboardService();
   const dashboardWidgetService = new DashboardWidgetService();
 
+  // Create bot processor (Phase 2.6: Full integration)
+  let botProcessor: BotProcessor | undefined;
+  if (database && actionExecutor) {
+    const botQueryProcessor = new BotQueryProcessor(queryService);
+    const botActionExecutor = new BotActionExecutor(actionService, datasetService, actionExecutor);
+    const parameterExtractor = createParameterExtractor(repositories.aiProvider);
+    const conversationTracker = createConversationTracker(repositories.conversation);
+
+    botProcessor = createBotProcessor(
+      botQueryProcessor,
+      botActionExecutor,
+      repositories.aiProvider,
+      parameterExtractor,
+      conversationTracker,
+    );
+  }
+
   return {
     datasource: datasourceService,
     action: actionService,
@@ -190,5 +213,6 @@ export function createServices(options: ServiceFactoryOptions): Services {
     dashboardWidget: dashboardWidgetService,
     queryExecutor,
     actionExecutor,
+    botProcessor,
   };
 }

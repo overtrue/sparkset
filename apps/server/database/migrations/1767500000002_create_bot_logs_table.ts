@@ -4,6 +4,12 @@ export default class extends BaseSchema {
   protected tableName = 'bot_logs';
 
   async up() {
+    // Use createTableIfNotExists for idempotency
+    const hasTable = await this.schema.hasTable(this.tableName);
+    if (hasTable) {
+      return;
+    }
+
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary();
 

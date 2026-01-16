@@ -3,6 +3,7 @@ import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations';
 import { DateTime } from 'luxon';
 import Message from './message.js';
 import User from './user.js';
+import Bot from './bot.js';
 
 export default class Conversation extends BaseModel {
   static table = 'conversations';
@@ -15,6 +16,15 @@ export default class Conversation extends BaseModel {
 
   @belongsTo(() => User)
   declare user: BelongsTo<typeof User>;
+
+  @column({ columnName: 'bot_id' })
+  declare botId: number | null;
+
+  @belongsTo(() => Bot)
+  declare bot: BelongsTo<typeof Bot>;
+
+  @column({ columnName: 'external_user_id' })
+  declare externalUserId: string | null;
 
   @column()
   declare title: string | null;

@@ -64,6 +64,7 @@ export class ConversationTracker {
   /**
    * Get or create a conversation for a bot user
    * Uses external user ID to maintain continuity across sessions
+   * Phase 2.5: Now persists to database and uses cache as optimization
    *
    * @param bot Bot configuration
    * @param externalUserId External user identifier from webhook
@@ -78,7 +79,7 @@ export class ConversationTracker {
     // Build cache key combining bot and user
     const cacheKey = this.buildCacheKey(bot.id, externalUserId);
 
-    // Check cache first
+    // Check cache first for performance
     const cachedConversationId = this.activeConversations.get(cacheKey);
     if (cachedConversationId) {
       const context = await this.getConversationContext(cachedConversationId);
@@ -89,11 +90,30 @@ export class ConversationTracker {
       this.activeConversations.delete(cacheKey);
     }
 
-    // Create new conversation
+    // Check database for existing conversation (Phase 2.5: database persistence)
+    const existingConversation = await this.conversationRepo.findByBotAndExternalUser(
+      bot.id,
+      externalUserId,
+    );
+
+    if (existingConversation) {
+      // Cache for future requests
+      this.activeConversations.set(cacheKey, existingConversation.id);
+
+      // Get full context with messages
+      const context = await this.getConversationContext(existingConversation.id);
+      if (context) {
+        return context;
+      }
+    }
+
+    // Create new conversation with bot context (Phase 2.5)
     const title = `Bot ${bot.name} - User ${externalUserId}`;
-    const conversation = await this.conversationRepo.create({
+    const conversation = await this.conversationRepo.createWithBotContext({
       title,
       userId: internalUserId,
+      botId: bot.id,
+      externalUserId,
     });
 
     // Cache for future requests

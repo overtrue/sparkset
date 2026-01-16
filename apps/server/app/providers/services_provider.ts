@@ -24,6 +24,7 @@ import { ChartService } from '../services/chart_service.js';
 import { ChartCompiler } from '../services/chart_compiler.js';
 import { DashboardService } from '../services/dashboard_service.js';
 import { DashboardWidgetService } from '../services/dashboard_widget_service.js';
+import { BotProcessor } from '../services/bot_processor.js';
 import '../types/container.js';
 
 export default class ServicesProvider {
@@ -104,6 +105,12 @@ export default class ServicesProvider {
     this.app.container.bind('executors/action', () => services.actionExecutor);
     if (services.actionExecutor) {
       this.app.container.singleton(ActionExecutor, () => services.actionExecutor!);
+    }
+
+    // Bot Processor (Phase 2.6)
+    if (services.botProcessor) {
+      this.app.container.singleton(BotProcessor, () => services.botProcessor!);
+      this.app.container.singleton('BotProcessor', () => services.botProcessor!);
     }
   }
 

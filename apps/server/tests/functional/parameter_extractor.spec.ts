@@ -263,3 +263,66 @@ test('ParameterExtractor should track warnings for validation issues', async ({ 
   expect(result.warnings).toBeDefined();
   expect(Array.isArray(result.warnings)).toBe(true);
 });
+
+// Phase 2.7: Tests for missing required parameter tracking
+
+test('ParameterExtractor should identify missing required parameters', async ({ expect }) => {
+  const extractor = new ParameterExtractor();
+  const action = createMockAction();
+
+  // Missing 'name' which is required
+  const result = await extractor.extractParameters('userId=123', action);
+
+  expect(result.missingRequired).toBeDefined();
+  expect(result.missingRequired.length).toBeGreaterThan(0);
+  expect(result.missingRequired.some((p) => p.name === 'name')).toBe(true);
+});
+
+test('ParameterExtractor should return empty missingRequired when all required params present', async ({
+  expect,
+}) => {
+  const extractor = new ParameterExtractor();
+  const action = createMockAction();
+
+  const result = await extractor.extractParameters('userId=123 name="John"', action);
+
+  expect(result.missingRequired).toBeDefined();
+  expect(result.missingRequired.length).toBe(0);
+});
+
+test('ParameterExtractor should include description and label in missingRequired', async ({
+  expect,
+}) => {
+  const extractor = new ParameterExtractor();
+  const action = createMockAction({
+    inputSchema: {
+      parameters: [
+        {
+          name: 'email',
+          type: 'string',
+          required: true,
+          description: 'User email address',
+          label: 'Email Address',
+        },
+      ],
+    },
+  });
+
+  const result = await extractor.extractParameters('hello world', action);
+
+  expect(result.missingRequired.length).toBe(1);
+  expect(result.missingRequired[0].name).toBe('email');
+  expect(result.missingRequired[0].description).toBe('User email address');
+  expect(result.missingRequired[0].label).toBe('Email Address');
+});
+
+test('ParameterExtractor should list all missing required parameters', async ({ expect }) => {
+  const extractor = new ParameterExtractor();
+  const action = createMockAction();
+
+  // Both userId and name are required, neither provided
+  const result = await extractor.extractParameters('random text', action);
+
+  expect(result.missingRequired.length).toBe(2);
+  expect(result.missingRequired.map((p) => p.name).sort()).toEqual(['name', 'userId']);
+});

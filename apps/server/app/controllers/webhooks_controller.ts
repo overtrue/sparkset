@@ -2,16 +2,34 @@
  * Webhooks Controller
  * 接入层 - 处理来自各个平台的 Webhook 消息
  * 职责：验证、解析、用户映射、核心处理、响应发送、日志记录
+ *
+ * Phase 2.6: 集成完整的 BotProcessor 处理流程
  */
 
 import type { HttpContext } from '@adonisjs/core/http';
+import { inject } from '@adonisjs/core';
 import { botAdapterRegistry } from '../adapters/bot_adapter_registry.js';
-import { botProcessor } from '../services/bot_processor.js';
+import {
+  BotProcessor,
+  botProcessor as simpleBotProcessor,
+  type BotProcessInput,
+} from '../services/bot_processor.js';
 import Bot from '../models/bot.js';
 import BotEvent from '../models/bot_event.js';
 import { toId } from '../utils/validation.js';
 
+@inject()
 export default class WebhooksController {
+  /**
+   * BotProcessor 实例（通过依赖注入）
+   * 如果注入失败，回退到简化版本
+   */
+  private injectedProcessor: BotProcessor | null;
+
+  constructor(botProcessor?: BotProcessor) {
+    this.injectedProcessor = botProcessor ?? null;
+  }
+
   /**
    * 处理来自外部平台的 Webhook 消息
    * POST /webhooks/bot/:botId/:token
@@ -174,6 +192,8 @@ export default class WebhooksController {
 
   /**
    * 异步处理消息
+   * Phase 2.6: 使用完整的 BotProcessor（如果可用）
+   *
    * 流程：
    * 1. 更新事件状态为 processing
    * 2. 调用 bot 核心处理器
@@ -201,16 +221,26 @@ export default class WebhooksController {
       await event.merge({ status: 'processing' }).save();
 
       // ============ 调用 Bot 核心处理器 ============
-      // 如果没有映射到内部用户，使用外部用户 ID 作为临时用户 ID
+      // 如果没有映射到内部用户，使用外部用户 ID 哈希作为临时用户 ID
       const userId =
-        internalUserId || Math.abs(parsedMessage.externalUserId.hashCode() || 0) % 1000000;
+        internalUserId || Math.abs(this.hashCode(parsedMessage.externalUserId) || 0) % 1000000;
 
-      const result = await botProcessor.process(bot, {
+      const input: BotProcessInput = {
         userId,
         text: parsedMessage.text,
         externalUserId: parsedMessage.externalUserId,
         externalUserName: parsedMessage.externalUserName,
-      });
+      };
+
+      // Phase 2.6: 使用完整的 BotProcessor（如果可用）
+      let result;
+      if (this.injectedProcessor) {
+        // 使用完整的处理器（带会话追踪、意图识别等）
+        result = await this.injectedProcessor.process(bot, event, input);
+      } else {
+        // 回退到简化版本
+        result = await simpleBotProcessor.process(bot, input);
+      }
 
       const processingTimeMs = Date.now() - startTime;
 
@@ -272,5 +302,19 @@ export default class WebhooksController {
         console.error(`[Webhook] Failed to update event status:`, updateError);
       }
     }
+  }
+
+  /**
+   * 简单的字符串哈希函数
+   * 用于将外部用户 ID 转换为数字
+   */
+  private hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
   }
 }

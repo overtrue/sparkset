@@ -4,12 +4,18 @@ export default class extends BaseSchema {
   protected tableName = 'bot_integrations';
 
   async up() {
+    // Use createTableIfNotExists for idempotency
+    const hasTable = await this.schema.hasTable(this.tableName);
+    if (hasTable) {
+      return;
+    }
+
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary();
 
       // 多对多关系
       table.integer('bot_id').unsigned().notNullable();
-      table.integer('action_id').unsigned().notNullable();
+      table.integer('action_id').notNullable(); // actions.id is signed int
 
       // 是否必需 (执行时必须调用)
       table.boolean('is_required').notNullable().defaultTo(false);

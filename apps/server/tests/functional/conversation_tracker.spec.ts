@@ -17,7 +17,10 @@ import { ConversationTracker } from '../../app/services/conversation_tracker.js'
 
 // In-memory repository for testing
 class InMemoryConversationRepository implements ConversationRepository {
-  private conversationsStore = new Map<number, Conversation>();
+  private conversationsStore = new Map<
+    number,
+    Conversation & { botId?: number; externalUserId?: string }
+  >();
   private messagesStore = new Map<number, Message[]>();
   private nextConversationId = 1;
   private nextMessageId = 1;
@@ -40,6 +43,39 @@ class InMemoryConversationRepository implements ConversationRepository {
       id,
       title: input.title,
       userId: input.userId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.conversationsStore.set(id, conversation);
+    this.messagesStore.set(id, []);
+    return conversation;
+  }
+
+  async findByBotAndExternalUser(
+    botId: number,
+    externalUserId: string,
+  ): Promise<Conversation | null> {
+    for (const conv of this.conversationsStore.values()) {
+      if (conv.botId === botId && conv.externalUserId === externalUserId) {
+        return conv;
+      }
+    }
+    return null;
+  }
+
+  async createWithBotContext(input: {
+    title?: string;
+    userId?: number;
+    botId: number;
+    externalUserId: string;
+  }): Promise<Conversation> {
+    const id = this.nextConversationId++;
+    const conversation: Conversation & { botId?: number; externalUserId?: string } = {
+      id,
+      title: input.title,
+      userId: input.userId,
+      botId: input.botId,
+      externalUserId: input.externalUserId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -285,7 +321,9 @@ test('ConversationTracker should return empty string for empty context', async (
   expect(formatted).toBe('');
 });
 
-test('ConversationTracker should clear cache', async ({ expect }) => {
+test('ConversationTracker should clear cache but still find conversation in database', async ({
+  expect,
+}) => {
   const repo = new InMemoryConversationRepository();
   const tracker = new ConversationTracker(repo);
   const bot = createMockBot();
@@ -294,11 +332,13 @@ test('ConversationTracker should clear cache', async ({ expect }) => {
   tracker.clearCache();
   const context2 = await tracker.getOrCreateConversation(bot, 'user123');
 
-  // After cache clear, should create a new conversation
-  expect(context1.conversationId).not.toBe(context2.conversationId);
+  // After cache clear, should still find the same conversation from database (Phase 2.5)
+  expect(context1.conversationId).toBe(context2.conversationId);
 });
 
-test('ConversationTracker should invalidate specific cache entry', async ({ expect }) => {
+test('ConversationTracker should invalidate cache but still find conversation in database', async ({
+  expect,
+}) => {
   const repo = new InMemoryConversationRepository();
   const tracker = new ConversationTracker(repo);
   const bot = createMockBot();
@@ -311,8 +351,8 @@ test('ConversationTracker should invalidate specific cache entry', async ({ expe
   const context3 = await tracker.getOrCreateConversation(bot, 'user123');
   const context4 = await tracker.getOrCreateConversation(bot, 'user456');
 
-  // user123 should have new conversation, user456 should use cached
-  expect(context1.conversationId).not.toBe(context3.conversationId);
+  // user123 should still find the same conversation from database (Phase 2.5)
+  expect(context1.conversationId).toBe(context3.conversationId);
   expect(context4.conversationId).toBe(2); // Still using cached
 });
 

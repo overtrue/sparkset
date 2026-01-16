@@ -22,6 +22,33 @@ export class LucidConversationRepository implements ConversationRepository {
     return this.mapConversation(row);
   }
 
+  async findByBotAndExternalUser(
+    botId: number,
+    externalUserId: string,
+  ): Promise<Conversation | null> {
+    const row = await ConversationModel.query()
+      .where('botId', botId)
+      .where('externalUserId', externalUserId)
+      .orderBy('updatedAt', 'desc')
+      .first();
+    return row ? this.mapConversation(row) : null;
+  }
+
+  async createWithBotContext(input: {
+    title?: string;
+    userId?: number;
+    botId: number;
+    externalUserId: string;
+  }): Promise<Conversation> {
+    const row = await ConversationModel.create({
+      title: input.title ?? null,
+      userId: input.userId ?? null,
+      botId: input.botId,
+      externalUserId: input.externalUserId,
+    });
+    return this.mapConversation(row);
+  }
+
   async appendMessage(input: {
     conversationId: number;
     role: Role;

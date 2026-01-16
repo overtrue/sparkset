@@ -199,6 +199,7 @@ export class BotProcessor {
   /**
    * 处理动作请求
    * Phase 2.3: 完整的动作执行流程
+   * Phase 2.7: 支持缺少必需参数时的澄清问题
    */
   private async handleAction(
     bot: Bot,
@@ -235,6 +236,19 @@ export class BotProcessor {
           targetAction,
         );
         extractedParams = extraction.parameters;
+
+        // Phase 2.7: 检查是否有缺失的必需参数
+        if (extraction.missingRequired.length > 0) {
+          const clarificationQuestion = this.generateClarificationQuestion(
+            targetAction,
+            extraction.missingRequired,
+          );
+          return {
+            success: true,
+            response: clarificationQuestion,
+            processingTimeMs: Date.now() - startTime,
+          };
+        }
 
         // 如果提取参数时出现警告，记录但继续
         if (extraction.warnings.length > 0) {
@@ -273,6 +287,35 @@ export class BotProcessor {
         processingTimeMs: Date.now() - startTime,
       };
     }
+  }
+
+  /**
+   * 生成澄清问题
+   * Phase 2.7: 当缺少必需参数时，生成友好的问题询问用户
+   * @private
+   */
+  private generateClarificationQuestion(
+    action: Action,
+    missingParams: { name: string; type: string; description?: string; label?: string }[],
+  ): string {
+    if (missingParams.length === 0) {
+      return '';
+    }
+
+    // 构建问题列表
+    const paramQuestions = missingParams.map((param) => {
+      const label = param.label || param.name;
+      const description = param.description ? ` (${param.description})` : '';
+      return `- ${label}${description}`;
+    });
+
+    if (missingParams.length === 1) {
+      const param = missingParams[0];
+      const label = param.label || param.name;
+      return `要执行 "${action.name}"，请提供 ${label}：`;
+    }
+
+    return `要执行 "${action.name}"，请提供以下信息：\n${paramQuestions.join('\n')}`;
   }
 
   /**
