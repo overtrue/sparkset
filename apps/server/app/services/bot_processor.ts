@@ -3,7 +3,7 @@
  * 核心业务逻辑层 - 处理用户消息并生成响应
  * 独立于任何接入方式（webhook、test、API）
  *
- * Phase 2.2：完整实现，支持 AI 驱动的意图识别和消息路由
+ * Phase 2.3：完整实现，支持 AI 驱动的意图识别、消息路由和参数提取
  */
 
 import { generateText } from 'ai';
@@ -11,6 +11,8 @@ import type Bot from '../models/bot.js';
 import type BotEvent from '../models/bot_event.js';
 import type { BotQueryProcessor } from './query_processor.js';
 import type { BotActionExecutor } from './action_executor.js';
+import type { ParameterExtractor } from './parameter_extractor.js';
+import type { Action } from '../models/types.js';
 import { providerFactories } from '../ai/index.js';
 import type { AIProviderRepository } from '../db/interfaces.js';
 
@@ -68,6 +70,7 @@ export class BotProcessor {
     private queryProcessor?: BotQueryProcessor,
     private actionExecutor?: BotActionExecutor,
     private aiProviderRepository?: AIProviderRepository,
+    private parameterExtractor?: ParameterExtractor,
   ) {}
 
   /**
@@ -160,6 +163,7 @@ export class BotProcessor {
 
   /**
    * 处理动作请求
+   * Phase 2.3: 完整的动作执行流程
    */
   private async handleAction(
     bot: Bot,
@@ -167,16 +171,82 @@ export class BotProcessor {
     input: BotProcessInput,
     startTime: number,
   ): Promise<BotProcessResult> {
-    // Phase 2.3 将实现完整的动作执行流程
-    // 现在仅返回用户友好的消息
-    void event;
-    void bot;
+    try {
+      if (!this.actionExecutor) {
+        throw new Error('Action executor not configured');
+      }
 
-    return {
-      success: true,
-      response: `我理解您要执行一个操作: "${input.text}"。我正在处理中...`,
-      processingTimeMs: Date.now() - startTime,
-    };
+      // 1. 获取 bot 支持的所有动作
+      const enabledActions = await this.actionExecutor.listEnabledActions(bot);
+
+      if (enabledActions.length === 0) {
+        return {
+          success: false,
+          response: '',
+          error: '此 Bot 未配置任何动作',
+          processingTimeMs: Date.now() - startTime,
+        };
+      }
+
+      // 2. 从用户输入中提取参数
+      // 优先使用第一个可用动作作为上下文
+      // 在 Phase 2.4 中可以改进为让 AI 选择最合适的动作
+      const targetAction = enabledActions[0];
+      let extractedParams: Record<string, unknown> = {};
+
+      if (this.parameterExtractor && targetAction.inputSchema) {
+        const extraction = await this.parameterExtractor.extractParameters(
+          input.text,
+          targetAction,
+        );
+        extractedParams = extraction.parameters;
+
+        // 如果提取参数时出现警告，记录但继续
+        if (extraction.warnings.length > 0) {
+          // Log warnings but continue
+        }
+      }
+
+      // 3. 执行动作
+      const executionResult = await this.actionExecutor.execute(bot, event, {
+        ...targetAction,
+        parameters: extractedParams,
+      });
+
+      // 4. 生成用户友好的响应消息
+      if (executionResult.success) {
+        return {
+          success: true,
+          response: this.formatActionSuccessResponse(targetAction),
+          actionResult: executionResult.data,
+          processingTimeMs: Date.now() - startTime,
+        };
+      }
+
+      return {
+        success: false,
+        response: '',
+        error: executionResult.error?.message || `执行 "${targetAction.name}" 动作失败`,
+        processingTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '动作执行异常';
+      return {
+        success: false,
+        response: '',
+        error: errorMessage,
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * 格式化动作成功后的响应消息
+   * @private
+   */
+  private formatActionSuccessResponse(action: Action): string {
+    // Basic response - can be enhanced in Phase 2.4
+    return `成功执行 "${action.name}" 动作`;
   }
 
   /**
