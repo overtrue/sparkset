@@ -3,7 +3,7 @@
  * 核心业务逻辑层 - 处理用户消息并生成响应
  * 独立于任何接入方式（webhook、test、API）
  *
- * Phase 2.3：完整实现，支持 AI 驱动的意图识别、消息路由和参数提取
+ * Phase 2.4：完整实现，支持 AI 驱动的意图识别、消息路由、参数提取和会话追踪
  */
 
 import { generateText } from 'ai';
@@ -12,6 +12,7 @@ import type BotEvent from '../models/bot_event.js';
 import type { BotQueryProcessor } from './query_processor.js';
 import type { BotActionExecutor } from './action_executor.js';
 import type { ParameterExtractor } from './parameter_extractor.js';
+import type { ConversationTracker, ConversationContext } from './conversation_tracker.js';
 import type { Action } from '../models/types.js';
 import { providerFactories } from '../ai/index.js';
 import type { AIProviderRepository } from '../db/interfaces.js';
@@ -66,11 +67,15 @@ export interface UserIntent {
  * 所有外部请求（webhook、测试、API）都应通过此服务处理
  */
 export class BotProcessor {
+  /** 当前会话上下文（处理期间设置） */
+  private currentContext: ConversationContext | null = null;
+
   constructor(
     private queryProcessor?: BotQueryProcessor,
     private actionExecutor?: BotActionExecutor,
     private aiProviderRepository?: AIProviderRepository,
     private parameterExtractor?: ParameterExtractor,
+    private conversationTracker?: ConversationTracker,
   ) {}
 
   /**
@@ -88,28 +93,58 @@ export class BotProcessor {
     const startTime = Date.now();
 
     try {
-      void event; // 使用参数以避免TS错误
+      // 1. 获取或创建会话上下文
+      let conversationContext: ConversationContext | null = null;
+      if (this.conversationTracker && input.externalUserId) {
+        conversationContext = await this.conversationTracker.getOrCreateConversation(
+          bot,
+          input.externalUserId,
+          input.userId,
+        );
+        this.currentContext = conversationContext;
+      }
 
-      // 1. 识别用户意图
+      // 2. 识别用户意图（包含会话上下文）
       const intent = await this.identifyIntent(bot, input.text);
 
-      // 2. 根据意图类型路由处理
+      // 3. 根据意图类型路由处理
+      let result: BotProcessResult;
+
       if (intent.type === 'query' && bot.enableQuery && this.queryProcessor) {
-        return await this.handleQuery(bot, event as BotEvent, input, startTime);
+        result = await this.handleQuery(bot, event as BotEvent, input, startTime);
+      } else if (intent.type === 'action' && this.actionExecutor) {
+        result = await this.handleAction(bot, event as BotEvent, input, startTime);
+      } else {
+        // 无法处理的意图
+        result = {
+          success: false,
+          response: '',
+          error: `无法处理此请求: ${intent.reasoning}`,
+          processingTimeMs: Date.now() - startTime,
+        };
       }
 
-      if (intent.type === 'action' && this.actionExecutor) {
-        return await this.handleAction(bot, event as BotEvent, input, startTime);
+      // 4. 记录会话历史
+      if (this.conversationTracker && conversationContext && event) {
+        try {
+          await this.conversationTracker.linkEventToConversation(
+            event as BotEvent,
+            conversationContext.conversationId,
+            result.response || result.error || '',
+            result.actionResult,
+          );
+        } catch (trackingError) {
+          // 记录失败不影响主流程
+          console.warn('Failed to track conversation:', trackingError);
+        }
       }
 
-      // 3. 无法处理的意图
-      return {
-        success: false,
-        response: '',
-        error: `无法处理此请求: ${intent.reasoning}`,
-        processingTimeMs: Date.now() - startTime,
-      };
+      // 清理当前上下文
+      this.currentContext = null;
+
+      return result;
     } catch (error) {
+      this.currentContext = null;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
@@ -413,13 +448,22 @@ export class BotProcessor {
     const enabledDataSourcesCount = bot.enabledDataSources?.length || 0;
     const queryEnabled = bot.enableQuery ? '是' : '否';
 
+    // 添加会话上下文（如果有）
+    let conversationHistory = '';
+    if (this.currentContext && this.conversationTracker) {
+      conversationHistory = this.conversationTracker.formatContextForPrompt(
+        this.currentContext,
+        500,
+      );
+    }
+
     return `你是一个意图识别助手。根据用户的输入，判断用户的意图类型。
 
 Bot 配置信息：
 - 支持查询功能: ${queryEnabled}
 - 已启用的 Actions 数量: ${enabledActionsCount}
 - 已启用的数据源数量: ${enabledDataSourcesCount}
-
+${conversationHistory ? `\n${conversationHistory}` : ''}
 请分析以下用户输入，判断用户的意图是属于以下哪一种类型：
 1. query: 用户想要查询或获取数据信息
 2. action: 用户想要执行某个特定的操作或动作
@@ -512,6 +556,14 @@ export function createBotProcessor(
   queryProcessor?: BotQueryProcessor,
   actionExecutor?: BotActionExecutor,
   aiProviderRepository?: AIProviderRepository,
+  parameterExtractor?: ParameterExtractor,
+  conversationTracker?: ConversationTracker,
 ): BotProcessor {
-  return new BotProcessor(queryProcessor, actionExecutor, aiProviderRepository);
+  return new BotProcessor(
+    queryProcessor,
+    actionExecutor,
+    aiProviderRepository,
+    parameterExtractor,
+    conversationTracker,
+  );
 }
