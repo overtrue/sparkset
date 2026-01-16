@@ -127,7 +127,7 @@ export function BotTestDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="flex h-screen max-w-2xl flex-col">
+      <DrawerContent className="flex h-screen w-[600px] flex-col">
         <DrawerHeader className="border-b">
           <DrawerTitle>{t('Test Bot')}</DrawerTitle>
           <DrawerDescription>
