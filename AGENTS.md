@@ -362,6 +362,24 @@ git push --no-verify
 
 **Warning**: Skipping validation may cause CI failures. Use with caution.
 
+## Important Reminders on Task Management
+
+**CRITICAL**:
+
+- Use the TodoWrite tool to plan and track tasks throughout the conversation
+- Mark todos as completed IMMEDIATELY after finishing (don't batch up multiple tasks)
+- Only have ONE task in_progress at any time
+- Create specific, actionable items
+- Break complex tasks into smaller, manageable steps
+- Use clear, descriptive task names
+
+**Task States**:
+
+- `pending`: Task not yet started
+- `in_progress`: Currently working on (limit to ONE task at a time)
+- `completed`: Task finished successfully
+- `cancelled`: Task no longer needed
+
 ## Important Reminders
 
 **NEVER**:
@@ -375,6 +393,8 @@ git push --no-verify
 - Modify correct business logic to match wrong code
 - **Make syntax errors** - Every change must be syntactically correct
 - Skip validation steps - they exist to ensure code quality
+- Proactively create documentation files (\*.md) or README files - only create if explicitly requested by the user
+- Write files with emoji unless the user explicitly requests it
 
 **ALWAYS**:
 
@@ -389,6 +409,8 @@ git push --no-verify
 - **Let Git Hooks validate your code** - Don't bypass unless absolutely necessary
 - Fix validation errors before committing/pushing
 - **Refactor without compatibility concerns** - This is a new project, remove deprecated code directly instead of maintaining compatibility layers
+- **Prefer editing existing files** - NEVER write new files unless absolutely required
+- **Mark todos as completed immediately** - Don't batch up multiple tasks before marking them as completed
 
 ### Syntax Error Prevention
 
