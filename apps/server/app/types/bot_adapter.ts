@@ -32,6 +32,7 @@ export interface RichMessage {
 /**
  * Bot 适配器接口
  * 每个平台实现此接口来处理 Webhook 消息
+ * 职责：消息解析、签名验证、用户映射、响应格式化
  */
 export interface IBotAdapter {
   /**
@@ -62,6 +63,15 @@ export interface IBotAdapter {
    * @returns 解析后的消息,如果无法解析返回 null
    */
   parseMessage(payload: unknown): ParsedMessage | null;
+
+  /**
+   * 将外部用户标识映射到内部用户 ID
+   * 需要与 User 表进行关联查询，根据适配器配置的映射规则匹配用户
+   * @param externalUserId 外部平台的用户标识
+   * @param adapterConfig 适配器配置（包含映射规则）
+   * @returns 内部用户 ID，如果无法映射返回 null
+   */
+  resolveUserId?(externalUserId: string, adapterConfig: unknown): Promise<number | null>;
 
   /**
    * 发送文本回复

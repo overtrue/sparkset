@@ -19,6 +19,7 @@ interface UpdateFieldConfig {
 /**
  * Bot 业务逻辑服务
  * 处理 Bot 的创建、更新、删除、查询等操作
+ * 不涉及消息处理逻辑（那是 BotProcessor 的职责）
  */
 export class BotService {
   /**
@@ -268,13 +269,15 @@ export class BotService {
 
   /**
    * 测试 Bot 消息处理
-   * 通过调用实际的 webhook 端点来测试 bot
-   * 这会走完整的 bot 处理流程，包括消息解析、事件创建等
+   * 直接调用 bot 核心处理器，无需经过 webhook 和适配器
+   * 用于快速测试 bot 的业务逻辑
+   *
+   * @param botId Bot ID
+   * @param message 测试消息
    */
   async testBot(
     botId: number,
     message: string,
-    platform?: string,
   ): Promise<{
     success: boolean;
     message: string;
@@ -287,118 +290,117 @@ export class BotService {
     }
 
     try {
-      // 构造测试消息负载，模拟外部平台的请求
-      const testPayload = this.constructTestPayload(message, platform || bot.type);
+      // 动态导入以避免循环依赖
+      const BotEvent = (await import('../models/bot_event.js')).default;
 
-      console.log(`[Bot Test] Bot ID: ${botId}, Message: ${message}, Platform: ${platform}`);
-      console.log(`[Bot Test] Payload:`, JSON.stringify(testPayload, null, 2));
+      console.log(`[Bot Test] Bot ID: ${botId}, Message: "${message}"`);
 
-      // 调用实际的 webhook 端点来处理测试消息
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3333';
-      const webhookUrl = `${baseUrl}/webhooks/bot/${botId}/${bot.webhookToken}`;
-      console.log(`[Bot Test] Calling webhook: ${webhookUrl}`);
+      // 创建 BotEvent 记录
+      const botEvent = await BotEvent.create({
+        botId,
+        externalEventId: `test_${Date.now()}`,
+        content: message,
+        externalUserId: 'test_user',
+        externalUserName: 'Test User',
+        internalUserId: null,
+        status: 'pending',
+        retryCount: 0,
+        maxRetries: bot.maxRetries,
+      });
 
-      try {
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(testPayload),
-          signal: AbortSignal.timeout(10000),
+      console.log(`[Bot Test] Created event ID: ${botEvent.id}`);
+
+      // 异步处理消息
+      setImmediate(() => {
+        void this.processTestBotMessage(bot, botEvent.id, message).catch((error) => {
+          console.error(`[Bot Test] Failed to process event ${botEvent.id}:`, error);
         });
+      });
 
-        const responseData = (await response
-          .json()
-          .catch(() => ({}) as Record<string, unknown>)) as Record<string, unknown>;
-        console.log(`[Bot Test] Webhook response (${response.status}):`, responseData);
-
-        // 从响应中获取事件 ID（如果有）
-        const eventId = responseData?.eventId || responseData?.event_id;
-
-        return {
-          success: true,
-          message: 'Test message sent to bot for processing',
-          eventId: eventId ? Number(eventId) : undefined,
-        };
-      } catch (fetchError) {
-        const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
-
-        // 如果是超时或网络错误，返回失败
-        if (
-          errorMessage.includes('timeout') ||
-          errorMessage.includes('fetch') ||
-          errorMessage.includes('abort')
-        ) {
-          throw new Error(`Webhook call failed: ${errorMessage}`);
-        }
-
-        // 其他错误也返回失败
-        throw fetchError;
-      }
+      return {
+        success: true,
+        message: 'Test message queued for processing',
+        eventId: botEvent.id,
+      };
     } catch (error) {
-      console.error(`[Bot Test Error] Bot ID: ${botId}:`, error);
+      console.error(`[Bot Test] Error:`, error);
       return {
         success: false,
-        message: 'Failed to test bot',
+        message: 'Failed to queue test message',
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
 
   /**
-   * 构造测试消息负载
-   * 根据平台类型返回相应格式的消息
+   * 处理测试消息 (私有方法)
+   * 直接调用核心处理器，不涉及任何适配器
    */
-  private constructTestPayload(message: string, platform: string): Record<string, unknown> {
-    const basePayload = {
-      text: message,
-      timestamp: new Date().toISOString(),
-      sender: {
-        id: 'test_user',
-        name: 'Test User',
-      },
-    };
+  private async processTestBotMessage(bot: Bot, eventId: number, message: string): Promise<void> {
+    try {
+      const { botProcessor } = await import('../services/bot_processor.js');
+      const BotEvent = (await import('../models/bot_event.js')).default;
 
-    switch (platform.toLowerCase()) {
-      case 'wecom':
-        return {
-          ...basePayload,
-          msgtype: 'text',
-          touser: 'test_user',
-          agentid: 'test_agent',
-        };
-      case 'discord':
-        return {
-          ...basePayload,
-          author: {
-            id: 'test_user',
-            username: 'Test User',
-          },
-          channel_id: 'test_channel',
-        };
-      case 'slack':
-        return {
-          ...basePayload,
-          user: 'test_user',
-          channel: 'test_channel',
-          type: 'message',
-        };
-      case 'telegram':
-        return {
-          ...basePayload,
-          chat: {
-            id: 'test_chat',
-            type: 'private',
-          },
-          from: {
-            id: 'test_user',
-            first_name: 'Test',
-            username: 'test_user',
-          },
-        };
-      default:
-        return basePayload;
+      const startTime = Date.now();
+
+      // 获取事件记录
+      const event = await BotEvent.find(eventId);
+      if (!event) {
+        console.warn(`[Bot Test] Event ${eventId} not found`);
+        return;
+      }
+
+      // 更新状态为处理中
+      await event.merge({ status: 'processing' }).save();
+
+      // 调用核心处理器 (userId = 1 是测试用户)
+      const result = await botProcessor.process(bot, {
+        userId: 1,
+        text: message,
+        externalUserId: 'test_user',
+        externalUserName: 'Test User',
+      });
+
+      const processingTimeMs = Date.now() - startTime;
+
+      // 更新事件状态
+      if (result.success) {
+        await event
+          .merge({
+            status: 'completed',
+            actionResult: result.actionResult || null,
+            processingTimeMs,
+          })
+          .save();
+        console.log(`[Bot Test] Event ${eventId} completed: ${result.response}`);
+      } else {
+        await event
+          .merge({
+            status: 'failed',
+            errorMessage: result.error || 'Unknown error',
+            processingTimeMs,
+          })
+          .save();
+        console.error(`[Bot Test] Event ${eventId} failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`[Bot Test] Error processing event:`, error);
+
+      try {
+        const BotEvent = (await import('../models/bot_event.js')).default;
+        const event = await BotEvent.find(eventId);
+        if (event) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          await event
+            .merge({
+              status: 'failed',
+              errorMessage,
+            })
+            .save();
+        }
+      } catch (updateError) {
+        console.error(`[Bot Test] Failed to update event status:`, updateError);
+      }
     }
   }
 

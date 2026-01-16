@@ -231,9 +231,8 @@ export default class BotsController {
       }
 
       // 获取请求体中的测试消息
-      const { message, platform } = request.body() as {
+      const { message } = request.body() as {
         message: string;
-        platform?: string;
       };
 
       if (!message) {
@@ -241,7 +240,7 @@ export default class BotsController {
       }
 
       // 调用测试服务
-      const result = await botService.testBot(id, message, platform);
+      const result = await botService.testBot(id, message);
 
       return response.ok(result);
     } catch (error) {
@@ -344,7 +343,7 @@ export default class BotsController {
       }
 
       // 重放事件 - 重新处理该消息
-      const result = await botService.testBot(botId, event.content, undefined);
+      const result = await botService.testBot(botId, event.content);
 
       return response.ok({
         message: 'Event replayed successfully',
