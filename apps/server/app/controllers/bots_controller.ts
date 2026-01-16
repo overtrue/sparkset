@@ -346,10 +346,13 @@ export default class BotsController {
       const result = await botService.testBot(botId, event.content);
 
       return response.ok({
-        message: 'Event replayed successfully',
+        success: result.success,
+        message: result.success ? 'Event replayed successfully' : 'Event replay failed',
         originalEventId: event.id,
-        newEventId: result.eventId,
         originalContent: event.content,
+        response: result.response,
+        error: result.error,
+        processingTimeMs: result.processingTimeMs,
       });
     } catch (error) {
       const { response } = ctx;

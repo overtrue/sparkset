@@ -141,6 +141,11 @@ export default class WebhooksController {
         maxRetries: bot.maxRetries,
       });
 
+      // 如果成功映射了用户ID，立即更新事件记录
+      if (internalUserId && internalUserId !== botEvent.internalUserId) {
+        await botEvent.merge({ internalUserId }).save();
+      }
+
       // 立即返回 202 Accepted（异步处理）
       response.accepted({ success: true, eventId: botEvent.id });
 

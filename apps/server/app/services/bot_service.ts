@@ -280,9 +280,10 @@ export class BotService {
     message: string,
   ): Promise<{
     success: boolean;
-    message: string;
-    eventId?: number;
+    response: string;
+    actionResult?: unknown;
     error?: string;
+    processingTimeMs: number;
   }> {
     const bot = await this.getBot(botId);
     if (!bot) {
@@ -291,69 +292,12 @@ export class BotService {
 
     try {
       // 动态导入以避免循环依赖
-      const BotEvent = (await import('../models/bot_event.js')).default;
-
-      console.log(`[Bot Test] Bot ID: ${botId}, Message: "${message}"`);
-
-      // 创建 BotEvent 记录
-      const botEvent = await BotEvent.create({
-        botId,
-        externalEventId: `test_${Date.now()}`,
-        content: message,
-        externalUserId: 'test_user',
-        externalUserName: 'Test User',
-        internalUserId: null,
-        status: 'pending',
-        retryCount: 0,
-        maxRetries: bot.maxRetries,
-      });
-
-      console.log(`[Bot Test] Created event ID: ${botEvent.id}`);
-
-      // 异步处理消息
-      setImmediate(() => {
-        void this.processTestBotMessage(bot, botEvent.id, message).catch((error) => {
-          console.error(`[Bot Test] Failed to process event ${botEvent.id}:`, error);
-        });
-      });
-
-      return {
-        success: true,
-        message: 'Test message queued for processing',
-        eventId: botEvent.id,
-      };
-    } catch (error) {
-      console.error(`[Bot Test] Error:`, error);
-      return {
-        success: false,
-        message: 'Failed to queue test message',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  /**
-   * 处理测试消息 (私有方法)
-   * 直接调用核心处理器，不涉及任何适配器
-   */
-  private async processTestBotMessage(bot: Bot, eventId: number, message: string): Promise<void> {
-    try {
       const { botProcessor } = await import('../services/bot_processor.js');
-      const BotEvent = (await import('../models/bot_event.js')).default;
 
-      const startTime = Date.now();
+      console.log(`[Bot Test] Testing Bot ID: ${botId}, Message: "${message}"`);
 
-      // 获取事件记录
-      const event = await BotEvent.find(eventId);
-      if (!event) {
-        console.warn(`[Bot Test] Event ${eventId} not found`);
-        return;
-      }
-
-      // 更新状态为处理中
-      await event.merge({ status: 'processing' }).save();
-
-      // 调用核心处理器 (userId = 1 是测试用户)
+      // 直接调用核心处理器 (userId = 1 是测试用户)
+      // 同步返回结果，无需轮询
       const result = await botProcessor.process(bot, {
         userId: 1,
         text: message,
@@ -361,46 +305,17 @@ export class BotService {
         externalUserName: 'Test User',
       });
 
-      const processingTimeMs = Date.now() - startTime;
+      console.log(`[Bot Test] Result:`, result);
 
-      // 更新事件状态
-      if (result.success) {
-        await event
-          .merge({
-            status: 'completed',
-            actionResult: result.actionResult || null,
-            processingTimeMs,
-          })
-          .save();
-        console.log(`[Bot Test] Event ${eventId} completed: ${result.response}`);
-      } else {
-        await event
-          .merge({
-            status: 'failed',
-            errorMessage: result.error || 'Unknown error',
-            processingTimeMs,
-          })
-          .save();
-        console.error(`[Bot Test] Event ${eventId} failed: ${result.error}`);
-      }
+      return result;
     } catch (error) {
-      console.error(`[Bot Test] Error processing event:`, error);
-
-      try {
-        const BotEvent = (await import('../models/bot_event.js')).default;
-        const event = await BotEvent.find(eventId);
-        if (event) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          await event
-            .merge({
-              status: 'failed',
-              errorMessage,
-            })
-            .save();
-        }
-      } catch (updateError) {
-        console.error(`[Bot Test] Failed to update event status:`, updateError);
-      }
+      console.error(`[Bot Test] Error:`, error);
+      return {
+        success: false,
+        response: '',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        processingTimeMs: 0,
+      };
     }
   }
 
