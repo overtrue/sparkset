@@ -12,6 +12,7 @@ module.exports = [
       '**/.next/**',
       'apps/server/build/**',
       'apps/dashboard/.next/**',
+      'apps/dashboard/src/components/ui/**',
     ],
   },
   js.configs.recommended,
