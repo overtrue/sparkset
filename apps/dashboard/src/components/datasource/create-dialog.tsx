@@ -2,7 +2,7 @@
 
 import { useTranslations } from '@/i18n/use-translations';
 import { RiCheckboxCircleLine, RiCloseCircleLine, RiLoader4Line } from '@remixicon/react';
-import { type ChangeEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, type MouseEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   CreateDatasourceDto,
@@ -24,6 +24,21 @@ const DATABASE_TYPES = [
   { value: 'postgres', label: 'PostgreSQL' },
   { value: 'sqlite', label: 'SQLite' },
 ];
+
+const PORT_BY_TYPE: Record<string, number> = {
+  mysql: 3306,
+  postgres: 5432,
+  sqlite: 0,
+};
+
+const CONNECTION_FIELD_KEYS = new Set<keyof CreateDatasourceInput>([
+  'type',
+  'host',
+  'port',
+  'username',
+  'password',
+  'database',
+]);
 
 const defaultForm: CreateDatasourceInput = {
   name: '',
@@ -55,36 +70,36 @@ export function CreateDatasourceDialog({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const isEditing = Boolean(datasource);
+  const isBusy = submitting || testing;
 
-  // 初始化编辑模式的数据
-  if (datasource && datasource.id && form.name !== datasource.name) {
-    setForm({
-      name: datasource.name,
-      type: datasource.type,
-      host: datasource.host,
-      port: datasource.port,
-      username: datasource.username,
-      password: '',
-      database: datasource.database,
-      isDefault: datasource.isDefault,
-    } as CreateDatasourceInput);
+  useEffect(() => {
+    if (!open) return;
+    if (datasource) {
+      setForm({
+        name: datasource.name,
+        type: datasource.type,
+        host: datasource.host,
+        port: datasource.port,
+        username: datasource.username,
+        password: '',
+        database: datasource.database,
+        isDefault: datasource.isDefault,
+      } as CreateDatasourceInput);
+    } else {
+      setForm(defaultForm);
+    }
     setTestResult(null);
     setTesting(false);
     setIsVerified(false);
-  }
+  }, [datasource, open]);
 
-  const canTest = useMemo(() => {
-    // 测试需要完整的连接信息（密码可以为空）
-    if (!form.host || !form.username || !form.database) {
-      return false;
-    }
-    return true;
-  }, [form]);
+  // 测试需要完整的连接信息（密码可以为空）
+  const canTest = Boolean(form.host && form.username && form.database);
 
-  const shouldShowSubmit = useMemo(() => {
-    // 必须验证通过，且所有基础字段完整
-    return isVerified && form.name && form.host && form.username && form.database;
-  }, [isVerified, form]);
+  // 必须验证通过，且所有基础字段完整
+  const isFormComplete = Boolean(form.name && form.host && form.username && form.database);
+  const canSubmit = Boolean(isVerified && isFormComplete);
 
   const onChange =
     (key: keyof CreateDatasourceInput) => (e: ChangeEvent<HTMLInputElement> | string) => {
@@ -92,8 +107,7 @@ export function CreateDatasourceDialog({
 
       // 智能端口切换：当切换数据库类型时自动更新默认端口
       if (key === 'type') {
-        const portMap: Record<string, number> = { mysql: 3306, postgres: 5432, sqlite: 0 };
-        const newPort = portMap[value as string] ?? 3306;
+        const newPort = PORT_BY_TYPE[value as string] ?? 3306;
         setForm(
           (prev: CreateDatasourceInput) =>
             ({
@@ -109,12 +123,14 @@ export function CreateDatasourceDialog({
         }));
       }
 
-      // 用户修改配置时，重置验证状态
-      setIsVerified(false);
-      setTestResult(null);
+      if (CONNECTION_FIELD_KEYS.has(key)) {
+        // 用户修改连接配置时，重置验证状态
+        setIsVerified(false);
+        setTestResult(null);
+      }
     };
 
-  const handleTestConnection = async (e?: React.MouseEvent) => {
+  const handleTestConnection = async (e?: MouseEvent<HTMLButtonElement>) => {
     if (e) e.preventDefault();
     if (!canTest || testing) return;
     setTesting(true);
@@ -147,7 +163,7 @@ export function CreateDatasourceDialog({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!shouldShowSubmit || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     try {
       let result: Datasource;
@@ -179,8 +195,16 @@ export function CreateDatasourceDialog({
     onOpenChange(false);
   };
 
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      handleClose();
+      return;
+    }
+    onOpenChange(true);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{datasource ? t('Edit Datasource') : t('Add Datasource')}</DialogTitle>
@@ -202,18 +226,26 @@ export function CreateDatasourceDialog({
               <Label htmlFor="name">{t('Name')}</Label>
               <Input
                 id="name"
+                name="name"
                 value={form.name}
                 onChange={onChange('name')}
-                placeholder={t('e.g. production-mysql')}
+                placeholder={t('eg production-mysql…')}
+                autoComplete="off"
+                disabled={isBusy}
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="type">{t('Type')}</Label>
-                <Select value={form.type} onValueChange={(value) => onChange('type')(value)}>
+                <Select
+                  name="type"
+                  value={form.type}
+                  onValueChange={(value) => onChange('type')(value)}
+                  disabled={isBusy}
+                >
                   <SelectTrigger id="type">
-                    <SelectValue placeholder={t('Select database type')} />
+                    <SelectValue placeholder={t('Select database type…')} />
                   </SelectTrigger>
                   <SelectContent>
                     {DATABASE_TYPES.map((dbType) => (
@@ -228,22 +260,29 @@ export function CreateDatasourceDialog({
                 <Label htmlFor="port">{t('Port')}</Label>
                 <Input
                   id="port"
+                  name="port"
                   type="number"
                   value={form.port}
                   onChange={onChange('port')}
+                  inputMode="numeric"
                   min={1}
+                  autoComplete="off"
+                  disabled={isBusy}
                   required
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="host">Host</Label>
+                <Label htmlFor="host">{t('Host')}</Label>
                 <Input
                   id="host"
+                  name="host"
                   value={form.host}
                   onChange={onChange('host')}
-                  placeholder="127.0.0.1"
+                  placeholder={t('eg 127.0.0.1…')}
+                  autoComplete="off"
+                  disabled={isBusy}
                   required
                 />
               </div>
@@ -251,9 +290,12 @@ export function CreateDatasourceDialog({
                 <Label htmlFor="database">{t('Database Name')}</Label>
                 <Input
                   id="database"
+                  name="database"
                   value={form.database}
                   onChange={onChange('database')}
-                  placeholder="sparkset"
+                  placeholder={t('eg sparkset…')}
+                  autoComplete="off"
+                  disabled={isBusy}
                   required
                 />
               </div>
@@ -263,15 +305,19 @@ export function CreateDatasourceDialog({
                 <Label htmlFor="username">{t('Username')}</Label>
                 <Input
                   id="username"
+                  name="username"
                   value={form.username}
                   onChange={onChange('username')}
+                  autoComplete="username"
+                  spellCheck={false}
+                  disabled={isBusy}
                   required
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">
                   {t('Password')}{' '}
-                  {datasource && (
+                  {isEditing && (
                     <span className="text-muted-foreground">
                       {t('(Leave empty to keep unchanged)')}
                     </span>
@@ -279,31 +325,41 @@ export function CreateDatasourceDialog({
                 </Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   value={form.password}
                   onChange={onChange('password')}
                   placeholder={
-                    datasource
-                      ? t('Leave empty to keep unchanged')
-                      : t('Leave empty for passwordless connection')
+                    isEditing
+                      ? t('Leave empty to keep unchanged…')
+                      : t('Leave empty for passwordless connection…')
                   }
+                  autoComplete="current-password"
+                  disabled={isBusy}
                 />
               </div>
             </div>
 
             {/* 连通性验证状态区域 */}
             {(testResult !== null || testing) && (
-              <div className="rounded-lg border p-3 space-y-2 bg-muted/50">
+              <div
+                className="rounded-lg border p-3 space-y-2 bg-muted/50"
+                role="status"
+                aria-live="polite"
+              >
                 <div className="flex items-center gap-2 font-medium">
                   {testing && (
                     <>
-                      <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
-                      <span className="text-blue-600">{t('Verifying database connection')}</span>
+                      <RiLoader4Line
+                        className="h-4 w-4 animate-spin text-blue-500"
+                        aria-hidden="true"
+                      />
+                      <span className="text-blue-600">{t('Verifying database connection…')}</span>
                     </>
                   )}
                   {testResult?.success && !testing && (
                     <>
-                      <RiCheckboxCircleLine className="h-4 w-4 text-green-500" />
+                      <RiCheckboxCircleLine className="h-4 w-4 text-green-500" aria-hidden="true" />
                       <span className="text-green-600">
                         {t('Connection verified successfully')}
                       </span>
@@ -311,7 +367,7 @@ export function CreateDatasourceDialog({
                   )}
                   {testResult?.success === false && !testing && (
                     <>
-                      <RiCloseCircleLine className="h-4 w-4 text-red-500" />
+                      <RiCloseCircleLine className="h-4 w-4 text-red-500" aria-hidden="true" />
                       <span className="text-red-600">{t('Connection verification failed')}</span>
                     </>
                   )}
@@ -319,7 +375,7 @@ export function CreateDatasourceDialog({
                 {testResult?.message && (
                   <p className="text-sm text-muted-foreground">{testResult.message}</p>
                 )}
-                {datasource && testResult?.success === false && (
+                {isEditing && testResult?.success === false && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {t(
                       'Tip: Please check the database configuration including host, port, username and password',
@@ -332,7 +388,7 @@ export function CreateDatasourceDialog({
 
           <div className="flex gap-2 sm:flex-col-reverse sm:gap-0">
             <div className="flex gap-2 sm:flex-row-reverse">
-              {!shouldShowSubmit ? (
+              {!canSubmit ? (
                 <>
                   {/* 创建/编辑模式：只显示验证连通性按钮 */}
                   <Button
@@ -341,11 +397,11 @@ export function CreateDatasourceDialog({
                     onClick={() => {
                       void handleTestConnection();
                     }}
-                    disabled={!canTest || testing}
+                    disabled={!canTest || isBusy}
                     className="w-full sm:w-auto"
                     title={t('Verify Connection')}
                   >
-                    {testing ? t('Verifying') : t('Verify Connection')}
+                    {testing ? t('Verifying…') : t('Verify Connection')}
                   </Button>
                   <Button
                     type="button"
@@ -362,8 +418,8 @@ export function CreateDatasourceDialog({
                   <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                     {submitting
                       ? datasource
-                        ? t('Updating')
-                        : t('Creating')
+                        ? t('Updating…')
+                        : t('Creating…')
                       : datasource
                         ? t('Save')
                         : t('Add')}

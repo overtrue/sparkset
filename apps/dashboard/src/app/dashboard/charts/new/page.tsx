@@ -1,5 +1,5 @@
 import { ChartFormWrapper } from '@/components/charts/chart-form-wrapper';
-import { datasetsApi } from '@/lib/api/datasets';
+import { fetchDatasets } from '@/lib/api/datasets';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export default async function NewChartPage({ searchParams }: Props) {
   const datasetId = params.datasetId ? Number(params.datasetId) : undefined;
 
   // Fetch datasets from API
-  const result = await datasetsApi.list().catch(() => ({ items: [] }));
+  const result = await fetchDatasets().catch(() => ({ items: [] }));
 
   // If no datasets exist, redirect to query page to create one
   if (result.items.length === 0) {

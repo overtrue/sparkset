@@ -10,11 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { datasetsApi } from '@/lib/api/datasets';
+import { previewDataset } from '@/lib/api/datasets';
 import type { ResultSet } from '@/types/chart';
 import type { DatasetWidgetConfig } from '@/types/dashboard';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface DatasetWidgetProps {
   config: DatasetWidgetConfig;
@@ -26,23 +26,29 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ResultSet | null>(null);
+  const maxRows = config.maxRows ?? 10;
+  const displayRows = useMemo(() => (data?.rows ?? []).slice(0, maxRows), [data?.rows, maxRows]);
+  const columns = useMemo(
+    () => data?.schema?.columns?.map((col) => col.name) ?? [],
+    [data?.schema?.columns],
+  );
 
-  const loadDataset = async () => {
+  const loadDataset = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await datasetsApi.preview(config.datasetId, {});
+      const result = await previewDataset(config.datasetId, {});
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('Failed to load dataset'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [config.datasetId, t]);
 
   useEffect(() => {
     void loadDataset();
-  }, [config.datasetId, refreshKey]);
+  }, [loadDataset, refreshKey]);
 
   if (loading) {
     return (
@@ -65,14 +71,10 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
   if (!data || !data.rows || data.rows.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-4 text-muted-foreground">
-        {t('No data')}
+        {t('No Data')}
       </div>
     );
   }
-
-  const maxRows = config.maxRows ?? 10;
-  const displayRows = data.rows.slice(0, maxRows);
-  const columns = data.schema.columns.map((col) => col.name);
 
   return (
     <div className="h-full w-full overflow-auto">
@@ -102,7 +104,10 @@ export function DatasetWidget({ config, refreshKey }: DatasetWidgetProps) {
       </Table>
       {data.rows.length > maxRows && (
         <div className="p-2 text-xs text-muted-foreground text-center">
-          显示前 {maxRows} 行，共 {data.rows.length} 行
+          {t('Show first {maxRows} rows of {totalRows} rows', {
+            maxRows,
+            totalRows: data.rows.length,
+          })}
         </div>
       )}
     </div>

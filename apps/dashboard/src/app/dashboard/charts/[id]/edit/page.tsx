@@ -1,6 +1,6 @@
 import { ChartFormWrapper } from '@/components/charts/chart-form-wrapper';
-import { datasetsApi } from '@/lib/api/datasets';
-import { chartsApi } from '@/lib/api/charts';
+import { fetchDatasets } from '@/lib/api/datasets';
+import { fetchChartById } from '@/lib/api/charts';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { getLocaleFromRequest } from '@/i18n/server-utils';
@@ -25,8 +25,8 @@ async function EditChartContent({ params }: Props) {
 
   // Fetch chart and datasets in parallel
   const [chartResult, datasetsResult] = await Promise.allSettled([
-    chartsApi.get(chartId),
-    datasetsApi.list(),
+    fetchChartById(chartId),
+    fetchDatasets(),
   ]);
 
   // Handle chart not found
@@ -60,7 +60,7 @@ export default async function EditChartPage({ params }: Props) {
   const dict = await getDictionary(locale);
 
   return (
-    <Suspense fallback={<div className="space-y-6">{dict['Loading'] || 'Loading'}</div>}>
+    <Suspense fallback={<div className="space-y-6">{dict['Loading…'] || 'Loading…'}</div>}>
       <EditChartContent params={params} />
     </Suspense>
   );

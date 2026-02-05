@@ -42,13 +42,13 @@ export function ErrorState({
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
       <Alert variant="destructive" className="max-w-md">
-        <RiAlertLine className="h-4 w-4" />
+        <RiAlertLine className="h-4 w-4" aria-hidden="true" />
         <AlertTitle>{errorTitle}</AlertTitle>
         <AlertDescription>{errorMessage}</AlertDescription>
       </Alert>
       {onRetry && (
         <Button onClick={onRetry} variant="outline" className="mt-4">
-          <RiRefreshLine className="h-4 w-4 mr-2" />
+          <RiRefreshLine className="h-4 w-4" aria-hidden="true" />
           {retryText}
         </Button>
       )}

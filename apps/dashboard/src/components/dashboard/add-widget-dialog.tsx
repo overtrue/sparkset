@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { chartsApi } from '@/lib/api/charts';
-import { datasetsApi } from '@/lib/api/datasets';
+import { fetchCharts } from '@/lib/api/charts';
+import { fetchDatasets } from '@/lib/api/datasets';
 import type { Chart, Dataset } from '@/types/chart';
 import type {
   ChartWidgetConfig,
@@ -22,7 +22,7 @@ import type {
   WidgetType,
 } from '@/types/dashboard';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 interface AddWidgetDialogProps {
@@ -51,33 +51,33 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      void loadData();
-    } else {
-      // 关闭时重置状态
-      setSelectedChartIds(new Set());
-      setSelectedDatasetIds(new Set());
-      setTextContent('');
-      setActiveTab('chart');
-    }
-  }, [open]);
+  const resetState = useCallback(() => {
+    setSelectedChartIds(new Set());
+    setSelectedDatasetIds(new Set());
+    setTextContent('');
+    setActiveTab('chart');
+  }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [chartsResult, datasetsResult] = await Promise.all([
-        chartsApi.list(),
-        datasetsApi.list(),
-      ]);
-      setCharts(chartsResult.items);
-      setDatasets(datasetsResult.items);
+      const [chartsResult, datasetsResult] = await Promise.all([fetchCharts(), fetchDatasets()]);
+      setCharts(chartsResult.items || []);
+      setDatasets(datasetsResult.items || []);
     } catch {
       toast.error(t('Failed to load data'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (open) {
+      void loadData();
+    } else {
+      resetState();
+    }
+  }, [loadData, open, resetState]);
 
   const handleChartToggle = (chartId: number) => {
     setSelectedChartIds((prev) => {
@@ -103,7 +103,11 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
     });
   };
 
-  const handleSubmit = () => {
+  const widgetCount =
+    selectedChartIds.size + selectedDatasetIds.size + (textContent.trim() ? 1 : 0);
+  const hasSelection = widgetCount > 0;
+
+  const handleSubmit = useCallback(() => {
     const widgets: {
       title: string;
       type: WidgetType;
@@ -168,10 +172,26 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
     onAdd(widgets);
     onOpenChange(false);
-  };
+  }, [onAdd, onOpenChange, selectedChartIds, selectedDatasetIds, t, textContent]);
 
-  const hasSelection =
-    selectedChartIds.size > 0 || selectedDatasetIds.size > 0 || textContent.trim().length > 0;
+  const chartItems = useMemo(
+    () =>
+      charts.map((chart) => ({
+        id: chart.id,
+        title: chart.title,
+        description: chart.description,
+      })),
+    [charts],
+  );
+  const datasetItems = useMemo(
+    () =>
+      datasets.map((dataset) => ({
+        id: dataset.id,
+        title: dataset.name,
+        description: dataset.description,
+      })),
+    [datasets],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,12 +217,12 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
             <TabsContent value="chart" className="flex-1 overflow-auto mt-4">
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">{t('Loading')}</div>
-              ) : charts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t('Loading…')}</div>
+              ) : chartItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">{t('No Charts')}</div>
               ) : (
                 <div className="space-y-2">
-                  {charts.map((chart) => (
+                  {chartItems.map((chart) => (
                     <div
                       key={chart.id}
                       className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 cursor-pointer"
@@ -213,10 +233,12 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
                         onCheckedChange={() => handleChartToggle(chart.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <div className="flex-1">
-                        <div className="font-medium">{chart.title}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{chart.title}</div>
                         {chart.description && (
-                          <div className="text-sm text-muted-foreground">{chart.description}</div>
+                          <div className="text-sm text-muted-foreground break-words">
+                            {chart.description}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -227,12 +249,12 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
 
             <TabsContent value="dataset" className="flex-1 overflow-auto mt-4">
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">{t('Loading')}</div>
-              ) : datasets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t('Loading…')}</div>
+              ) : datasetItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">{t('No Datasets')}</div>
               ) : (
                 <div className="space-y-2">
-                  {datasets.map((dataset) => (
+                  {datasetItems.map((dataset) => (
                     <div
                       key={dataset.id}
                       className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 cursor-pointer"
@@ -243,10 +265,12 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
                         onCheckedChange={() => handleDatasetToggle(dataset.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <div className="flex-1">
-                        <div className="font-medium">{dataset.name}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{dataset.title}</div>
                         {dataset.description && (
-                          <div className="text-sm text-muted-foreground">{dataset.description}</div>
+                          <div className="text-sm text-muted-foreground break-words">
+                            {dataset.description}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -265,6 +289,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
                   onChange={(e) => setTextContent(e.target.value)}
                   placeholder={t('Enter text content, Markdown format supported')}
                   className="min-h-[200px]"
+                  name="widget-text"
                 />
               </div>
             </TabsContent>
@@ -276,8 +301,7 @@ export function AddWidgetDialog({ open, onOpenChange, onAdd }: AddWidgetDialogPr
             {t('Cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!hasSelection}>
-            {t('Add')} (
-            {selectedChartIds.size + selectedDatasetIds.size + (textContent.trim() ? 1 : 0)})
+            {t('Add')} ({widgetCount})
           </Button>
         </DialogFooter>
       </DialogContent>

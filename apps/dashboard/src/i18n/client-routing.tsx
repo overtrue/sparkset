@@ -2,7 +2,7 @@
 
 import NextLink from 'next/link';
 import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next/navigation';
-import { ComponentProps, useEffect, useState } from 'react';
+import { ComponentProps, useEffect, useMemo, useState } from 'react';
 
 import { defaultLocale, hasLocale, type Locale } from './config';
 import { getStoredLocale, setStoredLocale } from './locale-storage';
@@ -59,26 +59,29 @@ export function usePathname(): string {
 export function useRouter() {
   const router = useNextRouter();
 
-  return {
-    ...router,
-    push: (href: string) => {
-      // 直接使用提供的路径，不添加语言前缀
-      return router.push(href);
-    },
-    replace: (href: string) => {
-      // 直接使用提供的路径，不添加语言前缀
-      return router.replace(href);
-    },
-    back: () => {
-      router.back();
-    },
-    forward: () => {
-      router.forward();
-    },
-    refresh: () => {
-      router.refresh();
-    },
-  };
+  return useMemo(
+    () => ({
+      ...router,
+      push: (href: string) => {
+        // 直接使用提供的路径，不添加语言前缀
+        return router.push(href);
+      },
+      replace: (href: string) => {
+        // 直接使用提供的路径，不添加语言前缀
+        return router.replace(href);
+      },
+      back: () => {
+        router.back();
+      },
+      forward: () => {
+        router.forward();
+      },
+      refresh: () => {
+        router.refresh();
+      },
+    }),
+    [router],
+  );
 }
 
 interface LinkProps extends ComponentProps<typeof NextLink> {

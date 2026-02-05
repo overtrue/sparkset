@@ -48,7 +48,7 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
 
   const defaultTrigger = (
     <Button variant="outline" size="sm" className="gap-2">
-      <RiCodeSSlashLine className="h-4 w-4" />
+      <RiCodeSSlashLine className="h-4 w-4" aria-hidden="true" />
       {t('View SQL')}
     </Button>
   );
@@ -61,7 +61,7 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
           <div className="flex items-center justify-between">
             <div>
               <SheetTitle className="flex items-center gap-2">
-                <RiCodeSSlashLine className="h-5 w-5" />
+                <RiCodeSSlashLine className="h-5 w-5" aria-hidden="true" />
                 {t('SQL Statement')}
               </SheetTitle>
               <SheetDescription className="mt-2">
@@ -72,17 +72,18 @@ export function SqlViewer({ sql, trigger, open, onOpenChange }: SqlViewerProps) 
               size="sm"
               variant={isMultiLine ? 'default' : 'ghost'}
               className="gap-2"
-              onClick={() => setIsMultiLine(!isMultiLine)}
+              onClick={() => setIsMultiLine((prev) => !prev)}
+              aria-pressed={isMultiLine}
               title={isMultiLine ? t('Switch to single line mode') : t('Switch to multi-line mode')}
             >
               {isMultiLine ? (
                 <>
-                  <RiAlignJustify className="h-4 w-4" />
+                  <RiAlignJustify className="h-4 w-4" aria-hidden="true" />
                   {t('Multi-line')}
                 </>
               ) : (
                 <>
-                  <RiAlignLeft className="h-4 w-4" />
+                  <RiAlignLeft className="h-4 w-4" aria-hidden="true" />
                   {t('Single line')}
                 </>
               )}

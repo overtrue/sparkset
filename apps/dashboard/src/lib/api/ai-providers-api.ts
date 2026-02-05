@@ -43,15 +43,3 @@ export async function testAIProviderConnectionByConfig(
 ): Promise<TestConnectionResult> {
   return apiPost('/ai-providers/test-connection', config);
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const aiProvidersApi = {
-  list: fetchAIProviders,
-  get: fetchAIProviderById,
-  create: createAIProvider,
-  update: updateAIProvider,
-  delete: deleteAIProvider,
-  setDefault: setDefaultAIProvider,
-  testConnection: testAIProviderConnection,
-  testConnectionByConfig: testAIProviderConnectionByConfig,
-};

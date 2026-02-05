@@ -1,6 +1,6 @@
 'use client';
 
-import { ChartRenderer } from '@/components/charts/renderer';
+import { ChartFrame, ChartRenderer } from '@/components/charts/renderer';
 import type { ChartSpec } from '@/components/charts/types';
 import { buildConfig, transformData } from '@/components/charts/utils';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -10,10 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import type { ChartConfig } from '@/components/ui/chart';
 import { Link, useRouter } from '@/i18n/client-routing';
 import { useTranslations } from '@/i18n/use-translations';
-import { chartsApi } from '@/lib/api/charts';
-import { datasetsApi } from '@/lib/api/datasets';
+import { deleteChart, fetchChartById } from '@/lib/api/charts';
+import { previewDataset } from '@/lib/api/datasets';
 import { RiArrowLeftLine, RiDeleteBin2Line, RiEditLine, RiRefreshLine } from '@remixicon/react';
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -51,12 +51,12 @@ export default function ChartDetailPage({ params }: Props) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const chartResult = await chartsApi.get(id);
+        const chartResult = await fetchChartById(id);
         setChartData(chartResult as ChartData);
 
         // Generate preview using shared utility functions
         if (chartResult.specJson && chartResult.datasetId) {
-          const previewResult = await datasetsApi.preview(chartResult.datasetId);
+          const previewResult = await previewDataset(chartResult.datasetId);
 
           // Use shared transform and build functions
           const transformedData = transformData(previewResult.rows, chartResult.specJson);
@@ -73,26 +73,10 @@ export default function ChartDetailPage({ params }: Props) {
     void loadData();
   }, [id]); // Remove 't' from dependencies to prevent infinite loop
 
-  // Memoize rechartsProps to prevent unnecessary re-renders
-  // Must be called at the top level (before any conditional returns)
-  // Use stable dependencies to avoid unnecessary recalculations
-  const nameKey =
-    chartData?.specJson.encoding.category?.field || chartData?.specJson.encoding.x?.field;
-  const dataKey = chartData?.specJson.encoding.y?.[0]?.field;
-  const rechartsProps = useMemo(
-    () => ({
-      pieConfig: {
-        nameKey,
-        dataKey,
-      },
-    }),
-    [nameKey, dataKey],
-  );
-
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await chartsApi.delete(id);
+      await deleteChart(id);
       toast.success(t('Chart deleted'));
       router.push('/dashboard/charts');
     } catch {
@@ -117,7 +101,7 @@ export default function ChartDetailPage({ params }: Props) {
           <CardContent>
             <Button asChild>
               <Link href="/dashboard/charts">
-                <RiArrowLeftLine className="h-4 w-4" />
+                <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
                 {t('Back to list')}
               </Link>
             </Button>
@@ -130,7 +114,7 @@ export default function ChartDetailPage({ params }: Props) {
   if (!chartData || previewData.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title={t('Loading...')} description="" />
+        <PageHeader title={t('Loading…')} description="" />
       </div>
     );
   }
@@ -144,18 +128,18 @@ export default function ChartDetailPage({ params }: Props) {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/charts/${id}/edit`}>
-                <RiEditLine className="h-4 w-4" />
+                <RiEditLine className="h-4 w-4" aria-hidden="true" />
                 {t('Edit')}
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard/charts/new" className="flex items-center">
-                <RiRefreshLine className="h-4 w-4" />
-                {t('Create from this')}
+                <RiRefreshLine className="h-4 w-4" aria-hidden="true" />
+                {t('Create From This')}
               </Link>
             </Button>
             <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
-              <RiDeleteBin2Line className="h-4 w-4" />
+              <RiDeleteBin2Line className="h-4 w-4" aria-hidden="true" />
               {t('Delete')}
             </Button>
           </div>
@@ -190,16 +174,17 @@ export default function ChartDetailPage({ params }: Props) {
             {chartData.chartType.toUpperCase()} | {t('Dataset')}：{chartData.dataset?.name || 'N/A'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="h-[600px]">
-          <ChartRenderer
-            chartType={chartData.chartType}
-            variant={chartData.specJson.variant}
-            data={previewData}
-            config={previewConfig}
-            style={chartData.specJson.style}
-            rechartsProps={rechartsProps}
-            className="h-full w-full"
-          />
+        <CardContent>
+          <ChartFrame chartType={chartData.chartType}>
+            <ChartRenderer
+              chartType={chartData.chartType}
+              variant={chartData.specJson.variant}
+              data={previewData}
+              config={previewConfig}
+              style={chartData.specJson.style}
+              className="h-full w-full"
+            />
+          </ChartFrame>
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@
  */
 
 import { ReactNode } from 'react';
+import { Link } from '@/i18n/client-routing';
 import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
@@ -23,7 +24,8 @@ interface EmptyStateProps {
    */
   action?: {
     label: string;
-    onClick: () => void;
+    onClick?: () => void;
+    href?: string;
     variant?: 'default' | 'outline' | 'secondary';
   };
   /**
@@ -43,8 +45,12 @@ export function EmptyState({ icon, title, description, action, className = '' }:
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       {description && <p className="text-muted-foreground mb-6 max-w-md">{description}</p>}
       {action && (
-        <Button onClick={action.onClick} variant={action.variant || 'default'}>
-          {action.label}
+        <Button
+          onClick={action.onClick}
+          variant={action.variant || 'default'}
+          asChild={Boolean(action.href)}
+        >
+          {action.href ? <Link href={action.href}>{action.label}</Link> : action.label}
         </Button>
       )}
     </div>

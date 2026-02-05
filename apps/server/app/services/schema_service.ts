@@ -1,6 +1,8 @@
 import { ColumnDefinition, DBClient, DataSourceConfig, TableSchema } from '@sparkset/core';
+import { generateText } from 'ai';
 import { SchemaCacheRepository } from '../db/interfaces';
 import type { AIProvider, DataSource } from '../models/types';
+import { createLanguageModel } from '../ai/index.js';
 import { AIProviderService } from './ai_provider_service';
 
 export interface SchemaServiceDeps {
@@ -16,6 +18,19 @@ export interface SchemaServiceDeps {
 
 export class SchemaService {
   constructor(private deps: SchemaServiceDeps) {}
+
+  private isRecordNotFoundError(err: unknown): boolean {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorString = String(err);
+    return (
+      errorMessage.toLowerCase().includes('not found') ||
+      errorMessage.includes('Record to update not found') ||
+      errorMessage.includes('required but not found') ||
+      errorString.toLowerCase().includes('not found') ||
+      errorString.includes('Record to update not found') ||
+      errorString.includes('required but not found')
+    );
+  }
 
   async list(datasourceId: number): Promise<TableSchema[]> {
     return this.deps.schemaRepo.listTables(datasourceId);
@@ -86,47 +101,102 @@ export class SchemaService {
    * 使用指定的 AI Provider 生成文本
    */
   private async generateTextWithProvider(prompt: string, provider: AIProvider): Promise<string> {
-    const apiKey = provider.apiKey;
-    if (!apiKey) {
-      throw new Error('No API key available for AI provider');
-    }
-
-    // 优先使用 provider 配置；如果没有 baseURL，则使用默认 OpenAI 兼容路径
-    const baseURL = provider.baseURL || 'https://api.openai.com/v1';
     const model = provider.defaultModel || 'gpt-4o-mini';
+    const languageModel = createLanguageModel(
+      provider.type,
+      model,
+      provider.apiKey,
+      provider.baseURL,
+      this.deps.logger,
+    );
 
-    const url = `${baseURL.replace(/\/$/, '')}/chat/completions`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 256,
-      }),
+    const result = await generateText({
+      model: languageModel,
+      prompt,
+      temperature: 0.1,
     });
 
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`AI request failed (${response.status}): ${text}`);
-    }
+    return result.text.trim();
+  }
 
-    let parsed: { choices?: { message?: { content?: string } }[] };
+  private async updateTableSemanticDescriptionWithRetry(
+    datasourceId: number,
+    table: TableSchema,
+    description: string,
+  ): Promise<void> {
     try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error(`Failed to parse AI response: ${text}`);
-    }
+      await this.updateTableMetadata(table.id, { semanticDescription: description });
+    } catch (err: unknown) {
+      if (!this.isRecordNotFoundError(err)) {
+        throw err;
+      }
 
-    const content = parsed.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      throw new Error(`Empty AI response: ${text}`);
+      try {
+        const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
+        const currentTable = currentTables.find((t) => t.tableName === table.tableName);
+        if (currentTable) {
+          await this.updateTableMetadata(currentTable.id, { semanticDescription: description });
+          return;
+        }
+
+        // 表已不存在，跳过
+        this.deps.logger?.warn(
+          `Table ${table.tableName} not found when updating semantic description`,
+        );
+      } catch (retryErr) {
+        // 重试也失败，记录错误但不再抛出
+        this.deps.logger?.error(
+          retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
+          `Failed to retry updating table ${table.tableName} semantic description`,
+        );
+      }
     }
-    return content;
+  }
+
+  private async updateColumnSemanticDescriptionWithRetry(
+    datasourceId: number,
+    table: TableSchema,
+    column: ColumnDefinition,
+    description: string,
+  ): Promise<void> {
+    const columnId = column.id;
+    if (columnId == null) return;
+
+    try {
+      await this.updateColumnMetadata(columnId, { semanticDescription: description });
+    } catch (err: unknown) {
+      if (!this.isRecordNotFoundError(err)) {
+        throw err;
+      }
+
+      try {
+        const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
+        const currentTable = currentTables.find((t) => t.tableName === table.tableName);
+        if (currentTable) {
+          const currentCol = currentTable.columns.find((c) => c.name === column.name);
+          if (currentCol && currentCol.id != null) {
+            await this.updateColumnMetadata(currentCol.id, { semanticDescription: description });
+            return;
+          }
+
+          // 列已不存在，跳过
+          this.deps.logger?.warn(
+            `Column ${table.tableName}.${column.name} not found when updating semantic description`,
+          );
+        } else {
+          // 表已不存在，跳过
+          this.deps.logger?.warn(
+            `Table ${table.tableName} not found when updating column semantic description`,
+          );
+        }
+      } catch (retryErr) {
+        // 重试也失败，记录错误但不再抛出
+        this.deps.logger?.error(
+          retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
+          `Failed to retry updating column ${table.tableName}.${column.name} semantic description`,
+        );
+      }
+    }
   }
 
   /**
@@ -156,106 +226,22 @@ export class SchemaService {
         tasks.push(async () => {
           const prompt = this.buildTablePrompt(table);
           const description = await this.generateTextWithProvider(prompt, provider);
-          // 尝试更新，如果记录不存在则重新查找
-          try {
-            await this.updateTableMetadata(table.id, { semanticDescription: description });
-          } catch (err: unknown) {
-            // 如果更新失败（可能是记录不存在），尝试重新查找表
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            const errorString = String(err);
-            // 检查是否是记录未找到的错误
-            const isRecordNotFound =
-              errorMessage.toLowerCase().includes('not found') ||
-              errorMessage.includes('Record to update not found') ||
-              errorMessage.includes('required but not found') ||
-              errorString.toLowerCase().includes('not found') ||
-              errorString.includes('Record to update not found') ||
-              errorString.includes('required but not found');
-
-            if (isRecordNotFound) {
-              try {
-                const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
-                const currentTable = currentTables.find((t) => t.tableName === table.tableName);
-                if (currentTable) {
-                  await this.updateTableMetadata(currentTable.id, {
-                    semanticDescription: description,
-                  });
-                } else {
-                  // 表已不存在，跳过
-                  this.deps.logger?.warn(
-                    `Table ${table.tableName} not found when updating semantic description`,
-                  );
-                }
-              } catch (retryErr) {
-                // 重试也失败，记录错误但不再抛出
-                this.deps.logger?.error(
-                  retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
-                  `Failed to retry updating table ${table.tableName} semantic description`,
-                );
-              }
-            } else {
-              throw err;
-            }
-          }
+          await this.updateTableSemanticDescriptionWithRetry(datasourceId, table, description);
         });
       }
 
       // 列级描述任务
       for (const col of table.columns) {
-        const columnId = col.id;
-        if (col.semanticDescription || columnId == null) continue;
+        if (col.semanticDescription || col.id == null) continue;
         tasks.push(async () => {
           const prompt = this.buildColumnPrompt(table, col);
           const description = await this.generateTextWithProvider(prompt, provider);
-          // 尝试更新，如果记录不存在则重新查找
-          try {
-            await this.updateColumnMetadata(columnId, { semanticDescription: description });
-          } catch (err: unknown) {
-            // 如果更新失败（可能是记录不存在），尝试重新查找列
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            const errorString = String(err);
-            // 检查是否是记录未找到的错误
-            const isRecordNotFound =
-              errorMessage.toLowerCase().includes('not found') ||
-              errorMessage.includes('Record to update not found') ||
-              errorMessage.includes('required but not found') ||
-              errorString.toLowerCase().includes('not found') ||
-              errorString.includes('Record to update not found') ||
-              errorString.includes('required but not found');
-
-            if (isRecordNotFound) {
-              try {
-                const currentTables = await this.deps.schemaRepo.listTables(datasourceId);
-                const currentTable = currentTables.find((t) => t.tableName === table.tableName);
-                if (currentTable) {
-                  const currentCol = currentTable.columns.find((c) => c.name === col.name);
-                  if (currentCol && currentCol.id != null) {
-                    await this.updateColumnMetadata(currentCol.id, {
-                      semanticDescription: description,
-                    });
-                  } else {
-                    // 列已不存在，跳过
-                    this.deps.logger?.warn(
-                      `Column ${table.tableName}.${col.name} not found when updating semantic description`,
-                    );
-                  }
-                } else {
-                  // 表已不存在，跳过
-                  this.deps.logger?.warn(
-                    `Table ${table.tableName} not found when updating column semantic description`,
-                  );
-                }
-              } catch (retryErr) {
-                // 重试也失败，记录错误但不再抛出
-                this.deps.logger?.error(
-                  retryErr instanceof Error ? retryErr : new Error(String(retryErr)),
-                  `Failed to retry updating column ${table.tableName}.${col.name} semantic description`,
-                );
-              }
-            } else {
-              throw err;
-            }
-          }
+          await this.updateColumnSemanticDescriptionWithRetry(
+            datasourceId,
+            table,
+            col,
+            description,
+          );
         });
       }
     }

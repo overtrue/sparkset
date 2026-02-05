@@ -17,7 +17,7 @@ import {
   RiRefreshLine,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import { useRouter } from 'next/navigation';
+import { Link } from '@/i18n/client-routing';
 
 interface WidgetMenuProps {
   widget: DashboardWidget;
@@ -27,28 +27,16 @@ interface WidgetMenuProps {
 }
 
 export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuProps) {
-  const router = useRouter();
   const t = useTranslations();
-
-  const handleEditChart = () => {
-    if (widget.type === 'chart') {
-      const config = widget.config as { chartId: number };
-      router.push(`/dashboard/charts/${config.chartId}/edit`);
-    }
-  };
-
-  const handleViewDataset = () => {
-    if (widget.type === 'dataset') {
-      const config = widget.config as { datasetId: number };
-      router.push(`/dashboard/datasets/${config.datasetId}`);
-    }
-  };
+  const chartId = widget.type === 'chart' ? (widget.config as { chartId: number }).chartId : null;
+  const datasetId =
+    widget.type === 'dataset' ? (widget.config as { datasetId: number }).datasetId : null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <RiMore2Line className="h-4 w-4" />
+          <RiMore2Line className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">{t('Widget Menu')}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -57,13 +45,15 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
-                <RiRefreshLine className="h-4 w-4" />
+                <RiRefreshLine className="h-4 w-4" aria-hidden="true" />
                 {t('Refresh')}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handleEditChart}>
-              <RiEditLine className="h-4 w-4" />
-              {t('Edit Chart')}
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/charts/${String(chartId)}/edit`}>
+                <RiEditLine className="h-4 w-4" aria-hidden="true" />
+                {t('Edit Chart')}
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
@@ -72,13 +62,15 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onRefresh && (
               <DropdownMenuItem onClick={onRefresh}>
-                <RiRefreshLine className="h-4 w-4" />
+                <RiRefreshLine className="h-4 w-4" aria-hidden="true" />
                 {t('Refresh')}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handleViewDataset}>
-              <RiDatabaseLine className="h-4 w-4" />
-              {t('View Details')}
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/datasets/${String(datasetId)}`}>
+                <RiDatabaseLine className="h-4 w-4" aria-hidden="true" />
+                {t('View Details')}
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
@@ -87,7 +79,7 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           <>
             {onEdit && (
               <DropdownMenuItem onClick={onEdit}>
-                <RiEditLine className="h-4 w-4" />
+                <RiEditLine className="h-4 w-4" aria-hidden="true" />
                 {t('Edit')}
               </DropdownMenuItem>
             )}
@@ -95,8 +87,8 @@ export function WidgetMenu({ widget, onRefresh, onEdit, onRemove }: WidgetMenuPr
           </>
         )}
         {onRemove && (
-          <DropdownMenuItem onClick={onRemove} className="text-destructive">
-            <RiDeleteBinLine className="h-4 w-4" />
+          <DropdownMenuItem onClick={onRemove} variant="destructive">
+            <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />
             {t('Remove')}
           </DropdownMenuItem>
         )}

@@ -69,19 +69,6 @@ function transformCategoricalData(
         // Ensure the value is a number, not undefined or null
         // This is critical for radial charts where NaN values cause rendering issues
         const value = values[yField.field];
-        // Debug: Log the value to verify it's correct
-        if (process.env.NODE_ENV === 'development') {
-          console.log(
-            '[transformCategoricalData] yField:',
-            yField.field,
-            'value:',
-            value,
-            'type:',
-            typeof value,
-            'values:',
-            values,
-          );
-        }
         // Convert to number, ensuring it's a valid number
         const numValue = typeof value === 'number' ? value : Number(value);
         result[yField.field] = isNaN(numValue) ? 0 : numValue;
@@ -267,21 +254,6 @@ export function buildConfig(spec: ChartSpec): ChartConfig {
 /**
  * Build chart config from form data
  */
-export function buildConfigFromFormData(
-  yFields: { field: string; label?: string; color?: string }[],
-): ChartConfig {
-  const config: ChartConfig = {};
-
-  yFields.forEach((yField, index) => {
-    config[yField.field] = {
-      label: yField.label || yField.field,
-      color: yField.color || getChartColor(index),
-    };
-  });
-
-  return config;
-}
-
 // ============================================================================
 // Key Extraction
 // ============================================================================

@@ -8,7 +8,7 @@ import {
   RiSparkling2Line,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import Link from 'next/link';
+import { Link } from '@/i18n/client-routing';
 
 import { Button } from './ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -35,7 +35,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
       title: t('Configure Datasource'),
       description: t('Add database connection and sync schema'),
       completed: datasourceCount > 0,
-      href: '/',
+      href: '/dashboard/datasources',
       icon: RiDatabase2Line,
     },
     {
@@ -43,7 +43,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
       title: t('Configure AI Provider'),
       description: t('Set up AI service provider for intelligent queries'),
       completed: aiProviderCount > 0,
-      href: '/ai-providers',
+      href: '/dashboard/ai-providers',
       icon: RiSparkling2Line,
     },
   ];
@@ -83,13 +83,16 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
                             : 'bg-muted text-muted-foreground'
                         }`}
                       >
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div className="flex-1 space-y-1">
                         <CardTitle className="flex items-center gap-2">
                           {todo.title}
                           {todo.completed && (
-                            <RiCheckboxCircleLine className="h-5 w-5 text-primary" />
+                            <RiCheckboxCircleLine
+                              className="h-5 w-5 text-primary"
+                              aria-hidden="true"
+                            />
                           )}
                         </CardTitle>
                         <CardDescription>{todo.description}</CardDescription>
@@ -98,14 +101,17 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
                     <div className="flex items-center gap-2">
                       {todo.completed ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <RiCheckboxBlankCircleLine className="h-4 w-4 fill-primary text-primary" />
+                          <RiCheckboxBlankCircleLine
+                            className="h-4 w-4 fill-primary text-primary"
+                            aria-hidden="true"
+                          />
                           <span>{t('Completed')}</span>
                         </div>
                       ) : (
                         <Button asChild variant="default">
                           <Link href={todo.href}>
                             {t('Configure')}
-                            <RiArrowRightLine className="h-4 w-4" />
+                            <RiArrowRightLine className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         </Button>
                       )}
@@ -128,7 +134,7 @@ export function Onboarding({ datasourceCount, aiProviderCount }: OnboardingProps
             <div className="space-y-2">
               <p className="text-muted-foreground">{t('All configurations completed!')}</p>
               <Button asChild size="lg">
-                <Link href="/query">{t('Get Started')}</Link>
+                <Link href="/dashboard/query">{t('Get Started')}</Link>
               </Button>
             </div>
           )}

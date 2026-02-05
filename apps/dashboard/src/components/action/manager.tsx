@@ -2,7 +2,6 @@
 
 import {
   RiAddLine,
-  RiCloseLine,
   RiDeleteBinLine,
   RiEditLine,
   RiLoader4Line,
@@ -11,7 +10,7 @@ import {
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -28,7 +27,7 @@ import type {
   UpdateActionInput,
   GenerateActionSQLInput,
 } from '@/types/api';
-import type { DatasourceDTO } from '@/types/api';
+import type { Datasource } from '@/types/api';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
@@ -37,7 +36,6 @@ import { DatasourceSelector } from '../datasource-selector';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import {
   Dialog,
   DialogContent,
@@ -64,11 +62,29 @@ const defaultForm: CreateActionInput = {
   inputSchema: undefined,
 };
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
 function formatDate(value?: string) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  return dateFormatter.format(date);
+}
+
+function getPayloadForEdit(payload: unknown, type: string): string {
+  if (type === 'sql') {
+    const sqlPayload = payload as { sql?: string };
+    return JSON.stringify({ sql: sqlPayload?.sql || '' }, null, 2);
+  }
+  return JSON.stringify(payload, null, 2);
 }
 
 interface ActionManagerProps {
@@ -88,29 +104,30 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   const [executingId, setExecutingId] = useState<number | null>(null);
   const [executionResult, setExecutionResult] = useState<unknown>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [payloadText, setPayloadText] = useState('');
   const [executeDialogOpen, setExecuteDialogOpen] = useState(false);
   const [pendingExecuteId, setPendingExecuteId] = useState<number | null>(null);
-  const [datasources, setDatasources] = useState<DatasourceDTO[]>([]);
+  const [datasources, setDatasources] = useState<Datasource[]>([]);
   const [selectedDatasourceId, setSelectedDatasourceId] = useState<number | undefined>(undefined);
   const [generatingSQL, setGeneratingSQL] = useState(false);
 
   useEffect(() => {
-    if (dialogOpen) {
-      setPayloadText(getPayloadForEdit(form.payload, form.type));
-      // 加载数据源列表
-      void fetchDatasources().then((res) => setDatasources(res.items));
-    }
-  }, [form.type, dialogOpen]);
+    if (!dialogOpen) return;
+    setPayloadText(getPayloadForEdit(form.payload, form.type));
+  }, [dialogOpen, form.type]);
 
-  const canSubmit = useMemo(() => {
-    if (!form.name.trim() || !form.type) return false;
-    if (form.type === 'sql') {
-      const payload = form.payload as { sql?: string };
-      return !!payload?.sql?.trim();
-    }
-    return true;
-  }, [form]);
+  useEffect(() => {
+    if (!dialogOpen) return;
+    // 加载数据源列表
+    void fetchDatasources().then((res) => setDatasources(res.items));
+  }, [dialogOpen]);
+
+  const sqlPayload = form.type === 'sql' ? (form.payload as { sql?: string }) : null;
+  const canSubmit =
+    form.name.trim().length > 0 &&
+    Boolean(form.type) &&
+    (form.type !== 'sql' || Boolean(sqlPayload?.sql?.trim()));
 
   const onChange =
     (key: keyof CreateActionInput) =>
@@ -228,20 +245,29 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   };
 
   const handleDeleteSelected = async (rows: ActionDTO[]) => {
-    for (const row of rows) {
-      try {
-        await deleteAction(row.id);
-      } catch (err) {
+    if (rows.length === 0) return;
+    const results = await Promise.allSettled(rows.map((row) => deleteAction(row.id)));
+    const failedIds = new Set<number>();
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const row = rows[index];
+        failedIds.add(row.id);
         toast.error(
           t('Delete {name} failed: {message}', {
             name: row.name,
-            message: (err as Error)?.message,
+            message: (result.reason as Error)?.message,
           }),
         );
       }
+    });
+
+    const succeededIds = rows.filter((row) => !failedIds.has(row.id)).map((row) => row.id);
+    if (succeededIds.length > 0) {
+      const succeededSet = new Set(succeededIds);
+      setActions((prev) => prev.filter((action) => !succeededSet.has(action.id)));
+      toast.success(t('Successfully deleted {count} Actions', { count: succeededIds.length }));
     }
-    setActions((prev) => prev.filter((a) => !rows.some((r) => r.id === a.id)));
-    toast.success(t('Successfully deleted {count} Actions', { count: rows.length }));
   };
 
   const handleExecuteClick = (id: number) => {
@@ -258,24 +284,19 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     setExecutingId(id);
     setExecutionResult(null);
     setExecutionError(null);
+    setResultDialogOpen(false);
     setExecuteDialogOpen(false);
     try {
       const res = await executeAction(id, parameters);
       setExecutionResult(res);
+      setResultDialogOpen(true);
     } catch (err) {
       setExecutionError((err as Error)?.message ?? t('Execution failed'));
+      setResultDialogOpen(true);
     } finally {
       setExecutingId(null);
       setPendingExecuteId(null);
     }
-  };
-
-  const getPayloadForEdit = (payload: unknown, type: string): string => {
-    if (type === 'sql') {
-      const sqlPayload = payload as { sql?: string };
-      return JSON.stringify({ sql: sqlPayload?.sql || '' }, null, 2);
-    }
-    return JSON.stringify(payload, null, 2);
   };
 
   const handleGenerateSQL = async () => {
@@ -324,92 +345,101 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     }
   };
 
-  const canGenerateSQL = useMemo(() => {
-    return (
-      form.type === 'sql' &&
-      form.name.trim().length > 0 &&
-      selectedDatasourceId !== undefined &&
-      !generatingSQL
-    );
-  }, [form.type, form.name, selectedDatasourceId, generatingSQL]);
+  const canGenerateSQL =
+    form.type === 'sql' &&
+    form.name.trim().length > 0 &&
+    selectedDatasourceId !== undefined &&
+    !generatingSQL;
 
-  const columns: ColumnDef<ActionDTO>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
-        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
-        size: 180,
-      },
-      {
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
-        cell: ({ row }) => (
-          <Badge variant="outline" className="uppercase text-xs">
-            {row.getValue('type')}
-          </Badge>
-        ),
-        size: 100,
-      },
-      {
-        accessorKey: 'description',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
-        ),
-        size: 200,
-      },
-      {
-        id: 'updatedAt',
-        accessorFn: (row) => row.updatedAt || row.createdAt,
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Updated')} />,
-        cell: ({ row }) => (
-          <span className="text-muted-foreground text-xs">
-            {formatDate(row.getValue('updatedAt'))}
-          </span>
-        ),
-        size: 180,
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">{t('Actions')}</span>,
-        cell: ({ row }) => {
-          const action = row.original;
-          const isExecuting = executingId === action.id;
-          const isDeleting = deletingId === action.id;
+  const columns: ColumnDef<ActionDTO>[] = [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
+      cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+      size: 180,
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
+      cell: ({ row }) => (
+        <Badge variant="outline" className="uppercase text-xs">
+          {row.getValue('type')}
+        </Badge>
+      ),
+      size: 100,
+    },
+    {
+      accessorKey: 'description',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
+      ),
+      size: 200,
+    },
+    {
+      id: 'updatedAt',
+      accessorFn: (row) => row.updatedAt || row.createdAt,
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Last Updated')} />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs">
+          {formatDate(row.getValue('updatedAt'))}
+        </span>
+      ),
+      size: 180,
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">{t('Actions')}</span>,
+      cell: ({ row }) => {
+        const action = row.original;
+        const isExecuting = executingId === action.id;
+        const isDeleting = deletingId === action.id;
 
-          const rowActions: RowAction[] = [
-            {
-              label: isExecuting ? t('Executing') : t('Execute'),
-              icon: <RiPlayLine className={`h-4 w-4 ${isExecuting ? 'animate-spin' : ''}`} />,
-              onClick: () => handleExecuteClick(action.id),
-              disabled: isExecuting,
-            },
-            {
-              label: t('Edit'),
-              icon: <RiEditLine className="h-4 w-4" />,
-              onClick: () => handleOpenDialog(action),
-              disabled: isDeleting,
-            },
-            {
-              label: t('Delete'),
-              icon: <RiDeleteBinLine className="h-4 w-4" />,
-              onClick: () => {
-                setDeletingId(action.id);
-                setDeleteDialogOpen(true);
-              },
-              variant: 'destructive',
-              disabled: isDeleting,
-            },
-          ];
+        const executeButton = (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleExecuteClick(action.id)}
+            disabled={isExecuting}
+            className="h-7"
+          >
+            <RiPlayLine
+              className={`h-3.5 w-3.5 ${isExecuting ? 'animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+            {isExecuting ? t('Executing…') : t('Execute')}
+          </Button>
+        );
 
-          return <DataTableRowActions actions={rowActions} />;
-        },
-        size: 60,
+        const rowActions: RowAction[] = [
+          {
+            label: t('Edit'),
+            icon: <RiEditLine className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => handleOpenDialog(action),
+            disabled: isDeleting,
+          },
+          {
+            label: t('Delete'),
+            icon: <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => {
+              setDeletingId(action.id);
+              setDeleteDialogOpen(true);
+            },
+            variant: 'destructive',
+            disabled: isDeleting,
+          },
+        ];
+
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {executeButton}
+            <DataTableRowActions actions={rowActions} />
+          </div>
+        );
       },
-    ],
-    [executingId, deletingId],
-  );
+      size: 180,
+    },
+  ];
 
   return (
     <>
@@ -417,7 +447,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         columns={columns}
         data={actions}
         searchKey="name"
-        searchPlaceholder={t('Search Actions')}
+        searchPlaceholder={t('Search actions…')}
         enableRowSelection
         onDeleteSelected={(rows) => {
           void handleDeleteSelected(rows);
@@ -427,7 +457,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         emptyMessage={t('No Actions yet, click Create New in the top right')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
-            <RiAddLine className="h-4 w-4" />
+            <RiAddLine className="h-4 w-4" aria-hidden="true" />
             {t('Create Action')}
           </Button>
         }
@@ -456,9 +486,11 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                   <Label htmlFor="name">{t('Name')} *</Label>
                   <Input
                     id="name"
+                    name="name"
+                    autoComplete="off"
                     value={form.name}
                     onChange={onChange('name')}
-                    placeholder={t('eg: Query user list')}
+                    placeholder={t('E.g. query user list…')}
                     required
                   />
                 </div>
@@ -467,16 +499,22 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                   <Label htmlFor="description">{t('Description')}</Label>
                   <Textarea
                     id="description"
+                    name="description"
+                    autoComplete="off"
                     value={form.description}
                     onChange={onChange('description')}
-                    placeholder={t('Enter Action description (optional)')}
+                    placeholder={t('Describe the Action (optional)…')}
                     rows={2}
                   />
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="type">{t('Type')} *</Label>
-                  <Select value={form.type} onValueChange={(value) => onChange('type')(value)}>
+                  <Select
+                    name="type"
+                    value={form.type}
+                    onValueChange={(value) => onChange('type')(value)}
+                  >
                     <SelectTrigger id="type">
                       <SelectValue placeholder={t('Select type')} />
                     </SelectTrigger>
@@ -523,12 +561,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                       >
                         {generatingSQL ? (
                           <>
-                            <RiLoader4Line className="mr-2 h-3 w-3 animate-spin" />
-                            {t('Generating')}
+                            <RiLoader4Line className="h-3 w-3 animate-spin" aria-hidden="true" />
+                            {t('Generating…')}
                           </>
                         ) : (
                           <>
-                            <RiSparkling2Line className="mr-2 h-3 w-3" />
+                            <RiSparkling2Line className="h-3 w-3" aria-hidden="true" />
                             {t('AI Generate')}
                           </>
                         )}
@@ -537,10 +575,12 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                   </div>
                   <Textarea
                     id="payload"
+                    name="payload"
+                    autoComplete="off"
                     value={payloadText}
                     onChange={(e) => handlePayloadChange(e.target.value)}
                     placeholder={
-                      form.type === 'sql' ? '{"sql": "SELECT * FROM table"}' : '{"key": "value"}'
+                      form.type === 'sql' ? '{"sql": "SELECT * FROM table"}…' : '{"key": "value"}…'
                     }
                     rows={8}
                     className="font-mono text-sm"
@@ -569,7 +609,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                 {t('Cancel')}
               </Button>
               <Button type="submit" disabled={submitting || !canSubmit}>
-                {submitting ? t('Saving') : editingId ? t('Update') : t('Create')}
+                {submitting ? t('Saving…') : editingId ? t('Update') : t('Create')}
               </Button>
             </DialogFooter>
           </form>
@@ -607,43 +647,48 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         />
       )}
 
-      {/* 执行结果 */}
-      {(executionResult || executionError) && (
-        <Card className="shadow-none mt-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{t('Execution Result')}</CardTitle>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setExecutionResult(null);
-                  setExecutionError(null);
-                }}
-              >
-                <RiCloseLine className="mr-2 h-4 w-4" />
-                {t('Clear')}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {executionError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{executionError}</AlertDescription>
-              </Alert>
-            ) : (
-              <ActionResult
-                actionType={
-                  actions.find(
-                    (a) => a.id === (executionResult as ActionExecutionResponse).actionId,
-                  )?.type || 'unknown'
-                }
-                result={executionResult as ActionExecutionResponse}
-              />
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* 执行结果弹窗 */}
+      <Dialog
+        open={resultDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setExecutionResult(null);
+            setExecutionError(null);
+          }
+          setResultDialogOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-[960px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('Execution Result')}</DialogTitle>
+          </DialogHeader>
+          {executionError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{executionError}</AlertDescription>
+            </Alert>
+          ) : executionResult ? (
+            <ActionResult
+              actionType={
+                actions.find((a) => a.id === (executionResult as ActionExecutionResponse).actionId)
+                  ?.type || 'unknown'
+              }
+              result={executionResult as ActionExecutionResponse}
+            />
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setExecutionResult(null);
+                setExecutionError(null);
+                setResultDialogOpen(false);
+              }}
+            >
+              {t('Close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -3,7 +3,7 @@ import { RiArrowDownSLine, RiCheckLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -50,26 +50,29 @@ export function AiProviderSelector({
   return (
     <div className={`flex items-center gap-1.5 ${className ?? ''}`}>
       <Label htmlFor="aiProvider" className="text-xs text-muted-foreground whitespace-nowrap">
-        AI Provider
+        {t('AI Provider')}
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id="aiProvider"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className={cn(
-              'h-7 text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[160px] px-2 justify-between font-normal',
+        <PopoverTrigger
+          id="aiProvider"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={buttonVariants({
+            variant: 'outline',
+            size: 'sm',
+            className: cn(
+              'text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[160px] px-2 justify-between font-normal text-left',
               triggerClassName,
-            )}
-          >
+            ),
+          })}
+        >
+          <span className="flex-1 min-w-0 truncate text-left">
             {selectedProvider
               ? `${selectedProvider.name}${selectedProvider.isDefault ? ` ${t('(Default)')}` : ''}`
               : t('Select AI Provider')}
-            <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-          </Button>
+          </span>
+          <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" aria-hidden="true" />
         </PopoverTrigger>
         <PopoverContent className="w-[240px] p-0" align="start">
           <Command>
@@ -92,6 +95,7 @@ export function AiProviderSelector({
                         'mr-2 h-3 w-3 shrink-0',
                         value === provider.id ? 'opacity-100' : 'opacity-0',
                       )}
+                      aria-hidden="true"
                     />
                     <span>
                       {provider.name}

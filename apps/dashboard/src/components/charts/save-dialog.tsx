@@ -11,8 +11,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { chartsApi } from '@/lib/api/charts';
-import { datasetsApi } from '@/lib/api/datasets';
+import { createChart } from '@/lib/api/charts';
+import { createDataset } from '@/lib/api/datasets';
 import { RiArrowRightLine, RiLoader4Line } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useRouter } from 'next/navigation';
@@ -67,7 +67,7 @@ export function SaveChartDialog({
       // Infer schema from rows
       const schema = inferSchema(rows);
 
-      const dataset = await datasetsApi.create({
+      const dataset = await createDataset({
         datasourceId,
         name: datasetName,
         description: datasetDescription,
@@ -101,7 +101,7 @@ export function SaveChartDialog({
       // Auto-generate chart spec based on schema
       const spec = autoGenerateSpec(rows);
 
-      await chartsApi.create({
+      await createChart({
         datasetId: createdDatasetId,
         title: chartTitle,
         description: chartDescription,

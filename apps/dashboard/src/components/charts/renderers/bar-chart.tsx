@@ -54,11 +54,6 @@ export function BarChartRenderer({
             tickLine={false}
             tickMargin={10}
             axisLine={false}
-            tickFormatter={(value) =>
-              typeof value === 'string' && value.length > 10
-                ? value.slice(0, 10) + '...'
-                : String(value)
-            }
             width={100}
           />
 
@@ -89,15 +84,7 @@ export function BarChartRenderer({
       <BarChart data={data} accessibilityLayer>
         {showGrid && <CartesianGrid vertical={false} />}
 
-        <XAxis
-          dataKey={xKey}
-          tickLine={false}
-          tickMargin={10}
-          axisLine={false}
-          tickFormatter={(value) =>
-            typeof value === 'string' && value.length > 3 ? value.slice(0, 3) : String(value)
-          }
-        />
+        <XAxis dataKey={xKey} tickLine={false} tickMargin={10} axisLine={false} minTickGap={12} />
 
         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
 

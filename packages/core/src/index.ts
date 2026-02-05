@@ -10,8 +10,8 @@ export type {
 } from './db/types.js';
 
 // Export AI types and utilities
-export type { AIClient, ModelCallOptions, PromptOptions } from './ai/index.js';
-export { buildPrompt } from './ai/index.js';
+export type { AIClient, ActionPromptOptions, ModelCallOptions, PromptOptions } from './ai/index.js';
+export { buildActionPrompt, buildPrompt } from './ai/index.js';
 
 // Export query executor
 export { QueryExecutor } from './query/executor.js';

@@ -20,19 +20,38 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchConversation, fetchConversations } from '@/lib/api/conversations-api';
+import { fetchConversationById, fetchConversations } from '@/lib/api/conversations-api';
 import type { ConversationDetailDTO, ConversationDTO, MessageDTO } from '@/types/api';
 import { QueryResponse } from '@/lib/query';
-import { useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 interface HistoryDrawerProps {
-  trigger?: React.ReactNode;
+  trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onRerun?: (question: string) => void;
 }
 
-function formatDate(dateString: string, t: ReturnType<typeof useTranslations>): string {
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getDateFormatter(locale: string): Intl.DateTimeFormat {
+  const cached = dateFormatters.get(locale);
+  if (cached) return cached;
+
+  const formatter = new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+  dateFormatters.set(locale, formatter);
+  return formatter;
+}
+
+function formatDate(
+  dateString: string,
+  locale: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -45,11 +64,7 @@ function formatDate(dateString: string, t: ReturnType<typeof useTranslations>): 
   if (diffHours < 24) return t('{n} hours ago', { n: diffHours });
   if (diffDays < 7) return t('{n} days ago', { n: diffDays });
 
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return getDateFormatter(locale).format(date);
 }
 
 function getConversationTitle(
@@ -91,8 +106,8 @@ interface MessageListProps {
   t: ReturnType<typeof useTranslations>;
 }
 
-function MessageList({ messages, onRerun, t }: MessageListProps) {
-  const items: React.ReactNode[] = [];
+const MessageList = memo(function MessageList({ messages, onRerun, t }: MessageListProps) {
+  const items: ReactNode[] = [];
 
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
@@ -109,7 +124,10 @@ function MessageList({ messages, onRerun, t }: MessageListProps) {
       if (rowCount !== null) {
         items.push(
           <div key={message.id} className="flex items-center gap-3 py-2 px-0">
-            <RiCheckboxCircleLine className="h-3.5 w-3.5 text-green-500 shrink-0" />
+            <RiCheckboxCircleLine
+              className="h-3.5 w-3.5 text-green-500 shrink-0"
+              aria-hidden="true"
+            />
             <span className="text-xs text-muted-foreground whitespace-nowrap flex-1">
               {rowCount === 0 ? t('No Data') : t('Returned {count} rows', { count: rowCount })}
             </span>
@@ -123,7 +141,7 @@ function MessageList({ messages, onRerun, t }: MessageListProps) {
                 className="shrink-0 flex items-center gap-1.5 px-2 py-1 text-xs text-primary hover:bg-primary/10 rounded-md transition-colors"
                 title={t('Re-run')}
               >
-                <RiPlayLine className="h-3.5 w-3.5" />
+                <RiPlayLine className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('Re-run')}
               </button>
             )}
@@ -134,10 +152,14 @@ function MessageList({ messages, onRerun, t }: MessageListProps) {
   }
 
   return <>{items}</>;
-}
+});
 
 export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryDrawerProps) {
   const t = useTranslations();
+  const locale = useMemo(
+    () => (typeof document !== 'undefined' ? document.documentElement.lang || 'zh-CN' : 'zh-CN'),
+    [],
+  );
   // 内部管理打开状态（支持 uncontrolled 模式）
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = open ?? internalOpen;
@@ -151,7 +173,7 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
   const [details, setDetails] = useState<Map<number, ConversationDetailDTO>>(new Map());
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -162,58 +184,168 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    setInternalOpen(nextOpen);
-    onOpenChange?.(nextOpen);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setInternalOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange],
+  );
 
-    // 打开时加载会话列表
-    if (nextOpen) {
+  useEffect(() => {
+    if (isOpen) {
       void loadConversations();
     }
-  };
+  }, [isOpen, loadConversations]);
 
-  const handleToggle = async (id: number) => {
-    if (expandedId === id) {
-      setExpandedId(null);
-      return;
-    }
+  const handleToggle = useCallback(
+    async (id: number) => {
+      if (expandedId === id) {
+        setExpandedId(null);
+        return;
+      }
 
-    setExpandedId(id);
+      setExpandedId(id);
 
-    // 如果已经加载过，直接显示
-    if (details.has(id)) {
-      return;
-    }
+      // 如果已经加载过，直接显示
+      if (details.has(id)) {
+        return;
+      }
 
-    setLoadingDetailId(id);
-    try {
-      const detail = await fetchConversation(id);
-      setDetails((prev) => new Map(prev).set(id, detail));
-    } catch (err) {
-      console.error('Failed to fetch conversation detail:', err);
-    } finally {
-      setLoadingDetailId(null);
-    }
-  };
+      setLoadingDetailId(id);
+      try {
+        const detail = await fetchConversationById(id);
+        setDetails((prev) => new Map(prev).set(id, detail));
+      } catch (err) {
+        console.error('Failed to fetch conversation detail:', err);
+      } finally {
+        setLoadingDetailId(null);
+      }
+    },
+    [details, expandedId],
+  );
 
-  const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2">
-      <RiTimeLine className="h-4 w-4" />
-      {t('Conversation History')}
-    </Button>
+  const handleRerun = useCallback(
+    (question: string) => {
+      handleOpenChange(false);
+      onRerun?.(question);
+    },
+    [handleOpenChange, onRerun],
+  );
+
+  const defaultTrigger = useMemo(
+    () => (
+      <Button variant="outline" size="sm" className="gap-2">
+        <RiTimeLine className="h-4 w-4" aria-hidden="true" />
+        {t('Conversation History')}
+      </Button>
+    ),
+    [t],
+  );
+
+  const refreshLabel = t('Refresh');
+  const emptyState = (
+    <div className="py-12 text-center">
+      <RiChat3Line className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
+      <p className="text-sm text-muted-foreground">{t('No conversation history')}</p>
+      <p className="text-xs text-muted-foreground mt-1">
+        {t('Conversations are saved automatically after queries')}
+      </p>
+    </div>
+  );
+
+  const loadingState = (
+    <div className="space-y-3">
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-16 w-full" />
+    </div>
+  );
+
+  const listContent = (
+    <div className="space-y-1">
+      {conversations.map((conversation) => {
+        const isExpanded = expandedId === conversation.id;
+        const isLoadingDetail = loadingDetailId === conversation.id;
+        const detail = details.get(conversation.id);
+        const detailId = `conversation-${conversation.id}`;
+
+        return (
+          <div
+            key={conversation.id}
+            className="border border-border/50 rounded-lg overflow-hidden hover:border-border transition-colors"
+          >
+            {/* 会话头部 - 可点击展开 */}
+            <button
+              type="button"
+              className="w-full py-3 px-3 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left"
+              onClick={() => void handleToggle(conversation.id)}
+              aria-expanded={isExpanded}
+              aria-controls={detailId}
+            >
+              <div className="shrink-0">
+                {isExpanded ? (
+                  <RiArrowDownSLine className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <RiArrowRightSLine className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-medium text-sm text-foreground truncate flex-1">
+                    {getConversationTitle(conversation, t)}
+                  </span>
+                  {detail && (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                      {t('{count} messages', { count: detail.messages.length })}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {formatDate(conversation.createdAt, locale, t)}
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            {/* 展开的消息列表 */}
+            {isExpanded && (
+              <div id={detailId} className="px-3 pb-3 pt-2">
+                {isLoadingDetail ? (
+                  <div className="py-4 text-center text-xs text-muted-foreground">
+                    {t('Loading…')}
+                  </div>
+                ) : detail?.messages?.length ? (
+                  <MessageList
+                    messages={detail.messages}
+                    t={t}
+                    onRerun={onRerun ? handleRerun : undefined}
+                  />
+                ) : (
+                  <div className="py-4 text-center text-xs text-muted-foreground">
+                    {detail
+                      ? t('No messages in this conversation')
+                      : t('Failed to load, please retry')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>{trigger ?? defaultTrigger}</SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto overscroll-contain">
         <SheetHeader>
           <div className="flex items-center justify-between pr-6">
             <div>
               <SheetTitle className="flex items-center gap-2">
-                <RiTimeLine className="h-5 w-5" />
+                <RiTimeLine className="h-5 w-5" aria-hidden="true" />
                 {t('Conversation History')}
               </SheetTitle>
               <SheetDescription className="mt-2">
@@ -228,109 +360,28 @@ export function HistoryDrawer({ trigger, open, onOpenChange, onRerun }: HistoryD
                 void loadConversations();
               }}
               disabled={loading}
+              aria-label={refreshLabel}
             >
-              <RiRefreshLine className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RiRefreshLine
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
             </Button>
           </div>
         </SheetHeader>
 
         <div className="mt-6 px-4">
           {error && (
-            <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+            <div
+              className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm"
+              role="status"
+              aria-live="polite"
+            >
               {error}
             </div>
           )}
 
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : conversations.length === 0 ? (
-            <div className="py-12 text-center">
-              <RiChat3Line className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground">{t('No conversation history')}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t('Conversations are saved automatically after queries')}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {conversations.map((conversation) => {
-                const isExpanded = expandedId === conversation.id;
-                const isLoadingDetail = loadingDetailId === conversation.id;
-                const detail = details.get(conversation.id);
-
-                return (
-                  <div
-                    key={conversation.id}
-                    className="border border-border/50 rounded-lg overflow-hidden hover:border-border transition-colors"
-                  >
-                    {/* 会话头部 - 可点击展开 */}
-                    <button
-                      type="button"
-                      className="w-full py-3 px-3 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left"
-                      onClick={() => void handleToggle(conversation.id)}
-                    >
-                      <div className="shrink-0">
-                        {isExpanded ? (
-                          <RiArrowDownSLine className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <RiArrowRightSLine className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-medium text-sm text-foreground truncate flex-1">
-                            {getConversationTitle(conversation, t)}
-                          </span>
-                          {detail && (
-                            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                              {t('{count} messages', { count: detail.messages.length })}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground/70">
-                            {formatDate(conversation.createdAt, t)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* 展开的消息列表 */}
-                    {isExpanded && (
-                      <div className="px-3 pb-3 pt-2">
-                        {isLoadingDetail ? (
-                          <div className="py-4 text-center text-xs text-muted-foreground">
-                            {t('Loading')}...
-                          </div>
-                        ) : detail?.messages?.length ? (
-                          <MessageList
-                            messages={detail.messages}
-                            t={t}
-                            onRerun={
-                              onRerun
-                                ? (question) => {
-                                    handleOpenChange(false);
-                                    onRerun(question);
-                                  }
-                                : undefined
-                            }
-                          />
-                        ) : (
-                          <div className="py-4 text-center text-xs text-muted-foreground">
-                            {detail
-                              ? t('No messages in this conversation')
-                              : t('Failed to load, please retry')}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {loading ? loadingState : conversations.length === 0 ? emptyState : listContent}
         </div>
       </SheetContent>
     </Sheet>

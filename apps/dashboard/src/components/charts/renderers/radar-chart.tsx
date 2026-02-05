@@ -37,17 +37,6 @@ export function RadarChartRenderer({
     showDots = false,
   } = style;
 
-  // Debug: Log categoryKey and first data item to verify structure
-
-  if (process.env.NODE_ENV === 'development' && data.length > 0) {
-    console.log('[RadarChart] categoryKey:', categoryKey, 'data[0]:', data[0], 'all data:', data);
-
-    console.log(
-      '[RadarChart] category values:',
-      data.map((d) => d[categoryKey]),
-    );
-  }
-
   return (
     <ChartContainer config={config} className={cn('mx-auto h-full w-full', className)}>
       <RadarChart data={data}>

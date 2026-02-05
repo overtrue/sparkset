@@ -8,15 +8,21 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
+  EmptyTitle,
 } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
+import { Link } from '@/i18n/client-routing';
 import { useTranslations } from '@/i18n/use-translations';
 
 interface DashboardEmptyStateProps {
-  onAddWidget: () => void;
+  onAddWidget?: () => void;
+  actionHref?: string;
 }
 
-export function DashboardEmptyState({ onAddWidget }: DashboardEmptyStateProps) {
+export function DashboardEmptyState({
+  onAddWidget,
+  actionHref = '/dashboard/dashboards',
+}: DashboardEmptyStateProps) {
   const t = useTranslations();
 
   return (
@@ -24,24 +30,31 @@ export function DashboardEmptyState({ onAddWidget }: DashboardEmptyStateProps) {
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <RiDashboardLine className="h-8 w-8 text-primary" />
+            <RiDashboardLine className="h-8 w-8 text-primary" aria-hidden="true" />
           </EmptyMedia>
-          <EmptyDescription className="text-xl font-semibold text-foreground text-center mt-2">
+          <EmptyTitle className="text-xl font-semibold text-foreground text-center mt-2">
             {t('No Widgets')}
-          </EmptyDescription>
-          <p className="text-muted-foreground text-sm mt-2 text-center max-w-md">
+          </EmptyTitle>
+          <EmptyDescription className="text-muted-foreground text-sm text-center max-w-md mt-2">
             {t('Add your first widget to start visualizing data')}
-          </p>
+          </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent className="opacity-40">
-          <span className="text-xs tracking-widest">•••</span>
-        </EmptyContent>
+        <EmptyContent />
       </Empty>
       <div className="mt-6">
-        <Button onClick={onAddWidget} className="gap-2">
-          <RiAddLine className="h-4 w-4" />
-          {t('Add Widget')}
-        </Button>
+        {onAddWidget ? (
+          <Button onClick={onAddWidget} className="gap-2">
+            <RiAddLine className="h-4 w-4" aria-hidden="true" />
+            {t('Add Widget')}
+          </Button>
+        ) : (
+          <Button asChild className="gap-2">
+            <Link href={actionHref}>
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
+              {t('Add Widget')}
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   );

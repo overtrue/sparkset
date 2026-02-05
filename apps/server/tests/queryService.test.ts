@@ -16,7 +16,6 @@ const makeDatasourceService = () => ({
     },
   ]),
 });
-const makeActionService = () => ({ get: vi.fn().mockResolvedValue(null) });
 const makeSchemaService = () => ({
   list: vi.fn().mockResolvedValue([
     {
@@ -59,8 +58,6 @@ describe('QueryService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       datasourceService: makeDatasourceService() as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actionService: makeActionService() as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schemaService: makeSchemaService() as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       aiProviderService: makeAIProviderService() as any,
@@ -72,21 +69,22 @@ describe('QueryService', () => {
     expect(res.rows[0]).toEqual({ a: 1 });
   });
 
-  it('returns empty rows when executor missing', async () => {
+  it('passes limit to executor', async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValue({ rows: [], sql: [{ sql: 'select 1', datasourceId: 1 }] });
     const svc = new QueryService({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       datasourceService: makeDatasourceService() as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actionService: makeActionService() as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schemaService: makeSchemaService() as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       aiProviderService: makeAIProviderService() as any,
       planner,
+      executor: { execute } as unknown as QueryExecutor,
     });
 
-    const res = await svc.run({ question: 'hi', limit: 1 });
-    expect(res.rows).toHaveLength(0);
-    expect(res.summary).toContain('查询执行器未配置');
+    await svc.run({ question: 'hi', limit: 1 });
+    expect(execute).toHaveBeenCalledWith(expect.anything(), { limit: 1 });
   });
 });

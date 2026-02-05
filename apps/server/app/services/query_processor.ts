@@ -1,7 +1,5 @@
 import type Bot from '../models/bot.js';
 import type BotEvent from '../models/bot_event.js';
-import Conversation from '../models/conversation.js';
-import Message from '../models/message.js';
 import { QueryService, type QueryRequest, type QueryResponse } from './query_service.js';
 
 /**
@@ -23,10 +21,8 @@ export interface QueryProcessingResult {
  *
  * Flow:
  * 1. Check if query is enabled for the bot
- * 2. Get or create conversation for this user
- * 3. Execute query using QueryService
- * 4. Format response for bot
- * 5. Save conversation history
+ * 2. Execute query using QueryService
+ * 3. Format response for bot
  */
 export class BotQueryProcessor {
   constructor(private queryService: QueryService) {}
@@ -36,7 +32,7 @@ export class BotQueryProcessor {
    */
   async processQuery(
     bot: Bot,
-    event: BotEvent,
+    _event: BotEvent,
     userMessage: string,
   ): Promise<QueryProcessingResult> {
     try {
@@ -51,12 +47,7 @@ export class BotQueryProcessor {
         };
       }
 
-      // 2. Get or create conversation
-      // For now, create a new conversation per user per bot
-      // In a real implementation, we might track by user + bot
-      const conversation = await this.getOrCreateConversation(event);
-
-      // 3. Build query request
+      // 2. Build query request
       // Use bot's configured datasource and AI provider if available
       const queryRequest: QueryRequest = {
         question: userMessage,
@@ -65,14 +56,11 @@ export class BotQueryProcessor {
         limit: 100,
       };
 
-      // 4. Execute query
+      // 3. Execute query
       const queryResponse = await this.queryService.run(queryRequest);
 
-      // 5. Format response for bot
+      // 4. Format response for bot
       const formattedResponse = this.formatQueryResponse(queryResponse);
-
-      // 6. Save conversation history
-      await this.saveConversationHistory(conversation, userMessage, formattedResponse);
 
       return {
         success: true,
@@ -88,27 +76,6 @@ export class BotQueryProcessor {
         },
       };
     }
-  }
-
-  /**
-   * Get or create conversation for a bot event
-   */
-  private async getOrCreateConversation(event: BotEvent): Promise<Conversation> {
-    // Use internalUserId from event if available, otherwise use default user (ID: 1)
-    // This is required because user_id is NOT NULL in the database
-    const userId = event.internalUserId ?? 1;
-
-    // Create a new conversation for this interaction
-    // In Phase 2.4 enhancement, this is handled by ConversationTracker
-    // but for backward compatibility, we keep this method working
-    const conversation = await Conversation.create({
-      userId,
-      title: `Bot query: ${event.externalUserId}`,
-      botId: event.botId,
-      externalUserId: event.externalUserId,
-    });
-
-    return conversation;
   }
 
   /**
@@ -192,34 +159,6 @@ export class BotQueryProcessor {
     }
     // eslint-disable-next-line @typescript-eslint/no-base-to-string
     return String(value);
-  }
-
-  /**
-   * Save conversation history (user message + assistant response)
-   */
-  private async saveConversationHistory(
-    conversation: Conversation,
-    userMessage: string,
-    assistantResponse: string,
-  ): Promise<void> {
-    try {
-      // Save user message
-      await Message.create({
-        conversationId: conversation.id,
-        role: 'user',
-        content: userMessage,
-      });
-
-      // Save assistant response
-      await Message.create({
-        conversationId: conversation.id,
-        role: 'assistant',
-        content: assistantResponse,
-      });
-    } catch (error) {
-      // Log error but don't fail the operation
-      console.error('Failed to save conversation history:', error);
-    }
   }
 }
 

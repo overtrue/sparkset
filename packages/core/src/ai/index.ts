@@ -22,6 +22,12 @@ export interface PromptOptions {
   limit?: number;
 }
 
+export interface ActionPromptOptions {
+  name: string;
+  description: string;
+  schemas: TableSchema[];
+}
+
 /**
  * 构建用于生成 SQL 的提示词
  * 包含 Schema 信息、安全约束和输出格式要求
@@ -96,4 +102,204 @@ ${columns}`;
   });
 
   return sections.join('\n\n');
+}
+
+/**
+ * 构建用于生成 Action SQL 的提示词
+ * 与查询 prompt 的区别：支持 DML 操作（INSERT, UPDATE, DELETE）和命名参数
+ */
+export function buildActionPrompt(options: ActionPromptOptions): string {
+  const { name, description, schemas } = options;
+
+  // 格式化 Schema 信息
+  const schemaSection = formatSchemas(schemas);
+
+  // 根据名称和描述推断操作类型
+  const lowerName = name.toLowerCase();
+  const lowerDesc = description.toLowerCase();
+  let operationHint = '';
+
+  if (
+    lowerName.includes('查询') ||
+    lowerName.includes('获取') ||
+    lowerName.includes('列表') ||
+    lowerName.includes('query') ||
+    lowerName.includes('get') ||
+    lowerName.includes('list') ||
+    lowerName.includes('fetch') ||
+    lowerDesc.includes('查询') ||
+    lowerDesc.includes('获取') ||
+    lowerDesc.includes('列表') ||
+    lowerDesc.includes('query') ||
+    lowerDesc.includes('get') ||
+    lowerDesc.includes('list') ||
+    lowerDesc.includes('fetch')
+  ) {
+    operationHint = 'This is a query operation, please use SELECT statement.';
+  } else if (
+    lowerName.includes('插入') ||
+    lowerName.includes('添加') ||
+    lowerName.includes('创建') ||
+    lowerName.includes('insert') ||
+    lowerName.includes('add') ||
+    lowerName.includes('create') ||
+    lowerDesc.includes('插入') ||
+    lowerDesc.includes('添加') ||
+    lowerDesc.includes('创建') ||
+    lowerDesc.includes('insert') ||
+    lowerDesc.includes('add') ||
+    lowerDesc.includes('create')
+  ) {
+    operationHint = 'This is an insert operation, please use INSERT statement.';
+  } else if (
+    lowerName.includes('更新') ||
+    lowerName.includes('修改') ||
+    lowerName.includes('编辑') ||
+    lowerName.includes('update') ||
+    lowerName.includes('modify') ||
+    lowerName.includes('edit') ||
+    lowerDesc.includes('更新') ||
+    lowerDesc.includes('修改') ||
+    lowerDesc.includes('编辑') ||
+    lowerDesc.includes('update') ||
+    lowerDesc.includes('modify') ||
+    lowerDesc.includes('edit')
+  ) {
+    operationHint = 'This is an update operation, please use UPDATE statement.';
+  } else if (
+    lowerName.includes('删除') ||
+    lowerName.includes('移除') ||
+    lowerName.includes('封禁') ||
+    lowerName.includes('delete') ||
+    lowerName.includes('remove') ||
+    lowerName.includes('ban') ||
+    lowerDesc.includes('删除') ||
+    lowerDesc.includes('移除') ||
+    lowerDesc.includes('封禁') ||
+    lowerDesc.includes('delete') ||
+    lowerDesc.includes('remove') ||
+    lowerDesc.includes('ban')
+  ) {
+    operationHint = 'This is a delete or update operation, please use DELETE or UPDATE statement.';
+  }
+
+  // 构建完整提示词
+  const prompt = `You are a professional SQL generation assistant. Based on the Action name and description provided by the user, along with the database Schema information, generate accurate and secure SQL statements.
+
+**Important: Your response must be valid JSON format, without any other text, markdown code blocks, or explanations.**
+
+## Database Schema Information
+
+${schemaSection}
+
+## Action Information
+
+- **Name**: ${name}
+${description ? `- **Description**: ${description}` : '- **Description**: None (infer from name only)'}
+${operationHint ? `- **Operation Type Hint**: ${operationHint}` : ''}
+
+## Important Constraints
+
+1. **Only use provided tables**: **Strictly prohibited** to use tables not listed in the Schema information. If the Action involves a table that is not in the Schema, return a JSON error.
+2. **Only use provided columns**: **Strictly prohibited** to use column names not listed in the table. Only use columns explicitly listed in the Schema.
+3. **DML operations supported**: Can generate SELECT, INSERT, UPDATE, DELETE statements based on Action description.
+4. **No DDL**: CREATE, ALTER, DROP and other data definition statements are not allowed.
+5. **No system operations**: Accessing system tables or executing system functions is not allowed.
+6. **Use named parameters**: For values that require user input, must use named parameter format \`:paramName\` (e.g., \`:userId\`, \`:user_id\`, \`:limit\`).
+7. **Parameter naming conventions**:
+   - Use meaningful parameter names (e.g., \`:userId\` instead of \`:id\`)
+   - Parameter names should use lowercase letters and underscores (e.g., \`:user_id\`)
+   - Infer required parameters based on Action description
+
+## Output Format Requirements (Must Strictly Follow)
+
+**Your response must be pure JSON text, in the following format:**
+ 
+On success (must include SQL and parameter definitions):
+{
+  "success": true,
+  "sql": "SELECT * FROM \`users\` WHERE \`id\` = :userId",
+  "parameters": [
+    {
+      "name": "userId",
+      "type": "number",
+      "required": true,
+      "label": "User Id",
+      "description": "User ID"
+    }
+  ]
+}
+
+On failure:
+{"success": false, "error": "Table does not exist or insufficient information"}
+
+**Parameter Definition Notes:**
+- name: Parameter name (consistent with :paramName in SQL, without the colon)
+- type: Parameter type, must be "string", "number", or "boolean"
+- required: Whether required, true or false
+- label: Display label (optional, uses name if not provided)
+- description: Parameter description (optional)
+
+**Strictly Prohibited:**
+- ❌ Do not use markdown code blocks (do not include \`\`\`json or \`\`\`)
+- ❌ Do not add any explanatory text, comments, or explanations
+- ❌ Do not return pure SQL text
+- ❌ Do not return plain text error messages
+- ✅ Only return valid JSON object
+
+## SQL Statement Requirements
+
+- Single statement
+- Use standard SQL syntax, wrap table names and column names with backticks (if they contain special characters)
+- Use named parameters (format: \`:paramName\`) in WHERE clauses, VALUES clauses, SET clauses, and other places that require user input
+
+## Examples
+
+If Action is "Query User" or "查询用户", on success should return:
+{
+  "success": true,
+  "sql": "SELECT * FROM \`users\` WHERE \`id\` = :userId",
+  "parameters": [
+    {
+      "name": "userId",
+      "type": "number",
+      "required": true,
+      "label": "User Id",
+      "description": "User ID to query"
+    }
+  ]
+}
+
+If Action is "Ban User" or "封禁用户", on success should return:
+{
+  "success": true,
+  "sql": "UPDATE \`users\` SET \`status\` = 'banned' WHERE \`id\` = :userId",
+  "parameters": [
+    {
+      "name": "userId",
+      "type": "number",
+      "required": true,
+      "label": "User Id",
+      "description": "User ID to ban"
+    }
+  ]
+}
+
+If table does not exist, should return:
+{"success": false, "error": "Table users does not exist in Schema"}
+
+## Task
+
+Generate SQL statement and parameter definitions for Action "${name}".
+
+**Important:**
+1. If SQL contains named parameters (e.g., :userId), must define these parameters in the parameters array
+2. Based on Action name and description, infer appropriate type, label, and description for each parameter
+3. Parameter names must match the named parameters in SQL (without the colon)
+
+**Now please return only JSON, format:**
+- Success: {"success": true, "sql": "...", "parameters": [...]}
+  - Failure: {"success": false, "error": "..."}**`;
+
+  return prompt;
 }

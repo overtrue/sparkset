@@ -13,7 +13,7 @@ import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useRouter } from '@/i18n/client-routing';
+import { Link } from '@/i18n/client-routing';
 import { useDatasets, useDeleteDataset } from '@/lib/api/datasets-hooks';
 import { useResourceList } from '@/hooks/use-resource-list';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
@@ -25,7 +25,6 @@ import { formatDateTime } from '@/lib/utils/date';
 
 export default function DatasetsPage() {
   const t = useTranslations();
-  const router = useRouter();
   const { data, error, isLoading, mutate } = useDatasets();
   const { trigger: deleteDataset } = useDeleteDataset();
   const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
@@ -57,10 +56,6 @@ export default function DatasetsPage() {
     });
   };
 
-  const handleCreateNew = () => {
-    router.push('/dashboard/query');
-  };
-
   const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Dataset>[] = [
@@ -70,13 +65,15 @@ export default function DatasetsPage() {
       cell: ({ row }) => {
         const dataset = row.original;
         return (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-primary font-medium"
-            onClick={() => router.push(`/dashboard/datasets/${dataset.id}`)}
-          >
-            {row.getValue('name')}
-          </Button>
+          <div className="min-w-0">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
+              asChild
+            >
+              <Link href={`/dashboard/datasets/${dataset.id}`}>{row.getValue('name')}</Link>
+            </Button>
+          </div>
         );
       },
       size: 200,
@@ -85,7 +82,9 @@ export default function DatasetsPage() {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
+        <span className="text-muted-foreground break-words">
+          {row.getValue('description') || '-'}
+        </span>
       ),
       size: 250,
     },
@@ -95,13 +94,17 @@ export default function DatasetsPage() {
       cell: ({ row }) => {
         const dataset = row.original;
         return (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-primary font-medium"
-            onClick={() => router.push(`/dashboard/datasources/${dataset.datasourceId}`)}
-          >
-            {row.getValue('datasourceName')}
-          </Button>
+          <div className="min-w-0">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
+              asChild
+            >
+              <Link href={`/dashboard/datasources/${dataset.datasourceId}`}>
+                {row.getValue('datasourceName')}
+              </Link>
+            </Button>
+          </div>
         );
       },
       size: 150,
@@ -137,17 +140,17 @@ export default function DatasetsPage() {
         const actions: RowAction[] = [
           {
             label: t('View Details'),
-            icon: <RiDatabaseLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/datasets/${dataset.id}`),
+            icon: <RiDatabaseLine className="h-4 w-4" aria-hidden="true" />,
+            href: `/dashboard/datasets/${dataset.id}`,
           },
           {
             label: t('Create Chart'),
-            icon: <RiAddLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/charts/new?datasetId=${dataset.id}`),
+            icon: <RiAddLine className="h-4 w-4" aria-hidden="true" />,
+            href: `/dashboard/charts/new?datasetId=${dataset.id}`,
           },
           {
             label: t('Delete'),
-            icon: <RiDatabaseLine className="h-4 w-4" />,
+            icon: <RiDatabaseLine className="h-4 w-4" aria-hidden="true" />,
             onClick: () => handleDeleteClick(dataset),
             variant: 'destructive',
           },
@@ -166,13 +169,13 @@ export default function DatasetsPage() {
           title={t('Datasets')}
           description={t('Manage your query result datasets')}
           action={
-            <Button onClick={handleCreateNew} disabled>
-              <RiAddLine className="h-4 w-4" />
+            <Button disabled>
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
               {t('New Dataset')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -184,9 +187,11 @@ export default function DatasetsPage() {
           title={t('Datasets')}
           description={t('Manage your query result datasets')}
           action={
-            <Button onClick={handleCreateNew}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Dataset')}
+            <Button asChild>
+              <Link href="/dashboard/query">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Dataset')}
+              </Link>
             </Button>
           }
         />
@@ -202,21 +207,23 @@ export default function DatasetsPage() {
           title={t('Datasets')}
           description={t('Manage your query result datasets')}
           action={
-            <Button onClick={handleCreateNew}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Dataset')}
+            <Button asChild>
+              <Link href="/dashboard/query">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Dataset')}
+              </Link>
             </Button>
           }
         />
         <EmptyState
-          icon={<RiDatabaseLine className="h-8 w-8 text-muted-foreground" />}
+          icon={<RiDatabaseLine className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
           title={t('No Datasets')}
           description={t(
             'From Query page, execute SQL query and save result as dataset to create charts',
           )}
           action={{
-            label: t('Create your first dataset'),
-            onClick: handleCreateNew,
+            label: t('Create Your First Dataset'),
+            href: '/dashboard/query',
           }}
         />
       </div>
@@ -229,9 +236,11 @@ export default function DatasetsPage() {
         title={t('Datasets')}
         description={t('Manage your query result datasets')}
         action={
-          <Button size="sm" onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4" />
-            {t('New Dataset')}
+          <Button size="sm" asChild>
+            <Link href="/dashboard/query">
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
+              {t('New Dataset')}
+            </Link>
           </Button>
         }
       />
@@ -240,7 +249,7 @@ export default function DatasetsPage() {
         columns={columns}
         data={datasets}
         searchKey="name"
-        searchPlaceholder={t('Search datasets...')}
+        searchPlaceholder={t('Search datasets…')}
         enableRowSelection
         onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Dataset')}

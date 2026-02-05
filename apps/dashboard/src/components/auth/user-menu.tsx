@@ -6,7 +6,7 @@
 'use client';
 
 import { RiLogoutCircleRLine, RiSettings3Line, RiUser3Line } from '@remixicon/react';
-import { useRouter } from 'next/navigation';
+import { Link, useRouter } from '@/i18n/client-routing';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -63,13 +63,17 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-            <RiUser3Line className="h-4 w-4" />
-            {t('Profile')}
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/profile">
+              <RiUser3Line className="h-4 w-4" aria-hidden="true" />
+              {t('Profile')}
+            </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-            <RiSettings3Line className="h-4 w-4" />
-            {t('Settings')}
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/settings">
+              <RiSettings3Line className="h-4 w-4" aria-hidden="true" />
+              {t('Settings')}
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
@@ -90,8 +94,8 @@ export function UserMenu() {
           </div>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
-          <RiLogoutCircleRLine className="h-4 w-4" />
+        <DropdownMenuItem onClick={handleLogout} variant="destructive">
+          <RiLogoutCircleRLine className="h-4 w-4" aria-hidden="true" />
           {t('Logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>

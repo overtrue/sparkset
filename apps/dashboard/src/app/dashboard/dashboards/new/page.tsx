@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useRouter } from '@/i18n/client-routing';
-import { dashboardsApi } from '@/lib/api/dashboards';
+import { createDashboard } from '@/lib/api/dashboards';
 import { toast } from 'sonner';
 
 export default function NewDashboardPage() {
@@ -29,7 +29,7 @@ export default function NewDashboardPage() {
 
     try {
       setLoading(true);
-      const dashboard = await dashboardsApi.create({
+      const dashboard = await createDashboard({
         title: title.trim(),
         description: description.trim() || undefined,
       });

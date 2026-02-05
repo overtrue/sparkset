@@ -57,15 +57,7 @@ export function LineChartRenderer({
       <LineChart data={data} accessibilityLayer margin={{ left: 12, right: 12 }}>
         {showGrid && <CartesianGrid vertical={false} />}
 
-        <XAxis
-          dataKey={xKey}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) =>
-            typeof value === 'string' && value.length > 3 ? value.slice(0, 3) : String(value)
-          }
-        />
+        <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} minTickGap={12} />
 
         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
 

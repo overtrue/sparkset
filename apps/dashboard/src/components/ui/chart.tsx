@@ -8,20 +8,19 @@ import { cn } from '@/lib/utils';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
-export type ChartConfig = Record<
-  string,
-  {
+export type ChartConfig = {
+  [k in string]: {
     label?: React.ReactNode;
     icon?: React.ComponentType;
   } & (
     | { color?: string; theme?: never }
     | { color?: never; theme: Record<keyof typeof THEMES, string> }
-  )
->;
+  );
+};
 
-interface ChartContextProps {
+type ChartContextProps = {
   config: ChartConfig;
-}
+};
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
@@ -40,7 +39,6 @@ function ChartContainer({
   className,
   children,
   config,
-  style,
   ...props
 }: React.ComponentProps<'div'> & {
   config: ChartConfig;
@@ -55,16 +53,13 @@ function ChartContainer({
         data-slot="chart"
         data-chart={chartId}
         className={cn(
-          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex w-full justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className,
         )}
-        style={{ ...style, height: style?.height ?? '100%' }}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer width="100%" height="100%">
-          {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   );
@@ -134,7 +129,9 @@ function ChartTooltipContent({
     const key = `${labelKey || item?.dataKey || item?.name || 'value'}`;
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
     const value =
-      !labelKey && typeof label === 'string' ? config[label]?.label || label : itemConfig?.label;
+      !labelKey && typeof label === 'string'
+        ? config[label as keyof typeof config]?.label || label
+        : itemConfig?.label;
 
     if (labelFormatter) {
       return (
@@ -158,7 +155,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        'border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl',
+        'border-border/50 bg-background gap-1.5 rounded-none border px-2.5 py-1.5 text-xs shadow-xl grid min-w-32 items-start',
         className,
       )}
     >
@@ -257,26 +254,20 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-center gap-4',
+        'flex items-center justify-center gap-4',
         verticalAlign === 'top' ? 'pb-3' : 'pt-3',
         className,
       )}
     >
       {payload
         .filter((item) => item.type !== 'none')
-        .map((item, index) => {
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        .map((item) => {
           const key = `${nameKey || item.dataKey || 'value'}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
-          // Always use index as the primary key to ensure uniqueness
-          // Even if id, value, or dataKey exist, they might not be unique
-          // Index is guaranteed to be unique within the array
-          const uniqueKey = `legend-item-${index}`;
-
           return (
             <div
-              key={uniqueKey}
+              key={item.value}
               className={cn(
                 '[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3',
               )}
@@ -291,7 +282,7 @@ function ChartLegendContent({
                   }}
                 />
               )}
-              {itemConfig?.label || item.value}
+              {itemConfig?.label}
             </div>
           );
         })}
@@ -299,7 +290,6 @@ function ChartLegendContent({
   );
 }
 
-// Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
   if (typeof payload !== 'object' || payload === null) {
     return undefined;
@@ -322,16 +312,14 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
     configLabelKey = payloadPayload[key as keyof typeof payloadPayload] as string;
   }
 
-  return configLabelKey in config ? config[configLabelKey] : config[key];
+  return configLabelKey in config ? config[configLabelKey] : config[key as keyof typeof config];
 }
 
 export {
   ChartContainer,
-  ChartContext,
+  ChartTooltip,
+  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
   ChartStyle,
-  ChartTooltip,
-  ChartTooltipContent,
-  useChart,
 };

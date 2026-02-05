@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { chartsApi } from '@/lib/api/charts';
+import { deleteChart } from '@/lib/api/charts';
 import type { Chart, Dataset } from '@/types/chart';
 import {
   RiAddLine,
@@ -24,7 +24,8 @@ import {
   RiTableLine,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import Link from 'next/link';
+import { Link } from '@/i18n/client-routing';
+import { formatDateTime } from '@/lib/utils/date';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -34,52 +35,47 @@ interface ChartListProps {
   onRefresh?: () => void;
 }
 
-// Chart list component compatible with old interface, for code still referencing `@/components/charts/list`.
 export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
   const t = useTranslations();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [chartToDelete, setChartToDelete] = React.useState<Chart | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
-  const getDatasetName = (datasetId: number) => {
-    const dataset = datasets.find((d) => d.id === datasetId);
-    return dataset?.name || t('Unknown Dataset');
-  };
+  const datasetMap = React.useMemo(
+    () => new Map(datasets.map((dataset) => [dataset.id, dataset])),
+    [datasets],
+  );
+  const getDatasetName = React.useCallback(
+    (datasetId: number) => datasetMap.get(datasetId)?.name || t('Unknown Dataset'),
+    [datasetMap, t],
+  );
 
+  const chartTypeIcons = React.useMemo(
+    () => ({
+      line: RiLineChartLine,
+      bar: RiBarChartLine,
+      area: RiLineChartLine,
+      pie: RiPieChartLine,
+      table: RiTableLine,
+    }),
+    [],
+  );
+  const chartTypeBadgeVariant = React.useMemo(
+    () => ({
+      line: 'default',
+      bar: 'secondary',
+      area: 'outline',
+      pie: 'destructive',
+      table: 'secondary',
+    }),
+    [],
+  );
   const getChartIcon = (chartType: Chart['chartType']) => {
-    const props = { className: 'h-5 w-5' };
-    switch (chartType) {
-      case 'line':
-        return <RiLineChartLine {...props} />;
-      case 'bar':
-        return <RiBarChartLine {...props} />;
-      case 'area':
-        return <RiLineChartLine {...props} />;
-      case 'pie':
-        return <RiPieChartLine {...props} />;
-      case 'table':
-        return <RiTableLine {...props} />;
-      default:
-        return <RiBarChartLine {...props} />;
-    }
+    const Icon = chartTypeIcons[chartType] ?? RiBarChartLine;
+    return <Icon className="h-5 w-5" aria-hidden="true" />;
   };
-
-  const getChartBadgeVariant = (chartType: Chart['chartType']) => {
-    switch (chartType) {
-      case 'line':
-        return 'default';
-      case 'bar':
-        return 'secondary';
-      case 'area':
-        return 'outline';
-      case 'pie':
-        return 'destructive';
-      case 'table':
-        return 'secondary';
-      default:
-        return 'default';
-    }
-  };
+  const getChartBadgeVariant = (chartType: Chart['chartType']) =>
+    chartTypeBadgeVariant[chartType] ?? 'default';
 
   const handleDeleteClick = (chart: Chart) => {
     setChartToDelete(chart);
@@ -91,7 +87,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
 
     try {
       setIsDeleting(true);
-      await chartsApi.delete(chartToDelete.id);
+      await deleteChart(chartToDelete.id);
       toast.success(t('Chart deleted'));
       setDeleteDialogOpen(false);
       setChartToDelete(null);
@@ -104,17 +100,14 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return Number.isNaN(date.getTime()) ? dateString : date.toLocaleDateString('zh-CN');
-  };
+  const formatDate = (dateString: string) => formatDateTime(dateString);
 
   if (charts.length === 0) {
     return (
       <Card className="text-center py-12">
         <CardContent className="space-y-4">
           <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-            <RiBarChartLine className="h-8 w-8 text-muted-foreground" />
+            <RiBarChartLine className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
           </div>
           <CardTitle>{t('No Charts')}</CardTitle>
           <CardDescription>
@@ -123,7 +116,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
           <div>
             <Button asChild>
               <Link href="/dashboard/charts/new">
-                <RiAddLine className="h-4 w-4 mr-2" />
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
                 {t('Create Chart')}
               </Link>
             </Button>
@@ -142,7 +135,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
         </div>
         <Button asChild>
           <Link href="/dashboard/charts/new">
-            <RiAddLine className="h-4 w-4 mr-2" />
+            <RiAddLine className="h-4 w-4" aria-hidden="true" />
             {t('New Chart')}
           </Link>
         </Button>
@@ -153,16 +146,16 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
           <Card key={chart.id} className="flex flex-col hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   {getChartIcon(chart.chartType)}
-                  <CardTitle className="text-lg">{chart.title}</CardTitle>
+                  <CardTitle className="text-lg truncate">{chart.title}</CardTitle>
                 </div>
                 <Badge variant={getChartBadgeVariant(chart.chartType)}>
                   {chart.chartType.toUpperCase()}
                 </Badge>
               </div>
               {chart.description && (
-                <CardDescription className="mt-1">{chart.description}</CardDescription>
+                <CardDescription className="mt-1 break-words">{chart.description}</CardDescription>
               )}
             </CardHeader>
 
@@ -189,14 +182,14 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
             <CardFooter className="pt-3 gap-2">
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/dashboard/charts/${chart.id}`}>
-                  <RiEyeLine className="h-4 w-4" />
+                  <RiEyeLine className="h-4 w-4" aria-hidden="true" />
                   {t('View')}
                 </Link>
               </Button>
 
               <Button variant="outline" size="sm" className="flex-1" asChild>
                 <Link href={`/dashboard/charts/${chart.id}/edit`}>
-                  <RiEditLine className="h-4 w-4" />
+                  <RiEditLine className="h-4 w-4" aria-hidden="true" />
                   {t('Edit')}
                 </Link>
               </Button>
@@ -207,7 +200,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
                 className="flex-1"
                 onClick={() => handleDeleteClick(chart)}
               >
-                <RiDeleteBin2Line className="h-4 w-4" />
+                <RiDeleteBin2Line className="h-4 w-4" aria-hidden="true" />
                 {t('Delete')}
               </Button>
             </CardFooter>

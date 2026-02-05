@@ -68,8 +68,14 @@ export function TokenManager({ bot, onTokenRegenerated }: TokenManagerProps) {
                 readOnly
                 className="font-mono text-xs"
               />
-              <Button variant="outline" size="sm" onClick={handleCopyToken} title={t('Copy')}>
-                <RiFileCopyLine className="h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyToken}
+                title={t('Copy')}
+                aria-label={t('Copy')}
+              >
+                <RiFileCopyLine className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
             <button
@@ -85,8 +91,14 @@ export function TokenManager({ bot, onTokenRegenerated }: TokenManagerProps) {
             <label className="text-sm font-medium">{t('Bot Webhook URL')}</label>
             <div className="flex gap-2">
               <Input value={webhookUrl} readOnly className="font-mono text-xs" />
-              <Button variant="outline" size="sm" onClick={handleCopyUrl} title={t('Copy')}>
-                <RiFileCopyLine className="h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyUrl}
+                title={t('Copy')}
+                aria-label={t('Copy')}
+              >
+                <RiFileCopyLine className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -101,8 +113,8 @@ export function TokenManager({ bot, onTokenRegenerated }: TokenManagerProps) {
               onClick={() => setConfirmOpen(true)}
               disabled={regenerating}
             >
-              <RiRefreshLine className="h-4 w-4" />
-              {regenerating ? t('Regenerating...') : t('Regenerate')}
+              <RiRefreshLine className="h-4 w-4" aria-hidden="true" />
+              {regenerating ? t('Regenerating…') : t('Regenerate')}
             </Button>
             <p className="text-xs text-muted-foreground mt-2">
               {t(

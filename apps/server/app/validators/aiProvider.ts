@@ -17,7 +17,7 @@ export const aiProviderCreateSchema = z.object({
     .union([z.string(), z.null()])
     .transform((val) => val ?? undefined)
     .optional(),
-  isDefault: z.coerce.boolean().optional().default(false),
+  isDefault: z.boolean().optional().default(false),
 });
 
 export const aiProviderUpdateSchema = aiProviderCreateSchema.partial().extend({

@@ -12,7 +12,7 @@ import {
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { type ChangeEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AI_PROVIDER_TYPES, getProviderLabel } from '../../lib/aiProviderTypes';
@@ -24,13 +24,12 @@ import {
   updateAIProvider,
 } from '../../lib/api/ai-providers-api';
 import type { AIProviderDTO, CreateAIProviderInput, TestConnectionResult } from '@/types/api';
-const removeAIProvider = deleteAIProvider;
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
 import { DataTableColumnHeader } from '../data-table/data-table-column-header';
 import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Button, buttonVariants } from '../ui/button';
 import {
   Command,
   CommandEmpty,
@@ -53,10 +52,31 @@ const defaultForm: CreateAIProviderInput = {
   isDefault: false,
 };
 
-function formatDate(value: string) {
+const API_KEY_REQUIRED_TYPES = new Set([
+  'openai',
+  'anthropic',
+  'deepseek',
+  'groq',
+  'moonshot',
+  'zhipu',
+  'qwen',
+]);
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
+function formatDate(value?: string) {
+  if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  return dateFormatter.format(date);
 }
 
 interface AIProviderManagerProps {
@@ -69,7 +89,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [form, setForm] = useState<CreateAIProviderInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [actionId, setActionId] = useState<number | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [providerSelectOpen, setProviderSelectOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -83,26 +103,15 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   // 验证通过状态（单独管理，不依赖表单变化自动清除）
   const [isVerified, setIsVerified] = useState(false);
 
-  const canTest = useMemo(() => {
-    // 测试需要类型和 API Key（部分 provider 需要）
-    if (!form.type) return false;
-    // 对于需要 API Key 的 provider，必须有 API Key 才能测试
-    if (
-      ['openai', 'anthropic', 'deepseek', 'groq', 'moonshot', 'zhipu', 'qwen'].includes(form.type)
-    ) {
-      return !!form.apiKey;
-    }
-    // openai-compatible 需要 baseURL
-    if (form.type === 'openai-compatible') {
-      return !!form.baseURL;
-    }
-    return true;
-  }, [form]);
-
-  const shouldShowSubmit = useMemo(() => {
-    // 必须验证通过，且所有基础字段完整
-    return isVerified && form.name && form.type;
-  }, [isVerified, form]);
+  const trimmedName = form.name.trim();
+  const requiresApiKey = API_KEY_REQUIRED_TYPES.has(form.type);
+  const requiresBaseURL = form.type === 'openai-compatible';
+  const canTest =
+    Boolean(form.type) &&
+    ((requiresApiKey && form.apiKey.trim().length > 0) ||
+      (requiresBaseURL && form.baseURL.trim().length > 0) ||
+      (!requiresApiKey && !requiresBaseURL));
+  const canSubmit = isVerified && trimmedName.length > 0 && Boolean(form.type);
 
   const onChange =
     (key: keyof CreateAIProviderInput) => (e: ChangeEvent<HTMLInputElement> | string) => {
@@ -132,6 +141,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
       setEditingId(null);
       setForm(defaultForm);
     }
+    setProviderSelectOpen(false);
     // 重置验证状态
     setTestResult(null);
     setTesting(false);
@@ -143,6 +153,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     setDialogOpen(false);
     setEditingId(null);
     setForm(defaultForm);
+    setProviderSelectOpen(false);
     setTestResult(null);
     setTesting(false);
     setIsVerified(false);
@@ -179,7 +190,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!shouldShowSubmit || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     try {
       if (editingId) {
@@ -204,7 +215,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   };
 
   const handleSetDefault = async (id: number) => {
-    setActionId(id);
+    setPendingActionId(id);
     try {
       await setDefaultAIProvider(id);
       setProviders((prev) =>
@@ -217,7 +228,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     } catch (err) {
       toast.error((err as Error)?.message ?? t('Setting failed'));
     } finally {
-      setActionId(null);
+      setPendingActionId(null);
     }
   };
 
@@ -230,7 +241,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     if (!deletingId) return;
     setDeleting(true);
     try {
-      await removeAIProvider(deletingId);
+      await deleteAIProvider(deletingId);
       setProviders((prev) => prev.filter((p) => p.id !== deletingId));
       toast.success(t('Deleted'));
       setConfirmOpen(false);
@@ -243,111 +254,115 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   };
 
   const handleDeleteSelected = async (rows: AIProviderDTO[]) => {
-    for (const row of rows) {
-      try {
-        await removeAIProvider(row.id);
-      } catch (err) {
-        toast.error(`${t('Delete failed')}: ${row.name} - ${(err as Error)?.message}`);
+    if (rows.length === 0) return;
+    const results = await Promise.allSettled(rows.map((row) => deleteAIProvider(row.id)));
+    const failedIds = new Set<number>();
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const row = rows[index];
+        failedIds.add(row.id);
+        toast.error(`${t('Delete failed')}: ${row.name} - ${(result.reason as Error)?.message}`);
       }
+    });
+
+    const succeededIds = rows.filter((row) => !failedIds.has(row.id)).map((row) => row.id);
+    if (succeededIds.length > 0) {
+      const succeededSet = new Set(succeededIds);
+      setProviders((prev) => prev.filter((p) => !succeededSet.has(p.id)));
+      toast.success(t('Successfully deleted {count} provider(s)', { count: succeededIds.length }));
     }
-    setProviders((prev) => prev.filter((p) => !rows.some((r) => r.id === p.id)));
-    toast.success(t('Successfully deleted {count} provider(s)', { count: rows.length }));
   };
 
-  const columns: ColumnDef<AIProviderDTO>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
-        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
-        size: 180,
-      },
-      {
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{getProviderLabel(row.getValue('type'))}</span>
+  const columns: ColumnDef<AIProviderDTO>[] = [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
+      cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+      size: 180,
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{getProviderLabel(row.getValue('type'))}</span>
+      ),
+      size: 140,
+    },
+    {
+      accessorKey: 'defaultModel',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Default Model')} />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.getValue('defaultModel') || '-'}</span>
+      ),
+      size: 140,
+    },
+    {
+      accessorKey: 'isDefault',
+      header: t('Status'),
+      cell: ({ row }) =>
+        row.getValue('isDefault') ? (
+          <Badge variant="default" className="gap-1">
+            <RiStarLine className="h-3 w-3 fill-current" aria-hidden="true" />
+            {t('Default')}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1">
+            <RiCheckLine className="h-3 w-3" aria-hidden="true" />
+            {t('Configured')}
+          </Badge>
         ),
-        size: 140,
-      },
-      {
-        accessorKey: 'defaultModel',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t('Default Model')} />
-        ),
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.getValue('defaultModel') || '-'}</span>
-        ),
-        size: 140,
-      },
-      {
-        accessorKey: 'isDefault',
-        header: t('Status'),
-        cell: ({ row }) =>
-          row.getValue('isDefault') ? (
-            <Badge variant="default" className="gap-1">
-              <RiStarLine className="h-3 w-3 fill-current" />
-              {t('Default')}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="gap-1">
-              <RiCheckLine className="h-3 w-3" />
-              {t('Configured')}
-            </Badge>
-          ),
-        size: 100,
-      },
-      {
-        accessorKey: 'updatedAt',
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Updated At')} />,
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
-        ),
-        size: 180,
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">{t('Actions')}</span>,
-        cell: ({ row }) => {
-          const provider = row.original;
-          const isLoading = actionId === provider.id;
+      size: 100,
+    },
+    {
+      accessorKey: 'updatedAt',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Updated At')} />,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
+      ),
+      size: 180,
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">{t('Actions')}</span>,
+      cell: ({ row }) => {
+        const provider = row.original;
+        const isLoading = pendingActionId === provider.id;
 
-          const actions: RowAction[] = [];
+        const actions: RowAction[] = [];
 
-          if (!provider.isDefault) {
-            actions.push({
-              label: t('Set as Default'),
-              icon: <RiStarLine className="h-4 w-4" />,
-              onClick: () => {
-                void handleSetDefault(provider.id);
-              },
-              disabled: isLoading,
-            });
-          }
-
-          actions.push(
-            {
-              label: t('Edit'),
-              icon: <RiEdit2Line className="h-4 w-4" />,
-              onClick: () => handleOpenDialog(provider),
-              disabled: isLoading,
+        if (!provider.isDefault) {
+          actions.push({
+            label: t('Set as Default'),
+            icon: <RiStarLine className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => {
+              void handleSetDefault(provider.id);
             },
-            {
-              label: t('Delete'),
-              icon: <RiDeleteBin2Line className="h-4 w-4" />,
-              onClick: () => handleRemoveClick(provider.id),
-              variant: 'destructive',
-              disabled: isLoading,
-            },
-          );
+            disabled: isLoading,
+          });
+        }
 
-          return <DataTableRowActions actions={actions} />;
-        },
-        size: 60,
+        actions.push(
+          {
+            label: t('Edit'),
+            icon: <RiEdit2Line className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => handleOpenDialog(provider),
+            disabled: isLoading,
+          },
+          {
+            label: t('Delete'),
+            icon: <RiDeleteBin2Line className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => handleRemoveClick(provider.id),
+            variant: 'destructive',
+            disabled: isLoading,
+          },
+        );
+
+        return <DataTableRowActions actions={actions} />;
       },
-    ],
-    [actionId],
-  );
+      size: 60,
+    },
+  ];
 
   return (
     <>
@@ -355,7 +370,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         columns={columns}
         data={providers}
         searchKey="name"
-        searchPlaceholder={t('Search Provider')}
+        searchPlaceholder={t('Search providers…')}
         enableRowSelection
         onDeleteSelected={(rows) => {
           void handleDeleteSelected(rows);
@@ -370,13 +385,22 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         emptyMessage={t('No providers yet, click the button above to add')}
         toolbar={
           <Button onClick={() => handleOpenDialog()}>
-            <RiAddLine className="h-4 w-4" />
+            <RiAddLine className="h-4 w-4" aria-hidden="true" />
             {t('Add Provider')}
           </Button>
         }
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseDialog();
+            return;
+          }
+          setDialogOpen(true);
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingId ? t('Edit Provider') : t('Add Provider')}</DialogTitle>
@@ -395,37 +419,52 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
           >
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">{t('Name')}</Label>
+                <Label htmlFor="name">{t('Name')} *</Label>
                 <Input
                   id="name"
+                  name="provider-name"
+                  autoComplete="off"
                   value={form.name}
                   onChange={onChange('name')}
-                  placeholder={t('e.g. my-openai')}
+                  placeholder={t('E.g. my-openai…')}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="type">{t('Provider Type')}</Label>
+                <Label htmlFor="type">{t('Provider Type')} *</Label>
                 <Popover open={providerSelectOpen} onOpenChange={setProviderSelectOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={providerSelectOpen}
-                      className="h-auto min-h-9 w-full justify-between py-2 px-3 text-left font-normal"
-                      id="type"
-                    >
-                      {form.type ? (
-                        <span className="text-sm font-medium">{getProviderLabel(form.type)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">{t('Select Provider Type')}</span>
-                      )}
-                      <RiArrowDownSLine className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                  <PopoverTrigger
+                    id="type"
+                    role="combobox"
+                    aria-expanded={providerSelectOpen}
+                    className={buttonVariants({
+                      variant: 'outline',
+                      className:
+                        'h-auto min-h-9 w-full justify-between py-2 px-3 text-left font-normal',
+                    })}
+                  >
+                    {form.type ? (
+                      <span className="flex-1 min-w-0 truncate text-left text-sm font-medium">
+                        {getProviderLabel(form.type)}
+                      </span>
+                    ) : (
+                      <span className="flex-1 min-w-0 truncate text-left text-muted-foreground">
+                        {t('Select provider type…')}
+                      </span>
+                    )}
+                    <RiArrowDownSLine
+                      className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                      aria-hidden="true"
+                    />
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0" align="start">
                     <Command className="h-[350px]">
-                      <CommandInput placeholder={t('Search Provider')} />
+                      <CommandInput
+                        name="provider-search"
+                        autoComplete="off"
+                        placeholder={t('Search providers…')}
+                        aria-label={t('Search providers…')}
+                      />
                       <CommandList>
                         <CommandEmpty>{t('No matching Provider found')}</CommandEmpty>
                         <CommandGroup>
@@ -441,7 +480,10 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                             >
                               <span className="text-sm font-medium">{providerType.label}</span>
                               {form.type === providerType.value && (
-                                <RiCheckLine className="ml-auto h-4 w-4 shrink-0" />
+                                <RiCheckLine
+                                  className="ml-auto h-4 w-4 shrink-0"
+                                  aria-hidden="true"
+                                />
                               )}
                             </CommandItem>
                           ))}
@@ -462,10 +504,12 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                 </Label>
                 <Input
                   id="apiKey"
+                  name="provider-api-key"
                   type="password"
+                  autoComplete="new-password"
                   value={form.apiKey}
                   onChange={onChange('apiKey')}
-                  placeholder={editingId ? t('Leave empty to keep unchanged') : 'sk-...'}
+                  placeholder={editingId ? t('Leave empty to keep unchanged…') : 'sk-…'}
                   required={!editingId}
                 />
               </div>
@@ -473,18 +517,23 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                 <Label htmlFor="baseURL">{t('Base URL (optional)')}</Label>
                 <Input
                   id="baseURL"
+                  name="provider-base-url"
+                  autoComplete="off"
+                  type="url"
                   value={form.baseURL}
                   onChange={onChange('baseURL')}
-                  placeholder="https://api.openai.com/v1"
+                  placeholder="https://api.openai.com/v1…"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="defaultModel">{t('Default Model (optional)')}</Label>
                 <Input
                   id="defaultModel"
+                  name="provider-default-model"
+                  autoComplete="off"
                   value={form.defaultModel}
                   onChange={onChange('defaultModel')}
-                  placeholder="gpt-4o-mini"
+                  placeholder="gpt-4o-mini…"
                 />
               </div>
 
@@ -494,13 +543,19 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                   <div className="flex items-center gap-2 font-medium">
                     {testing && (
                       <>
-                        <RiLoader4Line className="h-4 w-4 animate-spin text-blue-500" />
-                        <span className="text-blue-600">{t('Verifying Provider connection')}</span>
+                        <RiLoader4Line
+                          className="h-4 w-4 animate-spin text-blue-500"
+                          aria-hidden="true"
+                        />
+                        <span className="text-blue-600">{t('Verifying Provider connection…')}</span>
                       </>
                     )}
                     {testResult?.success && !testing && (
                       <>
-                        <RiCheckboxCircleLine className="h-4 w-4 text-green-500" />
+                        <RiCheckboxCircleLine
+                          className="h-4 w-4 text-green-500"
+                          aria-hidden="true"
+                        />
                         <span className="text-green-600">
                           {t('Connection verified successfully')}
                         </span>
@@ -508,7 +563,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                     )}
                     {testResult?.success === false && !testing && (
                       <>
-                        <RiCloseCircleLine className="h-4 w-4 text-red-500" />
+                        <RiCloseCircleLine className="h-4 w-4 text-red-500" aria-hidden="true" />
                         <span className="text-red-600">{t('Connection verification failed')}</span>
                       </>
                     )}
@@ -527,7 +582,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
             <div className="flex gap-2 sm:flex-col-reverse sm:gap-0">
               <div className="flex gap-2 sm:flex-row-reverse">
-                {!shouldShowSubmit ? (
+                {!canSubmit ? (
                   <>
                     {/* 创建/编辑模式：只显示验证连通性按钮 */}
                     <Button
@@ -539,7 +594,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                       disabled={!canTest || testing}
                       className="w-full sm:w-auto"
                     >
-                      {testing ? t('Verifying') : t('Verify Connection')}
+                      {testing ? t('Verifying…') : t('Verify Connection')}
                     </Button>
                     <Button
                       type="button"
@@ -556,8 +611,8 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
                     <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                       {submitting
                         ? editingId
-                          ? t('Updating')
-                          : t('Creating')
+                          ? t('Updating…')
+                          : t('Creating…')
                         : editingId
                           ? t('Save')
                           : t('Add')}

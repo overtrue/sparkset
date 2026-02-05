@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from '@/i18n/client-routing';
 import { useTranslations } from '@/i18n/use-translations';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +39,7 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
   const router = useRouter();
   const { trigger: createBot } = useCreateBot();
   const { trigger: updateBot } = useUpdateBot();
+  const isEditing = Boolean(bot);
 
   const [formData, setFormData] = useState({
     name: bot?.name || '',
@@ -47,6 +49,7 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const isBusy = submitting || isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +73,7 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
         toast.success(t('Bot updated successfully'));
       } else {
         // Create new bot - generate webhook URL
-        const webhookUrl = `${window.location.origin}/api/webhooks/bot/[id]/${Math.random().toString(36).substr(2, 9)}`;
+        const webhookUrl = `${window.location.origin}/api/webhooks/bot/[id]/${Math.random().toString(36).slice(2, 11)}`;
         const createData: CreateBotDto = {
           name: formData.name,
           description: formData.description,
@@ -95,9 +98,9 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{bot ? t('Edit Bot') : t('Create Bot')}</CardTitle>
+        <CardTitle>{isEditing ? t('Edit Bot') : t('Create Bot')}</CardTitle>
         <CardDescription>
-          {bot ? t('Update bot configuration') : t('Create a new bot')}
+          {isEditing ? t('Update bot configuration') : t('Create a new bot')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -114,8 +117,13 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
               id="name"
               placeholder={t('e.g. My Support Bot')}
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              disabled={submitting || isLoading}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
+              }
+              disabled={isBusy}
               required
             />
             <p className="text-xs text-muted-foreground">{t('A descriptive name for your bot')}</p>
@@ -128,23 +136,34 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
               id="description"
               placeholder={t('e.g. Helps with customer support inquiries')}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              disabled={submitting || isLoading}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+              disabled={isBusy}
               rows={4}
             />
             <p className="text-xs text-muted-foreground">{t('Optional description of the bot')}</p>
           </div>
 
           {/* Platform - only shown for new bots */}
-          {!bot && (
+          {!isEditing && (
             <div className="space-y-2">
               <Label htmlFor="type">{t('Platform')}</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value as BotPlatform })}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: value as BotPlatform,
+                  }))
+                }
+                disabled={isBusy}
               >
-                <SelectTrigger id="type" disabled={submitting || isLoading}>
-                  <SelectValue />
+                <SelectTrigger id="type" disabled={isBusy}>
+                  <SelectValue placeholder={t('Select platform…')} />
                 </SelectTrigger>
                 <SelectContent>
                   {PLATFORMS.map((p) => (
@@ -163,12 +182,16 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
           {/* Enable Query */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="enableQuery"
                 checked={formData.enableQuery}
-                onChange={(e) => setFormData({ ...formData, enableQuery: e.target.checked })}
-                disabled={submitting || isLoading}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    enableQuery: Boolean(checked),
+                  }))
+                }
+                disabled={isBusy}
               />
               <Label htmlFor="enableQuery" className="mb-0">
                 {t('Enable AI Query')}
@@ -181,15 +204,10 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
 
           {/* Buttons */}
           <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={submitting || isLoading}>
-              {submitting ? t('Saving...') : t('Save')}
+            <Button type="submit" disabled={isBusy}>
+              {submitting ? t('Saving…') : t('Save')}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={submitting || isLoading}
-            >
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isBusy}>
               {t('Cancel')}
             </Button>
           </div>

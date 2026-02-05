@@ -56,7 +56,6 @@ export const chartCreateSchema = z.object({
         outerRadius: z.number().optional(),
       })
       .optional(),
-    rechartsOverrides: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

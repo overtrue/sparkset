@@ -17,9 +17,6 @@ export async function fetchDashboardById(id: number): Promise<Dashboard> {
   return apiGet(`/api/dashboards/${id}`);
 }
 
-// Alias for backward compatibility
-export const fetchDashboard = fetchDashboardById;
-
 export async function createDashboard(data: CreateDashboardDto): Promise<Dashboard> {
   return apiPost('/api/dashboards', data);
 }
@@ -64,17 +61,3 @@ export async function refreshWidget(
 ): Promise<{ valid: boolean }> {
   return apiPost(`/api/dashboards/${dashboardId}/widgets/${widgetId}/refresh`);
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const dashboardsApi = {
-  list: fetchDashboards,
-  get: fetchDashboard,
-  create: createDashboard,
-  update: updateDashboard,
-  delete: deleteDashboard,
-  addWidget,
-  updateWidget,
-  deleteWidget,
-  updateLayout,
-  refreshWidget,
-};

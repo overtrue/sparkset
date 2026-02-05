@@ -27,16 +27,12 @@ export class ChartCompiler {
     // 4. 生成 shadcn ChartConfig
     const config = this.generateChartConfig(spec, aggregatedData);
 
-    // 5. 生成 Recharts 组件 props
-    const rechartsProps = this.generateRechartsProps(spec, aggregatedData);
-
     return {
       chartType: spec.chartType,
       variant: spec.variant,
       data: aggregatedData,
       config,
       style: spec.style,
-      rechartsProps,
       warnings: validation.warnings,
     };
   }
@@ -124,99 +120,6 @@ export class ChartCompiler {
     }
 
     return config;
-  }
-
-  /**
-   * 生成 Recharts props（适配 shadcn ChartContainer）
-   */
-  private generateRechartsProps(spec: ChartSpec, data: unknown[]): Record<string, unknown> {
-    const baseProps = {
-      data,
-      margin: { top: 20, right: 20, bottom: 20, left: 20 },
-      showLegend: spec.style?.showLegend ?? true,
-    };
-
-    // X 轴配置
-    const xAxisConfig = spec.encoding.x
-      ? {
-          dataKey: spec.encoding.x.field,
-          tickLine: false,
-          axisLine: false,
-          tickMargin: 8,
-          minTickGap: 32,
-        }
-      : {};
-
-    // Y 轴配置
-    const yAxisConfig = {
-      hide: true,
-    };
-
-    // 根据 chartType 生成不同配置
-    if (spec.chartType === 'line' || spec.chartType === 'area') {
-      return {
-        ...baseProps,
-        xAxis: xAxisConfig,
-        yAxis: yAxisConfig,
-        lines: spec.encoding.y!.map((y) => ({
-          type: spec.chartType === 'area' ? 'monotone' : 'linear',
-          dataKey: y.field,
-          stroke: `var(--color-${y.field})`,
-          fill: spec.chartType === 'area' ? `var(--color-${y.field})` : undefined,
-          fillOpacity: spec.chartType === 'area' ? 0.2 : 0,
-          strokeWidth: 2,
-          dot: false,
-          activeDot: { r: 4 },
-          isAnimationActive: true,
-          ...(spec.style?.smooth && { type: 'monotone' }),
-        })),
-        ...spec.rechartsOverrides,
-      };
-    }
-
-    if (spec.chartType === 'bar') {
-      return {
-        ...baseProps,
-        xAxis: xAxisConfig,
-        yAxis: yAxisConfig,
-        bars: spec.encoding.y!.map((y) => ({
-          dataKey: y.field,
-          fill: `var(--color-${y.field})`,
-          radius: [4, 4, 0, 0],
-          isAnimationActive: true,
-          stackId: spec.style?.stacked ? 'a' : undefined,
-        })),
-        ...spec.rechartsOverrides,
-      };
-    }
-
-    if (spec.chartType === 'pie') {
-      const xField = spec.encoding.x!.field;
-      const yField = spec.encoding.y![0].field;
-
-      return {
-        ...baseProps,
-        pieData: data,
-        pieConfig: {
-          nameKey: xField,
-          dataKey: yField,
-          innerRadius: 0,
-          outerRadius: '80%',
-          paddingAngle: 2,
-          isAnimationActive: true,
-        },
-        ...spec.rechartsOverrides,
-      };
-    }
-
-    if (spec.chartType === 'table') {
-      return {
-        ...baseProps,
-        // 表格不需要 Recharts props
-      };
-    }
-
-    return baseProps;
   }
 
   /**

@@ -17,9 +17,6 @@ export async function fetchChartById(id: number): Promise<Chart> {
   return apiGet(`/api/charts/${id}`);
 }
 
-// Alias for backward compatibility
-export const fetchChart = fetchChartById;
-
 export async function createChart(data: CreateChartDto): Promise<Chart> {
   return apiPost('/api/charts', data);
 }
@@ -42,14 +39,3 @@ export async function previewChart(data: {
 }): Promise<ChartRenderResult> {
   return apiPost('/api/charts/preview', data);
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const chartsApi = {
-  list: fetchCharts,
-  get: fetchChart,
-  create: createChart,
-  update: updateChart,
-  delete: deleteChart,
-  render: renderChart,
-  preview: previewChart,
-};

@@ -8,6 +8,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { getDictionary } from '@/i18n/dictionaries';
 import { getLocaleFromRequest } from '@/i18n/server-utils';
 import { TranslationsProvider } from '@/i18n/translations-context';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: 'Sparkset Dashboard',
@@ -26,7 +29,7 @@ export default async function RootLayout({ children }: Props) {
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning className={inter.variable}>
       <body>
         <TranslationsProvider translations={dictionary}>
           <ThemeProvider>

@@ -8,22 +8,29 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useRouter } from '@/i18n/client-routing';
+import { Link, useRouter } from '@/i18n/client-routing';
 import { useTranslations } from '@/i18n/use-translations';
-import { datasetsApi } from '@/lib/api/datasets';
+import { deleteDataset, fetchDatasetById, previewDataset, updateDataset } from '@/lib/api/datasets';
 import type { Dataset, ResultSet } from '@/types/chart';
 import { RiAddLine, RiDeleteBinLine, RiPlayLine, RiSaveLine } from '@remixicon/react';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/utils/date';
 
 export default function DatasetDetailPage() {
   const t = useTranslations();
+  const tRef = useRef(t);
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  const datasetId = useMemo(() => Number(params.id), [params.id]);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,121 +42,119 @@ export default function DatasetDetailPage() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    void loadDataset();
-  }, [id]);
+  const loadDataset = useCallback(async () => {
+    if (!Number.isFinite(datasetId) || datasetId <= 0) {
+      toast.error(tRef.current('Failed to load dataset'));
+      router.push('/dashboard/datasets');
+      return;
+    }
 
-  const loadDataset = async () => {
     try {
       setLoading(true);
-      const data = await datasetsApi.get(Number(id));
+      const data = await fetchDatasetById(datasetId);
       setDataset(data);
       setName(data.name);
       setDescription(data.description || '');
       setCurrentSql(data.querySql);
+      setQueryResult(null);
     } catch {
-      toast.error(t('Failed to load dataset'));
+      toast.error(tRef.current('Failed to load dataset'));
       router.push('/dashboard/datasets');
     } finally {
       setLoading(false);
     }
-  };
+  }, [datasetId, router]);
 
-  const hasChanges = () => {
+  useEffect(() => {
+    void loadDataset();
+  }, [loadDataset]);
+
+  const hasChanges = useMemo(() => {
     if (!dataset) return false;
     return (
       name !== dataset.name ||
       description !== (dataset.description || '') ||
       currentSql !== dataset.querySql
     );
-  };
+  }, [dataset, currentSql, description, name]);
 
-  const handleSave = async () => {
-    if (!dataset) return;
+  useEffect(() => {
+    if (!hasChanges) return;
 
-    try {
-      setSaving(true);
-      await datasetsApi.update(dataset.id, {
-        name,
-        description,
-        querySql: currentSql,
-      });
-      toast.success(t('Dataset updated'));
-      await loadDataset();
-    } catch {
-      toast.error(t('Update failed'));
-    } finally {
-      setSaving(false);
-    }
-  };
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
 
-  const handleSaveAndQuery = async () => {
-    if (!dataset) return;
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges]);
 
-    try {
-      setSaving(true);
-      await datasetsApi.update(dataset.id, {
-        name,
-        description,
-        querySql: currentSql,
-      });
-      toast.success(t('Dataset updated'));
-      await loadDataset();
-      await handleExecuteQueryWithSql();
-    } catch {
-      toast.error(t('Update failed'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleExecuteQueryWithSql = async () => {
+  const runQuery = useCallback(async () => {
     if (!dataset) return;
 
     try {
       setQueryLoading(true);
       setQueryResult(null);
-      const result = await datasetsApi.preview(dataset.id);
+      const result = await previewDataset(dataset.id);
       setQueryResult(result);
-      toast.success(t('Query executed successfully'));
+      toast.success(tRef.current('Query executed successfully'));
     } catch (error) {
-      toast.error(t('Query execution failed'));
+      toast.error(tRef.current('Query execution failed'));
       console.error(error);
     } finally {
       setQueryLoading(false);
     }
-  };
+  }, [dataset]);
+
+  const saveDataset = useCallback(async () => {
+    if (!dataset) return false;
+
+    try {
+      setSaving(true);
+      await updateDataset(dataset.id, {
+        name,
+        description,
+        querySql: currentSql,
+      });
+      toast.success(tRef.current('Dataset updated'));
+      await loadDataset();
+      return true;
+    } catch {
+      toast.error(tRef.current('Update failed'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [currentSql, dataset, description, loadDataset, name]);
+
+  const handleSave = useCallback(async () => {
+    await saveDataset();
+  }, [saveDataset]);
+
+  const handleSaveAndQuery = useCallback(async () => {
+    const saved = await saveDataset();
+    if (saved) {
+      await runQuery();
+    }
+  }, [runQuery, saveDataset]);
 
   const handleDelete = async () => {
     if (!dataset) return;
 
     try {
-      await datasetsApi.delete(dataset.id);
-      toast.success(t('Dataset deleted'));
+      await deleteDataset(dataset.id);
+      toast.success(tRef.current('Dataset deleted'));
       router.push('/dashboard/datasets');
     } catch {
-      toast.error(t('Delete failed'));
+      toast.error(tRef.current('Delete failed'));
     } finally {
       setDeleteConfirmOpen(false);
     }
   };
 
-  const handleExecuteQuery = async () => {
-    if (!dataset) return;
-
-    try {
-      setQueryLoading(true);
-      setQueryResult(null);
-      const result = await datasetsApi.preview(dataset.id);
-      setQueryResult(result);
-      toast.success(t('Query executed successfully'));
-    } catch (error) {
-      toast.error(t('Query execution failed'));
-      console.error(error);
-    } finally {
-      setQueryLoading(false);
-    }
-  };
+  const canSave = hasChanges && !saving;
+  const isQueryBusy = queryLoading;
 
   if (loading) {
     return (
@@ -190,41 +195,47 @@ export default function DatasetDetailPage() {
         action={
           <div className="flex gap-2">
             {dataset && <DashboardSelector type="dataset" contentId={dataset.id} size="sm" />}
-            <Button size="sm" onClick={handleSave} disabled={!hasChanges() || saving}>
-              <RiSaveLine className="h-4 w-4" />
-              {saving ? t('Saving...') : t('Save')}
+            <Button size="sm" onClick={handleSave} disabled={!canSave}>
+              <RiSaveLine className="h-4 w-4" aria-hidden="true" />
+              {saving ? t('Saving…') : t('Save')}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSaveAndQuery}
-              disabled={!hasChanges() || saving}
-            >
-              <RiSaveLine className="h-4 w-4" />
-              {saving ? t('Saving...') : t('Save and Query')}
+            <Button size="sm" variant="outline" onClick={handleSaveAndQuery} disabled={!canSave}>
+              <RiSaveLine className="h-4 w-4" aria-hidden="true" />
+              {saving ? t('Saving…') : t('Save and Query')}
             </Button>
             <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
-              <RiDeleteBinLine className="h-4 w-4" />
+              <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />
               {t('Delete')}
             </Button>
           </div>
         }
       />
       <div className="flex items-center gap-2 border-b pb-4">
-        <span className="text-sm text-muted-foreground">{t('Name')}:</span>
+        <Label htmlFor="dataset-name" className="text-sm text-muted-foreground">
+          {t('Name')}:
+        </Label>
         <Input
+          id="dataset-name"
+          name="dataset-name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={t('Dataset Name')}
+          placeholder={t('eg: Last 30 days sales data…')}
+          autoComplete="off"
+          spellCheck={false}
           className="h-8 text-sm flex-1 max-w-md"
         />
-        <span className="text-sm text-muted-foreground ml-4">{t('Description')}:</span>
+        <Label htmlFor="dataset-description" className="text-sm text-muted-foreground ml-4">
+          {t('Description')}:
+        </Label>
         <Input
+          id="dataset-description"
+          name="dataset-description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder={t('Description (optional)')}
+          placeholder={t('Describe this dataset…')}
+          autoComplete="off"
           className="h-8 text-sm flex-1"
         />
       </div>
@@ -238,27 +249,30 @@ export default function DatasetDetailPage() {
             </CardHeader>
             <CardContent>
               <Textarea
+                id="dataset-sql"
+                name="dataset-sql"
                 value={currentSql}
                 onChange={(e) => setCurrentSql(e.target.value)}
                 rows={10}
                 className="font-mono text-xs"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label={t('SQL Query')}
               />
               <div className="flex gap-2 mt-4">
-                <Button size="sm" onClick={handleExecuteQuery} disabled={queryLoading}>
-                  {queryLoading ? (
-                    <RiPlayLine className="h-4 w-4 animate-spin" />
+                <Button size="sm" onClick={runQuery} disabled={isQueryBusy}>
+                  {isQueryBusy ? (
+                    <RiPlayLine className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <RiPlayLine className="h-4 w-4" />
+                    <RiPlayLine className="h-4 w-4" aria-hidden="true" />
                   )}
-                  {queryLoading ? t('Executing...') : t('Execute Query')}
+                  {isQueryBusy ? t('Executing…') : t('Execute Query')}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/dashboard/charts/new?datasetId=${dataset.id}`)}
-                >
-                  <RiAddLine className="h-4 w-4" />
-                  {t('Create Chart')}
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard/charts/new?datasetId=${dataset.id}`}>
+                    <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                    {t('Create Chart')}
+                  </Link>
                 </Button>
               </div>
               {queryResult && (
@@ -311,11 +325,11 @@ export default function DatasetDetailPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Created At')}:</span>
-                <span className="font-medium">{new Date(dataset.createdAt).toLocaleString()}</span>
+                <span className="font-medium">{formatDateTime(dataset.createdAt)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('Updated At')}:</span>
-                <span className="font-medium">{new Date(dataset.updatedAt).toLocaleString()}</span>
+                <span className="font-medium">{formatDateTime(dataset.updatedAt)}</span>
               </div>
             </CardContent>
           </Card>

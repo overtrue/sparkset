@@ -10,9 +10,6 @@ export async function fetchDatasetById(id: number): Promise<Dataset> {
   return apiGet(`/api/datasets/${id}`);
 }
 
-// Alias for backward compatibility
-export const fetchDataset = fetchDatasetById;
-
 export async function createDataset(data: CreateDatasetDto): Promise<Dataset> {
   return apiPost('/api/datasets', data);
 }
@@ -31,13 +28,3 @@ export async function previewDataset(
 ): Promise<ResultSet> {
   return apiPost(`/api/datasets/${id}/preview`, { params });
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const datasetsApi = {
-  list: fetchDatasets,
-  get: fetchDataset,
-  create: createDataset,
-  update: updateDataset,
-  delete: deleteDataset,
-  preview: previewDataset,
-};

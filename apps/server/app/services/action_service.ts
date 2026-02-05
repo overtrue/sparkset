@@ -154,46 +154,12 @@ export class ActionService {
       try {
         parsedResponse = JSON.parse(cleanedResponse);
       } catch {
-        // 如果无法解析为 JSON，检查是否是纯 SQL（fallback 机制）
-        const lowerResponse = cleanedResponse.toLowerCase().trim();
-        const sqlKeywords = [
-          'select',
-          'insert',
-          'update',
-          'delete',
-          'from',
-          'where',
-          'set',
-          'values',
-        ];
-        const looksLikeSQL = sqlKeywords.some((keyword) => lowerResponse.includes(keyword));
-
-        // 检查是否包含错误关键词
-        const errorKeywords = [
-          '无法',
-          '错误',
-          '不存在',
-          '失败',
-          '不能',
-          'unable',
-          'error',
-          'failed',
-        ];
-        const isError = errorKeywords.some((keyword) => lowerResponse.includes(keyword));
-
-        if (looksLikeSQL && !isError) {
-          logger?.warn(
-            `[ActionService] AI returned plain SQL instead of JSON, wrapping it automatically.`,
-          );
-          parsedResponse = { success: true, sql: cleanedResponse };
-        } else {
-          logger?.error(
-            `[ActionService] Failed to parse JSON response. AI response: ${cleanedResponse.substring(0, 200)}`,
-          );
-          throw new Error(
-            'AI 返回的格式不正确，无法解析为 JSON。请重试或检查 Action 描述和数据源配置。',
-          );
-        }
+        logger?.error(
+          `[ActionService] Failed to parse JSON response. AI response: ${cleanedResponse.substring(0, 200)}`,
+        );
+        throw new Error(
+          'AI 返回的格式不正确，无法解析为 JSON。请重试或检查 Action 描述和数据源配置。',
+        );
       }
 
       // 检查是否成功

@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Link, useRouter } from '@/i18n/client-routing';
+import { Link } from '@/i18n/client-routing';
 import { useCharts, useDeleteChart } from '@/lib/api/charts-hooks';
 import { useDatasets } from '@/lib/api/datasets-hooks';
 import { useResourceList } from '@/hooks/use-resource-list';
@@ -29,14 +29,13 @@ import {
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
 
 export default function ChartsPage() {
   const t = useTranslations();
-  const router = useRouter();
   const {
     data: chartsData,
     error: chartsError,
@@ -47,6 +46,28 @@ export default function ChartsPage() {
   const { trigger: deleteChart } = useDeleteChart();
   const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
   const [selectedChartForDashboard, setSelectedChartForDashboard] = useState<number | null>(null);
+
+  const chartTypeIcons = useMemo(
+    () => ({
+      line: RiLineChartLine,
+      bar: RiBarChartLine,
+      area: RiLineChartLine,
+      pie: RiPieChartLine,
+      table: RiTableLine,
+    }),
+    [],
+  );
+
+  const chartTypeBadgeVariant = useMemo(
+    () => ({
+      line: 'default',
+      bar: 'secondary',
+      area: 'outline',
+      pie: 'destructive',
+      table: 'secondary',
+    }),
+    [],
+  );
 
   const {
     items: charts,
@@ -67,195 +88,192 @@ export default function ChartsPage() {
   const datasets = datasetsData?.items || [];
   const isLoading = chartsLoading || datasetsLoading;
   const error = chartsError || datasetsError;
+  const datasetsById = useMemo(
+    () => new Map(datasets.map((dataset) => [dataset.id, dataset])),
+    [datasets],
+  );
 
-  const handleDeleteClick = (chart: Chart) => {
-    openDialog({
-      title: t('Delete Chart'),
-      description: t(`Are you sure to delete '{name}'? This cannot be undone`, {
-        name: chart.title,
-      }),
-      variant: 'destructive',
-      onConfirm: () => handleDelete(chart),
-    });
-  };
+  const handleDeleteClick = useCallback(
+    (chart: Chart) => {
+      openDialog({
+        title: t('Delete Chart'),
+        description: t(`Are you sure to delete '{name}'? This cannot be undone`, {
+          name: chart.title,
+        }),
+        variant: 'destructive',
+        onConfirm: () => handleDelete(chart),
+      });
+    },
+    [handleDelete, openDialog, t],
+  );
 
-  const getChartIcon = (chartType: Chart['chartType']) => {
-    const props = { className: 'h-4 w-4' };
-    switch (chartType) {
-      case 'line':
-        return <RiLineChartLine {...props} />;
-      case 'bar':
-        return <RiBarChartLine {...props} />;
-      case 'area':
-        return <RiLineChartLine {...props} />;
-      case 'pie':
-        return <RiPieChartLine {...props} />;
-      case 'table':
-        return <RiTableLine {...props} />;
-      default:
-        return <RiBarChartLine {...props} />;
-    }
-  };
+  const closeDashboardSelector = useCallback(() => {
+    setSelectedChartForDashboard(null);
+  }, []);
 
-  const getChartBadgeVariant = (chartType: Chart['chartType']) => {
-    switch (chartType) {
-      case 'line':
-        return 'default';
-      case 'bar':
-        return 'secondary';
-      case 'area':
-        return 'outline';
-      case 'pie':
-        return 'destructive';
-      case 'table':
-        return 'secondary';
-      default:
-        return 'default';
-    }
-  };
+  const columns = useMemo<ColumnDef<Chart>[]>(() => {
+    const makeIcon = (chartType: Chart['chartType']) => {
+      const Icon = chartTypeIcons[chartType] ?? RiBarChartLine;
+      return <Icon className="h-4 w-4" aria-hidden="true" />;
+    };
 
-  const formatDate = (value: string) => formatDateTime(value);
+    const makeBadgeVariant = (chartType: Chart['chartType']) =>
+      chartTypeBadgeVariant[chartType] ?? 'default';
 
-  const columns: ColumnDef<Chart>[] = [
-    {
-      accessorKey: 'title',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Chart Name')} />,
-      cell: ({ row }) => {
-        const chart = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            {getChartIcon(chart.chartType)}
+    return [
+      {
+        accessorKey: 'title',
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Chart Name')} />,
+        cell: ({ row }) => {
+          const chart = row.original;
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              {makeIcon(chart.chartType)}
+              <Button
+                variant="link"
+                className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
+                asChild
+              >
+                <Link href={`/dashboard/charts/${chart.id}`}>{row.getValue('title')}</Link>
+              </Button>
+            </div>
+          );
+        },
+        size: 200,
+      },
+      {
+        accessorKey: 'chartType',
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
+        cell: ({ row }) => {
+          const chartType = row.original.chartType;
+          return <Badge variant={makeBadgeVariant(chartType)}>{chartType.toUpperCase()}</Badge>;
+        },
+        size: 100,
+      },
+      {
+        accessorKey: 'datasetId',
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Dataset')} />,
+        cell: ({ row }) => {
+          const datasetId = row.getValue('datasetId');
+          const dataset = datasetsById.get(datasetId as number);
+          return (
             <Button
               variant="link"
-              className="h-auto p-0 text-primary font-medium"
-              onClick={() => router.push(`/dashboard/charts/${chart.id}`)}
+              className="h-auto p-0 text-primary truncate max-w-[150px] block text-left"
+              asChild
             >
-              {row.getValue('title')}
+              <Link href={`/dashboard/datasets/${String(datasetId)}`}>
+                {dataset?.name || t('Unknown Dataset')}
+              </Link>
             </Button>
-          </div>
-        );
+          );
+        },
+        size: 150,
       },
-      size: 200,
-    },
-    {
-      accessorKey: 'chartType',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
-      cell: ({ row }) => {
-        const chartType = row.original.chartType;
-        return <Badge variant={getChartBadgeVariant(chartType)}>{chartType.toUpperCase()}</Badge>;
+      {
+        accessorKey: 'description',
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground break-words">
+            {row.getValue('description') || '-'}
+          </span>
+        ),
+        size: 200,
       },
-      size: 100,
-    },
-    {
-      accessorKey: 'datasetId',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Dataset')} />,
-      cell: ({ row }) => {
-        const datasetId = row.getValue('datasetId');
-        const dataset = datasets.find((d) => d.id === datasetId);
-        return (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-primary truncate max-w-[150px] block text-left"
-            onClick={() => router.push(`/dashboard/datasets/${String(datasetId)}`)}
-          >
-            {dataset?.name || t('Unknown Dataset')}
-          </Button>
-        );
+      {
+        accessorKey: 'createdAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{formatDateTime(row.getValue('createdAt'))}</span>
+        ),
+        size: 180,
       },
-      size: 150,
-    },
-    {
-      accessorKey: 'description',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
-      ),
-      size: 200,
-    },
-    {
-      accessorKey: 'createdAt',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
-      ),
-      size: 180,
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">{t('Actions')}</span>,
-      cell: ({ row }) => {
-        const chart = row.original;
-        const actions: RowAction[] = [
-          {
-            label: t('View Details'),
-            icon: <RiBarChartLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/charts/${chart.id}`),
-          },
-          {
-            label: t('Edit'),
-            icon: <RiBarChartLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/charts/${chart.id}/edit`),
-          },
-          {
-            label: t('Add to Dashboard'),
-            icon: <RiDashboardLine className="h-4 w-4" />,
-            onClick: () => setSelectedChartForDashboard(chart.id),
-          },
-          {
-            label: t('Create from this'),
-            icon: <RiAddLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/charts/new?datasetId=${chart.datasetId}`),
-          },
-          {
-            label: t('Delete'),
-            icon: <RiBarChartLine className="h-4 w-4" />,
-            onClick: () => handleDeleteClick(chart),
-            variant: 'destructive',
-          },
-        ];
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('Actions')}</span>,
+        cell: ({ row }) => {
+          const chart = row.original;
+          const actions: RowAction[] = [
+            {
+              label: t('View Details'),
+              icon: <RiBarChartLine className="h-4 w-4" aria-hidden="true" />,
+              href: `/dashboard/charts/${chart.id}`,
+            },
+            {
+              label: t('Edit'),
+              icon: <RiBarChartLine className="h-4 w-4" aria-hidden="true" />,
+              href: `/dashboard/charts/${chart.id}/edit`,
+            },
+            {
+              label: t('Add to Dashboard'),
+              icon: <RiDashboardLine className="h-4 w-4" aria-hidden="true" />,
+              onClick: () => setSelectedChartForDashboard(chart.id),
+            },
+            {
+              label: t('Create From This'),
+              icon: <RiAddLine className="h-4 w-4" aria-hidden="true" />,
+              href: `/dashboard/charts/new?datasetId=${chart.datasetId}`,
+            },
+            {
+              label: t('Delete'),
+              icon: <RiBarChartLine className="h-4 w-4" aria-hidden="true" />,
+              onClick: () => handleDeleteClick(chart),
+              variant: 'destructive',
+            },
+          ];
 
-        return (
-          <div className="flex items-center gap-2">
-            <DataTableRowActions actions={actions} />
-            {selectedChartForDashboard === chart.id && (
-              <DashboardSelector
-                type="chart"
-                contentId={chart.id}
-                size="sm"
-                defaultOpen={true}
-                onOpenChange={(open) => {
-                  if (!open) {
-                    setSelectedChartForDashboard(null);
-                  }
-                }}
-                onAdded={() => {
-                  setSelectedChartForDashboard(null);
-                }}
-              />
-            )}
-          </div>
-        );
+          return (
+            <div className="flex items-center gap-2">
+              <DataTableRowActions actions={actions} />
+              {selectedChartForDashboard === chart.id && (
+                <DashboardSelector
+                  type="chart"
+                  contentId={chart.id}
+                  size="sm"
+                  defaultOpen={true}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      closeDashboardSelector();
+                    }
+                  }}
+                  onAdded={closeDashboardSelector}
+                />
+              )}
+            </div>
+          );
+        },
+        size: 100,
       },
-      size: 100,
-    },
-  ];
+    ];
+  }, [
+    chartTypeBadgeVariant,
+    chartTypeIcons,
+    closeDashboardSelector,
+    datasetsById,
+    handleDeleteClick,
+    selectedChartForDashboard,
+    t,
+  ]);
+
+  const pageTitle = t('Chart Management');
+  const pageDescription = t('Create and manage dataset-based visualization charts');
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Chart Management')}
-          description={t('Create and manage dataset-based visualization charts')}
+          title={pageTitle}
+          description={pageDescription}
           action={
             <Button asChild disabled>
               <Link href="/dashboard/charts/new">
-                <RiAddLine className="h-4 w-4" />
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
                 {t('Create Chart')}
               </Link>
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -264,12 +282,12 @@ export default function ChartsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Chart Management')}
-          description={t('Create and manage dataset-based visualization charts')}
+          title={pageTitle}
+          description={pageDescription}
           action={
             <Button asChild>
               <Link href="/dashboard/charts/new">
-                <RiAddLine className="h-4 w-4" />
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
                 {t('Create Chart')}
               </Link>
             </Button>
@@ -284,12 +302,12 @@ export default function ChartsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Chart Management')}
-          description={t('Create and manage dataset-based visualization charts')}
+          title={pageTitle}
+          description={pageDescription}
           action={
             <Button asChild>
               <Link href="/dashboard/query">
-                <RiAddLine className="h-4 w-4" />
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
                 {t('Go to create dataset')}
               </Link>
             </Button>
@@ -306,8 +324,8 @@ export default function ChartsPage() {
           <CardContent>
             <Button asChild>
               <Link href="/dashboard/query">
-                <RiAddLine className="h-4 w-4" />
-                {t('Execute query and create dataset')}
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('Execute Query and Create Dataset')}
               </Link>
             </Button>
           </CardContent>
@@ -320,24 +338,24 @@ export default function ChartsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Chart Management')}
-          description={t('Create and manage dataset-based visualization charts')}
+          title={pageTitle}
+          description={pageDescription}
           action={
             <Button asChild>
               <Link href="/dashboard/charts/new">
-                <RiAddLine className="h-4 w-4" />
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
                 {t('Create Chart')}
               </Link>
             </Button>
           }
         />
         <EmptyState
-          icon={<RiBarChartLine className="h-8 w-8 text-muted-foreground" />}
+          icon={<RiBarChartLine className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
           title={t('No Charts')}
           description={t('Create your first chart to start visualizing data')}
           action={{
             label: t('Create Chart'),
-            onClick: () => router.push('/dashboard/charts/new'),
+            href: '/dashboard/charts/new',
           }}
         />
       </div>
@@ -347,12 +365,12 @@ export default function ChartsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('Chart Management')}
-        description={t('Create and manage dataset-based visualization charts')}
+        title={pageTitle}
+        description={pageDescription}
         action={
           <Button size="sm" asChild>
             <Link href="/dashboard/charts/new">
-              <RiAddLine className="h-4 w-4" />
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
               {t('Create Chart')}
             </Link>
           </Button>
@@ -363,7 +381,7 @@ export default function ChartsPage() {
         columns={columns}
         data={charts}
         searchKey="title"
-        searchPlaceholder={t('Search...')}
+        searchPlaceholder={t('Search…')}
         enableRowSelection
         onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Chart')}

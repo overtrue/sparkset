@@ -8,7 +8,7 @@ import {
 import type { SchemaCacheRepository } from './interfaces';
 
 /**
- * In-memory DBClient implementation for testing and fallback scenarios
+ * In-memory DBClient implementation for testing
  */
 export class InMemoryDBClient implements DBClient {
   async testConnection(): Promise<boolean> {

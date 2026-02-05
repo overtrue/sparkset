@@ -14,7 +14,7 @@ import type { BotActionExecutor } from './action_executor.js';
 import type { ParameterExtractor } from './parameter_extractor.js';
 import type { ConversationTracker, ConversationContext } from './conversation_tracker.js';
 import type { Action } from '../models/types.js';
-import { providerFactories } from '../ai/index.js';
+import { createLanguageModel } from '../ai/index.js';
 import type { AIProviderRepository } from '../db/interfaces.js';
 
 /**
@@ -94,65 +94,97 @@ export class BotProcessor {
 
     try {
       // 1. 获取或创建会话上下文
-      let conversationContext: ConversationContext | null = null;
-      if (this.conversationTracker && input.externalUserId) {
-        conversationContext = await this.conversationTracker.getOrCreateConversation(
-          bot,
-          input.externalUserId,
-          input.userId,
-        );
-        this.currentContext = conversationContext;
-      }
+      const conversationContext = await this.createConversationContext(bot, input);
 
       // 2. 识别用户意图（包含会话上下文）
       const intent = await this.identifyIntent(bot, input.text);
 
       // 3. 根据意图类型路由处理
-      let result: BotProcessResult;
-
-      if (intent.type === 'query' && bot.enableQuery && this.queryProcessor) {
-        result = await this.handleQuery(bot, event as BotEvent, input, startTime);
-      } else if (intent.type === 'action' && this.actionExecutor) {
-        result = await this.handleAction(bot, event as BotEvent, input, startTime);
-      } else {
-        // 无法处理的意图
-        result = {
-          success: false,
-          response: '',
-          error: `无法处理此请求: ${intent.reasoning}`,
-          processingTimeMs: Date.now() - startTime,
-        };
-      }
+      const result = await this.routeIntent(bot, event as BotEvent, input, intent, startTime);
 
       // 4. 记录会话历史
-      if (this.conversationTracker && conversationContext && event) {
-        try {
-          await this.conversationTracker.linkEventToConversation(
-            event as BotEvent,
-            conversationContext.conversationId,
-            result.response || result.error || '',
-            result.actionResult,
-          );
-        } catch (trackingError) {
-          // 记录失败不影响主流程
-          console.warn('Failed to track conversation:', trackingError);
-        }
-      }
+      await this.trackConversation(event as BotEvent, conversationContext, result);
 
       // 清理当前上下文
-      this.currentContext = null;
+      this.resetContext();
 
       return result;
     } catch (error) {
-      this.currentContext = null;
+      this.resetContext();
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        success: false,
-        response: '',
-        error: errorMessage,
-        processingTimeMs: Date.now() - startTime,
-      };
+      return this.buildErrorResult(errorMessage, startTime);
     }
+  }
+
+  private resetContext() {
+    this.currentContext = null;
+  }
+
+  private async createConversationContext(
+    bot: Bot,
+    input: BotProcessInput,
+  ): Promise<ConversationContext | null> {
+    if (!this.conversationTracker || !input.externalUserId) {
+      return null;
+    }
+
+    const conversationContext = await this.conversationTracker.getOrCreateConversation(
+      bot,
+      input.externalUserId,
+      input.userId,
+    );
+    this.currentContext = conversationContext;
+    return conversationContext;
+  }
+
+  private async trackConversation(
+    event: BotEvent,
+    conversationContext: ConversationContext | null,
+    result: BotProcessResult,
+  ): Promise<void> {
+    if (!this.conversationTracker || !conversationContext || !event) {
+      return;
+    }
+
+    try {
+      await this.conversationTracker.linkEventToConversation(
+        event,
+        conversationContext.conversationId,
+        result.response || result.error || '',
+        result.actionResult,
+      );
+    } catch (trackingError) {
+      // 记录失败不影响主流程
+      console.warn('Failed to track conversation:', trackingError);
+    }
+  }
+
+  private async routeIntent(
+    bot: Bot,
+    event: BotEvent,
+    input: BotProcessInput,
+    intent: UserIntent,
+    startTime: number,
+  ): Promise<BotProcessResult> {
+    if (intent.type === 'query' && bot.enableQuery && this.queryProcessor) {
+      return this.handleQuery(bot, event, input, startTime);
+    }
+
+    if (intent.type === 'action' && this.actionExecutor) {
+      return this.handleAction(bot, event, input, startTime);
+    }
+
+    // 无法处理的意图
+    return this.buildErrorResult(`无法处理此请求: ${intent.reasoning}`, startTime);
+  }
+
+  private buildErrorResult(message: string, startTime: number): BotProcessResult {
+    return {
+      success: false,
+      response: '',
+      error: message,
+      processingTimeMs: Date.now() - startTime,
+    };
   }
 
   /**
@@ -373,15 +405,12 @@ export class BotProcessor {
       const prompt = this.buildIntentPrompt(userText, bot);
 
       // 创建 AI 模型
-      const factory = providerFactories[provider.type];
-      if (!factory) {
-        throw new Error(`Unsupported AI provider: ${provider.type}`);
-      }
-
-      const model = factory.createModel(provider.defaultModel || 'gpt-4o-mini', {
-        apiKey: provider.apiKey,
-        baseURL: provider.baseURL,
-      });
+      const model = createLanguageModel(
+        provider.type,
+        provider.defaultModel || 'gpt-4o-mini',
+        provider.apiKey,
+        provider.baseURL,
+      );
 
       // 调用 AI 生成意图
       const result = await generateText({
@@ -557,40 +586,6 @@ ${conversationHistory ? `\n${conversationHistory}` : ''}
     }
   }
 }
-
-/**
- * 用于向后兼容的单例模式包装
- * 避免 WebhooksController 和 BotService 需要同时更改
- */
-export const botProcessor = {
-  /**
-   * 处理用户消息（简化版本，不使用 event 参数）
-   * 用于向后兼容旧的调用方式
-   */
-  async process(bot: Bot, input: BotProcessInput): Promise<BotProcessResult> {
-    const startTime = Date.now();
-
-    try {
-      // 简化的处理：仅返回确认消息
-      // 完整的处理需要通过依赖注入使用完整的 BotProcessor
-      const response = `[Bot: ${bot.name}] 已收到您的消息: "${input.text}"`;
-
-      return {
-        success: true,
-        response,
-        processingTimeMs: Date.now() - startTime,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        success: false,
-        response: '',
-        error: errorMessage,
-        processingTimeMs: Date.now() - startTime,
-      };
-    }
-  },
-};
 
 /**
  * 导出工厂函数用于依赖注入

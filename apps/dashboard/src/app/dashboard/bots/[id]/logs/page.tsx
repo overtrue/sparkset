@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { LoadingState } from '@/components/loading-state';
 import { ErrorState } from '@/components/error-state';
@@ -15,7 +15,7 @@ export default function BotLogsPage() {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
-  const botId = useMemo(() => (params?.id ? Number(params.id) : null), [params?.id]);
+  const botId = params?.id ? Number(params.id) : null;
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
@@ -66,16 +66,16 @@ export default function BotLogsPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Loading...')}
+          title={t('Loading…')}
           description={t('Fetching bot logs')}
           action={
             <Button onClick={() => router.back()} variant="outline" disabled>
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function BotLogsPage() {
           description={t('View all webhook events')}
           action={
             <Button onClick={() => router.back()} variant="outline">
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
@@ -105,7 +105,7 @@ export default function BotLogsPage() {
         description={t('View all webhook events and interactions for this bot')}
         action={
           <Button onClick={() => router.back()} variant="outline">
-            <RiArrowLeftLine className="h-4 w-4" />
+            <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
             {t('Back')}
           </Button>
         }

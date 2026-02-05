@@ -28,11 +28,11 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
   return (
     <>
       <Card className="shadow-none py-0 overflow-hidden w-full max-w-full border-border/50 gap-0">
-        <CardHeader className="py-3 px-4 bg-muted/20 border-b border-border/50 gap-0 pb-3!">
+        <CardHeader className="py-3 px-4 bg-muted/20 border-b border-border/50 gap-0">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center gap-2 shrink-0">
-                <RiFileTextLine className="h-4 w-4 text-muted-foreground" />
+                <RiFileTextLine className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <span className="font-semibold text-sm">{t('Query Result')}</span>
               </div>
               <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -47,7 +47,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 className="h-7 px-3 gap-1.5 text-xs"
                 onClick={() => setSaveDialogOpen(true)}
               >
-                <RiSave3Line className="h-3.5 w-3.5" />
+                <RiSave3Line className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('Save as Action')}
               </Button>
               <Button
@@ -56,7 +56,7 @@ export function QueryResult({ result, datasourceId, question }: QueryResultProps
                 className="h-7 px-3 gap-1.5 text-xs"
                 onClick={() => setSaveChartDialogOpen(true)}
               >
-                <RiBarChartLine className="h-3.5 w-3.5" />
+                <RiBarChartLine className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('Save as Chart')}
               </Button>
               <SqlViewer sql={result.sql} open={sqlDrawerOpen} onOpenChange={setSqlDrawerOpen} />

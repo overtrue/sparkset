@@ -25,13 +25,12 @@ interface EditTitleDialogProps {
 export function EditTitleDialog({ open, onOpenChange, widget, onSave }: EditTitleDialogProps) {
   const t = useTranslations();
   const [title, setTitle] = useState('');
+  const isOpen = open && Boolean(widget);
 
   useEffect(() => {
-    if (widget) {
-      // 初始化标题，如果为空则使用空字符串
-      setTitle(widget.title || '');
-    }
-  }, [widget]);
+    if (!isOpen || !widget) return;
+    setTitle(widget.title || '');
+  }, [isOpen, widget]);
 
   const handleSave = () => {
     if (!widget) return;
@@ -56,8 +55,9 @@ export function EditTitleDialog({ open, onOpenChange, widget, onSave }: EditTitl
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>{t('Title')}</Label>
+            <Label htmlFor="widget-title">{t('Title')}</Label>
             <Input
+              id="widget-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('Leave empty to use default title')}

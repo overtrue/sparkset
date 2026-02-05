@@ -9,27 +9,36 @@ import type {
 } from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
+const normalizeDatasource = <T extends Datasource>(datasource: T): T => ({
+  ...datasource,
+  isDefault: Number(datasource.isDefault) === 1,
+});
+
 // API functions - can be used in both server and client components
 export async function fetchDatasources(): Promise<ApiListResponse<Datasource>> {
-  return apiGet('/datasources');
+  const response = await apiGet<ApiListResponse<Datasource>>('/datasources');
+  return {
+    ...response,
+    items: response.items?.map(normalizeDatasource) ?? [],
+  };
 }
 
 export async function fetchDatasourceById(id: number): Promise<Datasource> {
-  return apiGet(`/datasources/${id}`);
+  const datasource = await apiGet<Datasource>(`/datasources/${id}`);
+  return normalizeDatasource(datasource);
 }
 
-// Alias for backward compatibility
-export const fetchDatasource = fetchDatasourceById;
-
 export async function createDatasource(data: CreateDatasourceDto): Promise<Datasource> {
-  return apiPost('/datasources', data);
+  const datasource = await apiPost<Datasource>('/datasources', data);
+  return normalizeDatasource(datasource);
 }
 
 export async function updateDatasource(
   id: number,
   data: Partial<CreateDatasourceDto>,
 ): Promise<Datasource> {
-  return apiPut(`/datasources/${id}`, data);
+  const datasource = await apiPut<Datasource>(`/datasources/${id}`, data);
+  return normalizeDatasource(datasource);
 }
 
 export async function deleteDatasource(id: number): Promise<void> {
@@ -45,7 +54,8 @@ export async function syncDatasource(id: number): Promise<{ success: boolean; me
 }
 
 export async function fetchDatasourceDetail(id: number): Promise<DatasourceDetailDTO> {
-  return apiGet(`/datasources/${id}`);
+  const datasource = await apiGet<DatasourceDetailDTO>(`/datasources/${id}`);
+  return normalizeDatasource(datasource);
 }
 
 export async function fetchSchema(datasourceId: number): Promise<TableSchemaDTO[]> {
@@ -76,17 +86,6 @@ export async function generateSemanticDescriptions(
 }
 
 export async function setDefaultDatasource(id: number): Promise<Datasource> {
-  return apiPost(`/datasources/${id}/set-default`);
+  const datasource = await apiPost<Datasource>(`/datasources/${id}/set-default`);
+  return normalizeDatasource(datasource);
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const datasourcesApi = {
-  list: fetchDatasources,
-  get: fetchDatasourceById,
-  create: createDatasource,
-  update: updateDatasource,
-  delete: deleteDatasource,
-  testConnection,
-  sync: syncDatasource,
-  setDefault: setDefaultDatasource,
-};

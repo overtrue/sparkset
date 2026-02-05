@@ -12,7 +12,7 @@ import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { useRouter } from '@/i18n/client-routing';
+import { Link } from '@/i18n/client-routing';
 import { useDashboards, useDeleteDashboard } from '@/lib/api/dashboards-hooks';
 import { useResourceList } from '@/hooks/use-resource-list';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
@@ -24,7 +24,6 @@ import { formatDateTime } from '@/lib/utils/date';
 
 export default function DashboardsPage() {
   const t = useTranslations();
-  const router = useRouter();
   const { data, error, isLoading, mutate } = useDashboards();
   const { trigger: deleteDashboard } = useDeleteDashboard();
   const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
@@ -63,13 +62,15 @@ export default function DashboardsPage() {
       cell: ({ row }) => {
         const dashboard = row.original;
         return (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-primary font-medium"
-            onClick={() => router.push(`/dashboard/dashboards/${dashboard.id}`)}
-          >
-            {row.getValue('title')}
-          </Button>
+          <div className="min-w-0">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
+              asChild
+            >
+              <Link href={`/dashboard/dashboards/${dashboard.id}`}>{row.getValue('title')}</Link>
+            </Button>
+          </div>
         );
       },
       size: 200,
@@ -78,7 +79,9 @@ export default function DashboardsPage() {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.getValue('description') || '-'}</span>
+        <span className="text-muted-foreground break-words">
+          {row.getValue('description') || '-'}
+        </span>
       ),
       size: 250,
     },
@@ -98,12 +101,12 @@ export default function DashboardsPage() {
         const actions: RowAction[] = [
           {
             label: t('View'),
-            icon: <RiDashboardLine className="h-4 w-4" />,
-            onClick: () => router.push(`/dashboard/dashboards/${dashboard.id}`),
+            icon: <RiDashboardLine className="h-4 w-4" aria-hidden="true" />,
+            href: `/dashboard/dashboards/${dashboard.id}`,
           },
           {
             label: t('Delete'),
-            icon: <RiDashboardLine className="h-4 w-4" />,
+            icon: <RiDashboardLine className="h-4 w-4" aria-hidden="true" />,
             onClick: () => handleDeleteClick(dashboard),
             variant: 'destructive',
           },
@@ -123,12 +126,12 @@ export default function DashboardsPage() {
           description={t('Create and manage data visualization dashboards')}
           action={
             <Button disabled>
-              <RiAddLine className="h-4 w-4" />
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
               {t('New Dashboard')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -140,9 +143,11 @@ export default function DashboardsPage() {
           title={t('Dashboards')}
           description={t('Create and manage data visualization dashboards')}
           action={
-            <Button onClick={() => router.push('/dashboard/dashboards/new')}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Dashboard')}
+            <Button asChild>
+              <Link href="/dashboard/dashboards/new">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Dashboard')}
+              </Link>
             </Button>
           }
         />
@@ -158,19 +163,21 @@ export default function DashboardsPage() {
           title={t('Dashboards')}
           description={t('Create and manage data visualization dashboards')}
           action={
-            <Button onClick={() => router.push('/dashboard/dashboards/new')}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Dashboard')}
+            <Button asChild>
+              <Link href="/dashboard/dashboards/new">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Dashboard')}
+              </Link>
             </Button>
           }
         />
         <EmptyState
-          icon={<RiDashboardLine className="h-8 w-8 text-muted-foreground" />}
+          icon={<RiDashboardLine className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
           title={t('No Dashboards')}
           description={t('Create your first dashboard to start visualizing data')}
           action={{
             label: t('Create Dashboard'),
-            onClick: () => router.push('/dashboard/dashboards/new'),
+            href: '/dashboard/dashboards/new',
           }}
         />
       </div>
@@ -183,9 +190,11 @@ export default function DashboardsPage() {
         title={t('Dashboards')}
         description={t('Create and manage data visualization dashboards')}
         action={
-          <Button onClick={() => router.push('/dashboard/dashboards/new')}>
-            <RiAddLine className="h-4 w-4" />
-            {t('New Dashboard')}
+          <Button asChild>
+            <Link href="/dashboard/dashboards/new">
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
+              {t('New Dashboard')}
+            </Link>
           </Button>
         }
       />
@@ -194,7 +203,7 @@ export default function DashboardsPage() {
         columns={columns}
         data={dashboards}
         searchKey="title"
-        searchPlaceholder={t('Search...')}
+        searchPlaceholder={t('Search…')}
         enableRowSelection
         onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Dashboard')}

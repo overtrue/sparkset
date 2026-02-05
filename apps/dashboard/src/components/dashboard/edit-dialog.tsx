@@ -25,13 +25,13 @@ interface EditDialogProps {
 export function EditDialog({ open, onOpenChange, widget, onSave }: EditDialogProps) {
   const t = useTranslations();
   const [content, setContent] = useState('');
+  const isOpen = open && Boolean(widget);
 
   useEffect(() => {
-    if (widget && widget.type === 'text') {
-      const config = widget.config as TextWidgetConfig;
-      setContent(config.content);
-    }
-  }, [widget]);
+    if (!isOpen || !widget || widget.type !== 'text') return;
+    const config = widget.config as TextWidgetConfig;
+    setContent(config.content);
+  }, [isOpen, widget]);
 
   const handleSave = () => {
     if (!widget) return;
@@ -56,8 +56,9 @@ export function EditDialog({ open, onOpenChange, widget, onSave }: EditDialogPro
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>{t('Content (Markdown supported)')}</Label>
+            <Label htmlFor="widget-content">{t('Content (Markdown supported)')}</Label>
             <Textarea
+              id="widget-content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder={t('Enter text content, Markdown format supported')}

@@ -29,6 +29,34 @@ export interface AIClient {
   generateSQL: (options: ModelCallOptions) => Promise<string>;
 }
 
+const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
+  groq: 'https://api.groq.com/openai/v1',
+  moonshot: 'https://api.moonshot.cn/v1',
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+  qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+};
+
+const PROVIDER_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+  groq: 'Groq',
+  moonshot: 'Moonshot',
+  zhipu: '智谱 AI',
+  qwen: '通义千问',
+  'openai-compatible': 'OpenAI 兼容',
+};
+
+const API_KEY_REQUIRED_PROVIDERS = new Set([
+  'openai',
+  'anthropic',
+  'deepseek',
+  'groq',
+  'moonshot',
+  'zhipu',
+  'qwen',
+]);
+
 /**
  * Provider 配置
  */
@@ -195,80 +223,22 @@ function createModel(
   return factory.createModel(model, { apiKey, baseURL });
 }
 
+export function createLanguageModel(
+  provider: string,
+  model: string,
+  apiKey?: string,
+  baseURL?: string,
+  logger?: AIClientConfig['logger'],
+): LanguageModel {
+  return createModel(provider, model, apiKey, baseURL, logger);
+}
+
 /**
  * 获取 provider 的默认 baseURL
  * 注意：有官方 SDK 的 provider（如 deepseek）不需要在这里配置
  */
 export function getDefaultBaseURL(provider: string): string | undefined {
-  const defaults: Record<string, string> = {
-    groq: 'https://api.groq.com/openai/v1',
-    moonshot: 'https://api.moonshot.cn/v1',
-    zhipu: 'https://open.bigmodel.cn/api/paas/v4',
-    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  };
-  return defaults[provider];
-}
-
-/**
- * 直接使用 fetch 调用 OpenAI 兼容 API
- * 用于处理非标准的 OpenAI 兼容 API（如内部代理）
- */
-async function callOpenAICompatibleAPI(
-  baseURL: string,
-  apiKey: string,
-  model: string,
-  prompt: string,
-  logger?: AIClientConfig['logger'],
-): Promise<string> {
-  const url = `${baseURL.replace(/\/$/, '')}/chat/completions`;
-
-  const requestBody = {
-    model,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.1,
-    max_tokens: 2048,
-  };
-
-  logger?.info(`[fetch] POST ${url}`);
-  logger?.info(`[fetch] Request body: ${JSON.stringify({ ...requestBody, messages: '[...]' })}`);
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  const responseText = await response.text();
-  logger?.info(`[fetch] Response status: ${response.status}`);
-
-  if (!response.ok) {
-    logger?.warn(`[fetch] Response body: ${responseText}`);
-    throw new Error(`API error ${response.status}: ${responseText}`);
-  }
-
-  let data: { choices?: { message?: { content?: string } }[] };
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    logger?.warn(`[fetch] Failed to parse response: ${responseText}`);
-    throw new Error(`Failed to parse API response: ${responseText}`);
-  }
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    logger?.warn(`[fetch] No content in response: ${responseText}`);
-    throw new Error(`No content in API response: ${responseText}`);
-  }
-
-  return content;
+  return PROVIDER_DEFAULT_BASE_URLS[provider];
 }
 
 /**
@@ -307,31 +277,9 @@ export class VercelAIClient implements AIClient {
           `Attempting to generate SQL with model: ${modelConfig.model} (provider: ${modelConfig.provider})`,
         );
 
-        const effectiveBaseURL = modelConfig.baseURL || getDefaultBaseURL(modelConfig.provider);
-
-        // 如果有自定义 baseURL（非官方 API），优先使用 fetch 直接调用
-        // 这样可以避免 Vercel AI SDK 的一些兼容性问题
-        if (effectiveBaseURL && modelConfig.apiKey) {
-          this.config.logger?.info(
-            `[createModel] Using fetch for custom baseURL: ${effectiveBaseURL}`,
-          );
-
-          const content = await callOpenAICompatibleAPI(
-            effectiveBaseURL,
-            modelConfig.apiKey,
-            modelConfig.model,
-            prompt,
-            this.config.logger,
-          );
-
-          const sql = extractSQL(content);
-          this.config.logger?.info(`Successfully generated SQL using ${modelConfig.model}`);
-          return sql;
-        }
-
         // 使用 Vercel AI SDK
         this.config.logger?.info(`[createModel] Using Vercel AI SDK`);
-        const languageModel = createModel(
+        const languageModel = createLanguageModel(
           modelConfig.provider,
           modelConfig.model,
           modelConfig.apiKey,
@@ -458,17 +406,57 @@ export class StubAIClient implements AIClient {
  * 获取 Provider 标签
  */
 function getProviderLabel(provider: string): string {
-  const labels: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    deepseek: 'DeepSeek',
-    groq: 'Groq',
-    moonshot: 'Moonshot',
-    zhipu: '智谱 AI',
-    qwen: '通义千问',
-    'openai-compatible': 'OpenAI 兼容',
+  return PROVIDER_LABELS[provider] || provider;
+}
+
+function requiresApiKey(provider: string): boolean {
+  return API_KEY_REQUIRED_PROVIDERS.has(provider);
+}
+
+function resolveTestURL(provider: string, baseURL?: string): string | null {
+  if (provider === 'openai-compatible') {
+    if (!baseURL) return null;
+    return `${baseURL.replace(/\/$/, '')}/models`;
+  }
+
+  if (
+    provider === 'groq' ||
+    provider === 'moonshot' ||
+    provider === 'zhipu' ||
+    provider === 'qwen'
+  ) {
+    const url = baseURL || getDefaultBaseURL(provider);
+    return url ? `${url.replace(/\/$/, '')}/models` : null;
+  }
+
+  if (provider === 'openai') {
+    return 'https://api.openai.com/v1/models';
+  }
+
+  if (provider === 'anthropic') {
+    return 'https://api.anthropic.com/v1/models';
+  }
+
+  if (provider === 'deepseek') {
+    return 'https://api.deepseek.com/models';
+  }
+
+  return null;
+}
+
+function buildAuthHeaders(provider: string, apiKey: string): Record<string, string> {
+  if (provider === 'anthropic') {
+    return {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    };
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
   };
-  return labels[provider] || provider;
 }
 
 /**
@@ -493,9 +481,7 @@ export async function testAIProviderConnection(options: {
     }
 
     // 验证 API Key（部分 provider 需要）
-    if (
-      ['openai', 'anthropic', 'deepseek', 'groq', 'moonshot', 'zhipu', 'qwen'].includes(provider)
-    ) {
+    if (requiresApiKey(provider)) {
       if (!apiKey) {
         return {
           success: false,
@@ -515,27 +501,8 @@ export async function testAIProviderConnection(options: {
     // 对于需要 API Key 的情况，必须进行实际的网络请求验证
     if (apiKey) {
       // 确定要使用的 API 端点 URL
-      let testURL: string;
-
-      if (provider === 'openai-compatible') {
-        // openai-compatible 必须有 baseURL
-        testURL = `${baseURL?.replace(/\/$/, '')}/models`;
-      } else if (
-        provider === 'groq' ||
-        provider === 'moonshot' ||
-        provider === 'zhipu' ||
-        provider === 'qwen'
-      ) {
-        // 这些 provider 有默认的 baseURL
-        const url = baseURL || getDefaultBaseURL(provider);
-        testURL = `${url?.replace(/\/$/, '')}/models`;
-      } else if (provider === 'openai') {
-        testURL = 'https://api.openai.com/v1/models';
-      } else if (provider === 'anthropic') {
-        testURL = 'https://api.anthropic.com/v1/models';
-      } else if (provider === 'deepseek') {
-        testURL = 'https://api.deepseek.com/models';
-      } else {
+      const testURL = resolveTestURL(provider, baseURL);
+      if (!testURL) {
         return {
           success: false,
           message: `无法确定 ${getProviderLabel(provider)} 的测试地址`,
@@ -544,18 +511,7 @@ export async function testAIProviderConnection(options: {
 
       try {
         // 构建请求头
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-
-        // 不同 provider 使用不同的认证方式
-        if (provider === 'anthropic') {
-          headers['x-api-key'] = apiKey;
-          headers['anthropic-version'] = '2023-06-01';
-        } else {
-          // OpenAI, DeepSeek, Groq, Moonshot, Zhipu, Qwen, OpenAI-compatible
-          headers['Authorization'] = `Bearer ${apiKey}`;
-        }
+        const headers = buildAuthHeaders(provider, apiKey);
 
         const response = await fetch(testURL, {
           method: 'GET',

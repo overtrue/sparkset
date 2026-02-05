@@ -1,9 +1,10 @@
 'use client';
-import { RiSubtractLine } from '@remixicon/react';
 
 import * as React from 'react';
 import { OTPInput, OTPInputContext } from 'input-otp';
+
 import { cn } from '@/lib/utils';
+import { RiSubtractLine } from '@remixicon/react';
 
 function InputOTP({
   className,
@@ -15,7 +16,11 @@ function InputOTP({
   return (
     <OTPInput
       data-slot="input-otp"
-      containerClassName={cn('flex items-center gap-2 has-disabled:opacity-50', containerClassName)}
+      containerClassName={cn(
+        'cn-input-otp flex items-center has-disabled:opacity-50',
+        containerClassName,
+      )}
+      spellCheck={false}
       className={cn('disabled:cursor-not-allowed', className)}
       {...props}
     />
@@ -24,7 +29,14 @@ function InputOTP({
 
 function InputOTPGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="input-otp-group" className={cn('flex items-center', className)} {...props} />
+    <div
+      data-slot="input-otp-group"
+      className={cn(
+        'has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 has-aria-invalid:border-destructive rounded-none has-aria-invalid:ring-1 flex items-center',
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -43,7 +55,7 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={isActive}
       className={cn(
-        'data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]',
+        'dark:bg-input/30 border-input data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive size-8 border-y border-r text-xs transition-all outline-none first:rounded-none first:border-l last:rounded-none data-[active=true]:ring-1 relative flex items-center justify-center data-[active=true]:z-10',
         className,
       )}
       {...props}
@@ -60,7 +72,12 @@ function InputOTPSlot({
 
 function InputOTPSeparator({ ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="input-otp-separator" role="separator" {...props}>
+    <div
+      data-slot="input-otp-separator"
+      className="[&_svg:not([class*='size-'])]:size-4 flex items-center"
+      role="separator"
+      {...props}
+    >
       <RiSubtractLine />
     </div>
   );

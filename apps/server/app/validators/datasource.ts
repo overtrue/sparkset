@@ -9,8 +9,7 @@ export const datasourceCreateSchema = z.object({
   // 密码可以为空（空字符串或 null），body parser 会将空字符串转换为 null
   password: z.union([z.string(), z.null()]).transform((val) => val ?? ''),
   database: z.string().min(1),
-  // isDefault 可能是 boolean 或 number（0/1），需要转换为 boolean
-  isDefault: z.coerce.boolean().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 export const datasourceUpdateSchema = datasourceCreateSchema.partial().extend({

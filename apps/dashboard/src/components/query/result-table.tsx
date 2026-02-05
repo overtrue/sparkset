@@ -6,10 +6,10 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
+  EmptyTitle,
 } from '@/components/ui/empty';
 import { ColumnDef } from '@tanstack/react-table';
 import { useMemo } from 'react';
@@ -17,6 +17,15 @@ import { useMemo } from 'react';
 interface ResultTableProps {
   rows: Record<string, unknown>[];
 }
+
+const formatCellValue = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value);
+};
 
 export function ResultTable({ rows }: ResultTableProps) {
   const t = useTranslations();
@@ -29,23 +38,7 @@ export function ResultTable({ rows }: ResultTableProps) {
       accessorKey: key,
       header: ({ column }) => <DataTableColumnHeader column={column} title={key} />,
       cell: ({ getValue }) => {
-        const value = getValue();
-        let displayValue: string;
-        if (value === null || value === undefined) {
-          displayValue = '';
-        } else if (typeof value === 'object') {
-          // Handle objects and arrays
-          displayValue = JSON.stringify(value);
-        } else if (typeof value === 'boolean') {
-          displayValue = value ? 'true' : 'false';
-        } else if (typeof value === 'number') {
-          displayValue = value.toString();
-        } else if (typeof value === 'string') {
-          displayValue = value;
-        } else {
-          // Fallback for any other type (shouldn't happen, but TypeScript needs this)
-          displayValue = JSON.stringify(value);
-        }
+        const displayValue = formatCellValue(getValue());
         return (
           <div className="max-w-full truncate" title={displayValue}>
             {displayValue}
@@ -61,18 +54,15 @@ export function ResultTable({ rows }: ResultTableProps) {
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <RiDatabase2Line className="h-8 w-8 text-gray-400" />
+              <RiDatabase2Line className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             </EmptyMedia>
-            <EmptyDescription className="text-base font-semibold text-foreground mt-2">
+            <EmptyTitle className="text-base font-semibold text-foreground mt-2">
               {t('Query successful but no data returned')}
-            </EmptyDescription>
-            <p className="text-muted-foreground text-sm mt-1">
+            </EmptyTitle>
+            <EmptyDescription className="text-muted-foreground text-sm mt-1">
               {t('No matching records in the table')}
-            </p>
+            </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent className="opacity-40">
-            <span className="text-xs tracking-widest">•••</span>
-          </EmptyContent>
         </Empty>
       </div>
     );

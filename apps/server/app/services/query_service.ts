@@ -1,7 +1,6 @@
 import { AIClient, VercelAIClient } from '../ai/index.js';
-import { DBClient, DataSourceConfig, QueryExecutor, QueryPlanner } from '@sparkset/core';
+import { QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
-import { ActionService } from '../services/action_service';
 import { AIProviderService } from '../services/ai_provider_service';
 import { DatasourceService } from '../services/datasource_service';
 import { SchemaService } from '../services/schema_service';
@@ -38,19 +37,16 @@ export interface QueryResponse {
 }
 
 /**
- * QueryService integrates planner + executor. If executor is provided, returns real DB rows; otherwise stub.
+ * QueryService integrates planner + executor to run real queries.
  */
 export class QueryService {
   constructor(
     private deps: {
       datasourceService: DatasourceService;
-      actionService: ActionService;
       schemaService: SchemaService;
       aiProviderService: AIProviderService;
       planner?: QueryPlanner;
-      executor?: QueryExecutor;
-      getDBClient?: (datasourceId: number) => Promise<DBClient>;
-      getDatasourceConfig?: (datasourceId: number) => Promise<DataSourceConfig>;
+      executor: QueryExecutor;
       logger?: LogLike;
     },
   ) {}
@@ -128,24 +124,11 @@ export class QueryService {
 
     const plan = await planner.plan(input.question, datasourceId, input.limit);
 
-    // If executor wired, run real queries
-    if (this.deps.executor) {
-      const execResult = await this.deps.executor.execute(plan.sql, { limit: input.limit });
-      return {
-        sql: plan.sql.map((s) => s.sql).join('\n'),
-        rows: execResult.rows as QueryResultRow[],
-        summary: execResult.summary,
-        datasourceId: datasourceId ?? undefined,
-      };
-    }
-
-    // Stub fallback (当没有 executor 时使用)
-    // 返回空结果，提示用户配置 executor
-    const limitedRows: QueryResultRow[] = [];
+    const execResult = await this.deps.executor.execute(plan.sql, { limit: input.limit });
     return {
       sql: plan.sql.map((s) => s.sql).join('\n'),
-      rows: limitedRows,
-      summary: '查询执行器未配置。请确保已正确配置数据源和查询执行器。',
+      rows: execResult.rows as QueryResultRow[],
+      summary: execResult.summary,
       datasourceId: datasourceId ?? undefined,
     };
   }

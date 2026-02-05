@@ -13,7 +13,7 @@ import { LoadingState } from '@/components/loading-state';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useRouter } from '@/i18n/client-routing';
+import { Link } from '@/i18n/client-routing';
 import { useBots, useDeleteBot } from '@/lib/api/bots-hooks';
 import { useResourceList } from '@/hooks/use-resource-list';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
@@ -33,7 +33,6 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 export default function BotsPage() {
   const t = useTranslations();
-  const router = useRouter();
   const { data, error, isLoading, mutate } = useBots(1, 10);
   const { trigger: deleteBot } = useDeleteBot();
   const { openDialog, dialogState, handleConfirm, handleCancel } = useConfirmDialog();
@@ -65,18 +64,6 @@ export default function BotsPage() {
     });
   };
 
-  const handleCreateNew = () => {
-    router.push('/dashboard/bots/new');
-  };
-
-  const handleViewDetails = (bot: Bot) => {
-    router.push(`/dashboard/bots/${bot.id}`);
-  };
-
-  const handleEdit = (bot: Bot) => {
-    router.push(`/dashboard/bots/${bot.id}/edit`);
-  };
-
   const formatDate = (value: string) => formatDateTime(value);
 
   const columns: ColumnDef<Bot>[] = [
@@ -86,13 +73,15 @@ export default function BotsPage() {
       cell: ({ row }) => {
         const bot = row.original;
         return (
-          <Button
-            variant="link"
-            className="h-auto p-0 text-primary font-medium"
-            onClick={() => handleViewDetails(bot)}
-          >
-            {row.getValue('name')}
-          </Button>
+          <div className="min-w-0">
+            <Button
+              variant="link"
+              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
+              asChild
+            >
+              <Link href={`/dashboard/bots/${bot.id}`}>{row.getValue('name')}</Link>
+            </Button>
+          </div>
         );
       },
       size: 150,
@@ -110,7 +99,9 @@ export default function BotsPage() {
       accessorKey: 'description',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.getValue('description') || '-'}</span>
+        <span className="text-muted-foreground text-sm break-words">
+          {row.getValue('description') || '-'}
+        </span>
       ),
       size: 200,
     },
@@ -158,17 +149,17 @@ export default function BotsPage() {
         const actions: RowAction[] = [
           {
             label: t('View Details'),
-            icon: <RiRobot2Line className="h-4 w-4" />,
-            onClick: () => handleViewDetails(bot),
+            icon: <RiRobot2Line className="h-4 w-4" aria-hidden="true" />,
+            href: `/dashboard/bots/${bot.id}`,
           },
           {
             label: t('Edit'),
-            icon: <RiEdit2Line className="h-4 w-4" />,
-            onClick: () => handleEdit(bot),
+            icon: <RiEdit2Line className="h-4 w-4" aria-hidden="true" />,
+            href: `/dashboard/bots/${bot.id}/edit`,
           },
           {
             label: t('Delete'),
-            icon: <RiDeleteBinLine className="h-4 w-4" />,
+            icon: <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />,
             onClick: () => handleDeleteClick(bot),
             variant: 'destructive',
           },
@@ -187,13 +178,13 @@ export default function BotsPage() {
           title={t('Bots')}
           description={t('Manage your AI bots')}
           action={
-            <Button onClick={handleCreateNew} disabled>
-              <RiAddLine className="h-4 w-4" />
+            <Button disabled>
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
               {t('New Bot')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -205,9 +196,11 @@ export default function BotsPage() {
           title={t('Bots')}
           description={t('Manage your AI bots')}
           action={
-            <Button onClick={handleCreateNew}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Bot')}
+            <Button asChild>
+              <Link href="/dashboard/bots/new">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Bot')}
+              </Link>
             </Button>
           }
         />
@@ -223,19 +216,21 @@ export default function BotsPage() {
           title={t('Bots')}
           description={t('Manage your AI bots')}
           action={
-            <Button onClick={handleCreateNew}>
-              <RiAddLine className="h-4 w-4" />
-              {t('New Bot')}
+            <Button asChild>
+              <Link href="/dashboard/bots/new">
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+                {t('New Bot')}
+              </Link>
             </Button>
           }
         />
         <EmptyState
-          icon={<RiRobot2Line className="h-8 w-8 text-muted-foreground" />}
+          icon={<RiRobot2Line className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
           title={t('No Bots')}
           description={t('Create your first bot to get started')}
           action={{
-            label: t('Create your first bot'),
-            onClick: handleCreateNew,
+            label: t('Create Your First Bot'),
+            href: '/dashboard/bots/new',
           }}
         />
       </div>
@@ -248,9 +243,11 @@ export default function BotsPage() {
         title={t('Bots')}
         description={t('Manage your AI bots')}
         action={
-          <Button onClick={handleCreateNew}>
-            <RiAddLine className="h-4 w-4" />
-            {t('New Bot')}
+          <Button asChild>
+            <Link href="/dashboard/bots/new">
+              <RiAddLine className="h-4 w-4" aria-hidden="true" />
+              {t('New Bot')}
+            </Link>
           </Button>
         }
       />
@@ -259,7 +256,7 @@ export default function BotsPage() {
         columns={columns}
         data={bots}
         searchKey="name"
-        searchPlaceholder={t('Search bots...')}
+        searchPlaceholder={t('Search bots…')}
         enableRowSelection
         onDeleteSelected={handleBulkDelete}
         deleteConfirmTitle={t('Delete Bots')}

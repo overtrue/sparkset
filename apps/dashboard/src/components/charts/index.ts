@@ -39,7 +39,6 @@ export {
 export {
   transformData,
   buildConfig,
-  buildConfigFromFormData,
   extractXKey,
   extractYKeys,
   extractNameKey,
@@ -52,7 +51,7 @@ export {
 } from './utils';
 
 // Components
-export { ChartRenderer, type ChartRendererProps } from './renderer';
+export { ChartFrame, ChartRenderer, type ChartRendererProps } from './renderer';
 export { ChartBuilder, type ChartBuilderHandle, type ChartSaveData } from './builder';
 export { ChartBuilderClient } from './builder-client';
 export {

@@ -1,10 +1,10 @@
 'use client';
 import { RiArrowDownSLine, RiCheckLine, RiDashboardLine, RiLoader4Line } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/client-routing';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -14,8 +14,8 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { dashboardsApi } from '@/lib/api/dashboards';
-import { datasetsApi } from '@/lib/api/datasets';
+import { addWidget, fetchDashboards } from '@/lib/api/dashboards';
+import { createDataset } from '@/lib/api/datasets';
 import type { Dashboard, ChartWidgetConfig, DatasetWidgetConfig } from '@/types/dashboard';
 import { toast } from 'sonner';
 
@@ -44,6 +44,8 @@ interface DashboardSelectorProps {
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
+const DEFAULT_WIDGET_SIZE = { w: 6, h: 12 };
 
 // 从 rows 推断 schema
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,41 +77,55 @@ export function DashboardSelector({
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen);
+  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
+  const [selectedDashboardId, setSelectedDashboardId] = useState<number | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const selectedDashboard = useMemo(
+    () => dashboards.find((dashboard) => dashboard.id === selectedDashboardId),
+    [dashboards, selectedDashboardId],
+  );
 
   // 同步外部控制
   useEffect(() => {
     setOpen(defaultOpen);
   }, [defaultOpen]);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    onOpenChange?.(newOpen);
-  };
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
-  const [selectedDashboardId, setSelectedDashboardId] = useState<number | undefined>(undefined);
-  const [loading, setLoading] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      setOpen(newOpen);
+      onOpenChange?.(newOpen);
+    },
+    [onOpenChange],
+  );
+
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  const loadDashboards = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await fetchDashboards();
+      setDashboards(result.items);
+    } catch {
+      toast.error(tRef.current('Failed to load dashboards'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // 加载仪表盘列表
   useEffect(() => {
     if (open) {
       void loadDashboards();
     }
-  }, [open]);
+  }, [open, loadDashboards]);
 
-  const loadDashboards = async () => {
-    try {
-      setLoading(true);
-      const result = await dashboardsApi.list();
-      setDashboards(result.items);
-    } catch {
-      toast.error(t('Failed to load dashboards'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     if (!selectedDashboardId) {
       toast.error(t('Please select a dashboard'));
       return;
@@ -136,7 +152,7 @@ export function DashboardSelector({
           ? queryResult.question.slice(0, 50)
           : t('Query Result Dataset');
 
-        const dataset = await datasetsApi.create({
+        const dataset = await createDataset({
           datasourceId: queryResult.datasourceId,
           name: datasetName,
           description: '',
@@ -163,16 +179,14 @@ export function DashboardSelector({
       }
 
       // 默认尺寸：参考 add-widget-dialog.tsx
-      const defaultSize = { w: 6, h: 12 };
-
       // 添加到仪表盘
-      await dashboardsApi.addWidget(selectedDashboardId, {
+      await addWidget(selectedDashboardId, {
         title: '', // 标题默认为空，使用来源对象的标题
         type: widgetType,
         x: 0, // 位置会在仪表盘中计算
         y: 0,
-        w: defaultSize.w,
-        h: defaultSize.h,
+        w: DEFAULT_WIDGET_SIZE.w,
+        h: DEFAULT_WIDGET_SIZE.h,
         config,
       });
 
@@ -186,91 +200,104 @@ export function DashboardSelector({
     } finally {
       setAdding(false);
     }
-  };
+  }, [contentId, onAdded, queryResult, router, selectedDashboardId, t, type]);
 
-  const selectedDashboard = dashboards.find((d) => d.id === selectedDashboardId);
+  const renderDashboardList = (options: {
+    onSelect: (dashboard: Dashboard) => void;
+    footer?: React.ReactNode;
+  }) => (
+    <Command>
+      <CommandInput
+        placeholder={t('Search dashboard…')}
+        aria-label={t('Search dashboard')}
+        name="dashboard-search"
+        autoComplete="off"
+      />
+      <CommandList>
+        {loading ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">{t('Loading…')}</div>
+        ) : (
+          <>
+            <CommandEmpty>{t('No dashboard found')}</CommandEmpty>
+            <CommandGroup>
+              {dashboards.map((dashboard) => (
+                <CommandItem
+                  key={dashboard.id}
+                  value={`${dashboard.id} ${dashboard.title}`}
+                  onSelect={() => options.onSelect(dashboard)}
+                  className="py-1.5"
+                >
+                  <RiCheckLine
+                    className={cn(
+                      'mr-2 h-3 w-3 shrink-0',
+                      selectedDashboardId === dashboard.id ? 'opacity-100' : 'opacity-0',
+                    )}
+                    aria-hidden="true"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">{dashboard.title}</div>
+                    {dashboard.description && (
+                      <div className="text-xs text-muted-foreground">{dashboard.description}</div>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {options.footer}
+          </>
+        )}
+      </CommandList>
+    </Command>
+  );
 
   // Button 模式
   if (variant === 'button') {
     return (
       <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size={size}
-            className={cn('gap-1.5', className)}
-            disabled={adding}
-          >
-            {adding ? (
-              <>
-                <RiLoader4Line className="h-4 w-4 animate-spin" />
-                {t('Adding...')}
-              </>
-            ) : (
-              <>
-                <RiDashboardLine className="h-4 w-4" />
-                {t('Add to Dashboard')}
-              </>
-            )}
-          </Button>
+        <PopoverTrigger
+          disabled={adding}
+          className={buttonVariants({
+            variant: 'outline',
+            size,
+            className: cn('gap-1.5', className),
+          })}
+        >
+          {adding ? (
+            <>
+              <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t('Adding…')}
+            </>
+          ) : (
+            <>
+              <RiDashboardLine className="h-4 w-4" aria-hidden="true" />
+              {t('Add to Dashboard')}
+            </>
+          )}
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder={t('Search dashboard')} />
-            <CommandList>
-              {loading ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">{t('Loading')}</div>
-              ) : (
-                <>
-                  <CommandEmpty>{t('No dashboard found')}</CommandEmpty>
-                  <CommandGroup>
-                    {dashboards.map((dashboard) => (
-                      <CommandItem
-                        key={dashboard.id}
-                        value={`${dashboard.id} ${dashboard.title}`}
-                        onSelect={() => {
-                          setSelectedDashboardId(dashboard.id);
-                        }}
-                        className="py-1.5"
-                      >
-                        <RiCheckLine
-                          className={cn(
-                            'mr-2 h-3 w-3 shrink-0',
-                            selectedDashboardId === dashboard.id ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">{dashboard.title}</div>
-                          {dashboard.description && (
-                            <div className="text-xs text-muted-foreground">
-                              {dashboard.description}
-                            </div>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  {dashboards.length > 0 && selectedDashboardId && (
-                    <div className="border-t p-2">
-                      <Button className="w-full" size="sm" onClick={handleAdd} disabled={adding}>
-                        {adding ? (
-                          <>
-                            <RiLoader4Line className="h-4 w-4 animate-spin" />
-                            {t('Adding...')}
-                          </>
-                        ) : (
-                          <>
-                            <RiDashboardLine className="h-4 w-4" />
-                            {t('Add to')} {selectedDashboard?.title}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </CommandList>
-          </Command>
+          {renderDashboardList({
+            onSelect: (dashboard) => {
+              setSelectedDashboardId(dashboard.id);
+            },
+            footer:
+              dashboards.length > 0 && selectedDashboardId ? (
+                <div className="border-t p-2">
+                  <Button className="w-full" size="sm" onClick={handleAdd} disabled={adding}>
+                    {adding ? (
+                      <>
+                        <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        {t('Adding…')}
+                      </>
+                    ) : (
+                      <>
+                        <RiDashboardLine className="h-4 w-4" aria-hidden="true" />
+                        {t('Add to')} {selectedDashboard?.title}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : null,
+          })}
         </PopoverContent>
       </Popover>
     );
@@ -280,61 +307,27 @@ export function DashboardSelector({
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
       <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={adding || loading}
-            className={cn(
-              'h-7 text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[160px] px-2 justify-between font-normal',
-            )}
-          >
-            {selectedDashboard ? selectedDashboard.title : t('Select Dashboard')}
-            <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-          </Button>
+        <PopoverTrigger
+          role="combobox"
+          aria-expanded={open}
+          disabled={adding || loading}
+          className={buttonVariants({
+            variant: 'outline',
+            size: 'sm',
+            className:
+              'text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[160px] px-2 justify-between font-normal',
+          })}
+        >
+          {selectedDashboard ? selectedDashboard.title : t('Select Dashboard')}
+          <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" aria-hidden="true" />
         </PopoverTrigger>
         <PopoverContent className="w-[240px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder={t('Search dashboard')} />
-            <CommandList>
-              {loading ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">{t('Loading')}</div>
-              ) : (
-                <>
-                  <CommandEmpty>{t('No dashboard found')}</CommandEmpty>
-                  <CommandGroup>
-                    {dashboards.map((dashboard) => (
-                      <CommandItem
-                        key={dashboard.id}
-                        value={`${dashboard.id} ${dashboard.title}`}
-                        onSelect={() => {
-                          setSelectedDashboardId(dashboard.id);
-                          handleOpenChange(false);
-                        }}
-                        className="py-1.5"
-                      >
-                        <RiCheckLine
-                          className={cn(
-                            'mr-2 h-3 w-3 shrink-0',
-                            selectedDashboardId === dashboard.id ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">{dashboard.title}</div>
-                          {dashboard.description && (
-                            <div className="text-xs text-muted-foreground">
-                              {dashboard.description}
-                            </div>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </>
-              )}
-            </CommandList>
-          </Command>
+          {renderDashboardList({
+            onSelect: (dashboard) => {
+              setSelectedDashboardId(dashboard.id);
+              handleOpenChange(false);
+            },
+          })}
         </PopoverContent>
       </Popover>
       {selectedDashboardId && (
@@ -347,8 +340,8 @@ export function DashboardSelector({
         >
           {adding ? (
             <>
-              <RiLoader4Line className="h-4 w-4 animate-spin" />
-              {t('Adding...')}
+              <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t('Adding…')}
             </>
           ) : (
             t('Add')

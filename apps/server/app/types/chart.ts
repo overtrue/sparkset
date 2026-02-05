@@ -62,9 +62,6 @@ export interface ChartSpec {
     innerRadius?: number;
     outerRadius?: number;
   };
-
-  // Recharts 高级配置
-  rechartsOverrides?: Record<string, unknown>;
 }
 
 // 前端渲染结果
@@ -74,7 +71,6 @@ export interface ChartRenderResult {
   data: unknown[];
   config: ShadcnChartConfig;
   style?: ChartSpec['style'];
-  rechartsProps: Record<string, unknown>;
   warnings?: string[];
 }
 

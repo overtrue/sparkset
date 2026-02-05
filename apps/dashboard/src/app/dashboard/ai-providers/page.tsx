@@ -28,7 +28,7 @@ const Page = async () => {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline ml-1"
             >
-              <RiExternalLinkLine className="h-3 w-3" />
+              <RiExternalLinkLine className="h-3 w-3" aria-hidden="true" />
               {t('View Documentation')}
             </Link>
           </>

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { LoadingState } from '@/components/loading-state';
 import { ErrorState } from '@/components/error-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from '@/i18n/client-routing';
+import { Link, useRouter } from '@/i18n/client-routing';
 import { useBot, useBotEvents } from '@/lib/api/bots-hooks';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
@@ -29,7 +29,7 @@ export default function BotDetailPage() {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
-  const botId = useMemo(() => (params?.id ? Number(params.id) : null), [params?.id]);
+  const botId = params?.id ? Number(params.id) : null;
   const [showTestDrawer, setShowTestDrawer] = useState(false);
 
   const { data: bot, error, isLoading } = useBot(botId);
@@ -43,16 +43,16 @@ export default function BotDetailPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Loading...')}
+          title={t('Loading…')}
           description={t('Fetching bot details')}
           action={
             <Button onClick={() => router.back()} variant="outline" disabled>
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -65,7 +65,7 @@ export default function BotDetailPage() {
           description={t('View bot configuration')}
           action={
             <Button onClick={() => router.back()} variant="outline">
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
@@ -83,19 +83,23 @@ export default function BotDetailPage() {
         action={
           <div className="flex gap-2">
             <Button onClick={() => setShowTestDrawer(true)} variant="secondary">
-              <RiPlayCircleLine className="h-4 w-4" />
+              <RiPlayCircleLine className="h-4 w-4" aria-hidden="true" />
               {t('Test Bot')}
             </Button>
-            <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/logs`)} variant="outline">
-              <RiFileListLine className="h-4 w-4" />
-              {t('View Logs')}
+            <Button asChild variant="outline">
+              <Link href={`/dashboard/bots/${bot.id}/logs`}>
+                <RiFileListLine className="h-4 w-4" aria-hidden="true" />
+                {t('View Logs')}
+              </Link>
             </Button>
-            <Button onClick={() => router.push(`/dashboard/bots/${bot.id}/edit`)} variant="outline">
-              <RiEdit2Line className="h-4 w-4" />
-              {t('Edit')}
+            <Button asChild variant="outline">
+              <Link href={`/dashboard/bots/${bot.id}/edit`}>
+                <RiEdit2Line className="h-4 w-4" aria-hidden="true" />
+                {t('Edit')}
+              </Link>
             </Button>
             <Button onClick={() => router.back()} variant="outline">
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           </div>

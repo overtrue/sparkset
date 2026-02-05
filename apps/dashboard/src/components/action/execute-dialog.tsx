@@ -232,7 +232,7 @@ export function ExecuteDialog({
               {t('Cancel')}
             </Button>
             <Button type="submit" disabled={executing}>
-              {executing ? t('Executing') : t('Execute')}
+              {executing ? t('Executing…') : t('Execute')}
             </Button>
           </DialogFooter>
         </form>

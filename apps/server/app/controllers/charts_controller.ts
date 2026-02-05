@@ -60,7 +60,6 @@ const createSchema = z.object({
         outerRadius: z.number().optional(),
       })
       .optional(),
-    rechartsOverrides: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

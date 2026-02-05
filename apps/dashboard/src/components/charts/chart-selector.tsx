@@ -38,6 +38,8 @@ export interface ChartSelectorProps {
   children?: React.ReactNode;
   /** Whether the selector is disabled */
   disabled?: boolean;
+  /** Optional trigger id for label association */
+  triggerId?: string;
 }
 
 // ============================================================================
@@ -54,11 +56,14 @@ const CATEGORY_ICONS: Record<ChartCategory, React.ComponentType<{ className?: st
   table: RiTableLine,
 };
 
+const DEFAULT_CATEGORY: ChartCategory = 'bar';
+const DEFAULT_CATEGORY_ICON = RiBarChart2Line;
+
 // ============================================================================
 // Mini Chart Preview Components
 // ============================================================================
 
-function MiniAreaChart({ variant }: { variant: ChartVariant }) {
+const MiniAreaChart = React.memo(function MiniAreaChart({ variant }: { variant: ChartVariant }) {
   const isStacked = variant.includes('stacked');
   const isStep = variant.includes('step');
   const isLinear = variant.includes('linear');
@@ -71,7 +76,7 @@ function MiniAreaChart({ variant }: { variant: ChartVariant }) {
       : 'M 5 25 Q 15 20 20 15 Q 25 10 35 5';
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       <defs>
         {isGradient && (
           <linearGradient id={`gradient-${variant}`} x1="0" y1="0" x2="0" y2="1">
@@ -96,15 +101,15 @@ function MiniAreaChart({ variant }: { variant: ChartVariant }) {
       )}
     </svg>
   );
-}
+});
 
-function MiniBarChart({ variant }: { variant: ChartVariant }) {
+const MiniBarChart = React.memo(function MiniBarChart({ variant }: { variant: ChartVariant }) {
   const isHorizontal = variant.includes('horizontal');
   const isStacked = variant.includes('stacked');
 
   if (isHorizontal) {
     return (
-      <svg viewBox="0 0 40 30" className="h-full w-full">
+      <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
         <rect x="5" y="4" width="25" height="5" fill="currentColor" rx="1" />
         <rect x="5" y="12" width="18" height="5" fill="currentColor" fillOpacity="0.6" rx="1" />
         <rect x="5" y="20" width="30" height="5" fill="currentColor" fillOpacity="0.3" rx="1" />
@@ -113,7 +118,7 @@ function MiniBarChart({ variant }: { variant: ChartVariant }) {
   }
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       <rect x="6" y="10" width="6" height="18" fill="currentColor" rx="1" />
       <rect
         x="14"
@@ -129,9 +134,9 @@ function MiniBarChart({ variant }: { variant: ChartVariant }) {
       <rect x="30" y="12" width="6" height="16" fill="currentColor" fillOpacity="0.3" rx="1" />
     </svg>
   );
-}
+});
 
-function MiniLineChart({ variant }: { variant: ChartVariant }) {
+const MiniLineChart = React.memo(function MiniLineChart({ variant }: { variant: ChartVariant }) {
   const isStep = variant.includes('step');
   const isLinear = variant.includes('linear');
   const showDots = variant.includes('dots');
@@ -143,7 +148,7 @@ function MiniLineChart({ variant }: { variant: ChartVariant }) {
       : 'M 5 22 Q 12 18 15 15 Q 20 10 28 8 Q 32 6 35 5';
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       <path d={pathD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       {showDots && (
         <>
@@ -156,14 +161,14 @@ function MiniLineChart({ variant }: { variant: ChartVariant }) {
       )}
     </svg>
   );
-}
+});
 
-function MiniPieChart({ variant }: { variant: ChartVariant }) {
+const MiniPieChart = React.memo(function MiniPieChart({ variant }: { variant: ChartVariant }) {
   const isDonut = variant.includes('donut');
   const showLabels = variant.includes('label');
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       {/* Pie slices */}
       <path d="M 20 15 L 20 3 A 12 12 0 0 1 31 15 Z" fill="currentColor" />
       <path d="M 20 15 L 31 15 A 12 12 0 0 1 20 27 Z" fill="currentColor" fillOpacity="0.6" />
@@ -186,14 +191,14 @@ function MiniPieChart({ variant }: { variant: ChartVariant }) {
       )}
     </svg>
   );
-}
+});
 
-function MiniRadarChart({ variant }: { variant: ChartVariant }) {
+const MiniRadarChart = React.memo(function MiniRadarChart({ variant }: { variant: ChartVariant }) {
   const isCircle = variant.includes('circle');
   const showDots = variant.includes('dots');
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       {/* Grid */}
       {isCircle ? (
         <>
@@ -230,14 +235,18 @@ function MiniRadarChart({ variant }: { variant: ChartVariant }) {
       )}
     </svg>
   );
-}
+});
 
-function MiniRadialChart({ variant }: { variant: ChartVariant }) {
+const MiniRadialChart = React.memo(function MiniRadialChart({
+  variant,
+}: {
+  variant: ChartVariant;
+}) {
   const showLabels = variant.includes('label');
   const isStacked = variant.includes('stacked');
 
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       {/* Background track */}
       <path
         d="M 8 25 A 12 12 0 0 1 32 25"
@@ -275,11 +284,11 @@ function MiniRadialChart({ variant }: { variant: ChartVariant }) {
       )}
     </svg>
   );
-}
+});
 
-function MiniTableChart() {
+const MiniTableChart = React.memo(function MiniTableChart() {
   return (
-    <svg viewBox="0 0 40 30" className="h-full w-full">
+    <svg viewBox="0 0 40 30" className="h-full w-full" aria-hidden="true" focusable="false">
       {/* Header */}
       <rect x="4" y="4" width="32" height="6" fill="currentColor" fillOpacity="0.2" rx="1" />
 
@@ -293,13 +302,13 @@ function MiniTableChart() {
       <line x1="27" y1="4" x2="27" y2="26" stroke="currentColor" strokeOpacity="0.3" />
     </svg>
   );
-}
+});
 
 // ============================================================================
 // Variant Preview Component
 // ============================================================================
 
-function VariantPreview({ variant }: { variant: ChartVariant }) {
+const VariantPreview = React.memo(function VariantPreview({ variant }: { variant: ChartVariant }) {
   const category = CHART_VARIANTS[variant].category;
 
   switch (category) {
@@ -320,36 +329,75 @@ function VariantPreview({ variant }: { variant: ChartVariant }) {
     default:
       return null;
   }
-}
+});
 
 // ============================================================================
 // Main Component
 // ============================================================================
 
-export function ChartSelector({ value, onChange, children, disabled }: ChartSelectorProps) {
+export function ChartSelector({
+  value,
+  onChange,
+  children,
+  disabled,
+  triggerId,
+}: ChartSelectorProps) {
   const t = useTranslations();
   const [open, setOpen] = React.useState(false);
   const [selectedCategory, setSelectedCategory] = React.useState<ChartCategory>(
-    value ? CHART_VARIANTS[value].category : 'bar',
+    value ? CHART_VARIANTS[value].category : DEFAULT_CATEGORY,
   );
 
-  const categories = getAllCategories();
+  const categories = React.useMemo(() => getAllCategories(), []);
+  const variantsByCategory = React.useMemo(
+    () => new Map(categories.map((category) => [category.id, getVariantsForCategory(category.id)])),
+    [categories],
+  );
 
-  const handleSelectVariant = (variant: ChartVariant) => {
-    const category = CHART_VARIANTS[variant].category;
-    onChange?.(variant, category);
-    setOpen(false);
-  };
+  React.useEffect(() => {
+    if (!value) return;
+    setSelectedCategory(CHART_VARIANTS[value].category);
+  }, [value]);
+
+  const handleSelectVariant = React.useCallback(
+    (variant: ChartVariant) => {
+      const category = CHART_VARIANTS[variant].category;
+      onChange?.(variant, category);
+      setOpen(false);
+    },
+    [onChange],
+  );
+
+  const handleCategoryChange = React.useCallback((nextCategory: string) => {
+    setSelectedCategory(nextCategory as ChartCategory);
+  }, []);
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (nextOpen && value) {
+        setSelectedCategory(CHART_VARIANTS[value].category);
+      }
+    },
+    [value],
+  );
 
   const selectedVariant = value ? CHART_VARIANTS[value] : null;
-  const CategoryIcon = selectedVariant ? CATEGORY_ICONS[selectedVariant.category] : RiBarChart2Line;
+  const CategoryIcon = selectedVariant
+    ? CATEGORY_ICONS[selectedVariant.category]
+    : DEFAULT_CATEGORY_ICON;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild disabled={disabled}>
         {children || (
-          <Button variant="outline" className="w-full justify-start gap-2" disabled={disabled}>
-            <CategoryIcon className="h-4 w-4" />
+          <Button
+            id={triggerId}
+            variant="outline"
+            className="w-full justify-start gap-2"
+            disabled={disabled}
+          >
+            <CategoryIcon className="h-4 w-4" aria-hidden="true" />
             <span className="flex-1 text-left">
               {selectedVariant ? t(selectedVariant.name) : t('Select chart type')}
             </span>
@@ -364,11 +412,7 @@ export function ChartSelector({ value, onChange, children, disabled }: ChartSele
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs
-          value={selectedCategory}
-          onValueChange={(v) => setSelectedCategory(v as ChartCategory)}
-          className="mt-4"
-        >
+        <Tabs value={selectedCategory} onValueChange={handleCategoryChange} className="mt-4">
           <TabsList className="grid w-full grid-cols-7">
             {categories.map((category) => {
               const Icon = CATEGORY_ICONS[category.id];
@@ -377,8 +421,9 @@ export function ChartSelector({ value, onChange, children, disabled }: ChartSele
                   key={category.id}
                   value={category.id}
                   className="flex items-center gap-1.5"
+                  aria-label={t(category.name)}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                   <span className="hidden sm:inline">{t(category.name)}</span>
                 </TabsTrigger>
               );
@@ -389,7 +434,7 @@ export function ChartSelector({ value, onChange, children, disabled }: ChartSele
             <TabsContent key={category.id} value={category.id} className="mt-4">
               <ScrollArea className="h-[320px]">
                 <div className="grid grid-cols-2 gap-4 pr-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {getVariantsForCategory(category.id).map((variantConfig) => (
+                  {(variantsByCategory.get(category.id) ?? []).map((variantConfig) => (
                     <button
                       key={variantConfig.id}
                       type="button"
@@ -398,6 +443,8 @@ export function ChartSelector({ value, onChange, children, disabled }: ChartSele
                         'group flex flex-col items-center rounded-lg border p-4 transition-all hover:border-primary hover:bg-accent',
                         value === variantConfig.id && 'border-primary bg-accent',
                       )}
+                      aria-pressed={value === variantConfig.id}
+                      aria-label={t(variantConfig.name)}
                     >
                       <div className="mb-2 h-12 w-full text-primary">
                         <VariantPreview variant={variantConfig.id} />
@@ -454,8 +501,9 @@ export function ChartTypeSelector({
             onClick={() => onChange?.(category.id)}
             disabled={disabled}
             className="gap-1.5"
+            aria-pressed={value === category.id}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4" aria-hidden="true" />
             {t(category.name)}
           </Button>
         );
@@ -479,6 +527,8 @@ export interface ChartVariantSelectorProps {
   disabled?: boolean;
   /** Class name */
   className?: string;
+  /** Optional aria-labelledby for group */
+  ariaLabelledBy?: string;
 }
 
 export function ChartVariantSelector({
@@ -487,12 +537,17 @@ export function ChartVariantSelector({
   onChange,
   disabled,
   className,
+  ariaLabelledBy,
 }: ChartVariantSelectorProps) {
   const t = useTranslations();
   const variants = getVariantsForCategory(category);
 
   return (
-    <div className={cn('grid grid-cols-2 gap-2 sm:grid-cols-3', className)}>
+    <div
+      className={cn('grid grid-cols-2 gap-2 sm:grid-cols-3', className)}
+      role="group"
+      aria-labelledby={ariaLabelledBy}
+    >
       {variants.map((variant) => (
         <button
           key={variant.id}
@@ -503,6 +558,8 @@ export function ChartVariantSelector({
             'flex flex-col items-center rounded-lg border p-3 transition-all hover:border-primary hover:bg-accent disabled:opacity-50',
             value === variant.id && 'border-primary bg-accent',
           )}
+          aria-pressed={value === variant.id}
+          aria-label={t(variant.name)}
         >
           <div className="mb-2 h-8 w-full text-primary">
             <VariantPreview variant={variant.id} />

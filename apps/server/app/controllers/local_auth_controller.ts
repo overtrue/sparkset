@@ -33,32 +33,7 @@ export default class LocalAuthController {
       }
     }
 
-    // 如果没有 header token，检查旧的 cookie 方式（向后兼容）
     if (!token) {
-      const authToken = request.cookie('auth_token');
-      const authProvider = request.cookie('auth_provider');
-
-      if (authToken && authProvider === 'local') {
-        // 旧的 cookie 格式: userId_timestamp
-        const [userId] = authToken.split('_');
-        const user = await User.find(parseInt(userId));
-
-        if (user && user.isActive) {
-          return {
-            authenticated: true,
-            user: {
-              id: user.id,
-              username: user.username,
-              email: user.email,
-              displayName: user.displayName,
-              roles: user.roles,
-              permissions: user.permissions,
-              provider: 'local',
-            },
-          };
-        }
-      }
-
       return {
         authenticated: false,
         enabled: this.authProvider.enabled(),
@@ -284,10 +259,6 @@ export default class LocalAuthController {
         const guard = new AccessTokenGuard(ctx);
         await guard.revokeToken(token);
       }
-
-      // 也清除旧的 cookie（向后兼容）
-      response.clearCookie('auth_token');
-      response.clearCookie('auth_provider');
 
       return {
         success: true,

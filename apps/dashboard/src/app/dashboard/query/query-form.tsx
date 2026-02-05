@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { runQuery } from '@/lib/query';
 import { RiRefreshLine } from '@remixicon/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from '@/i18n/use-translations';
 
 interface Props {
@@ -38,19 +38,41 @@ const QueryForm = ({
 }: Props) => {
   const t = useTranslations();
   const [internalQuestion, setInternalQuestion] = useState('');
-  const question = externalQuestion ?? internalQuestion;
+  const isControlled = externalQuestion !== undefined;
+  const question = isControlled ? externalQuestion : internalQuestion;
   const setQuestion = (q: string) => {
-    setInternalQuestion(q);
+    if (!isControlled) {
+      setInternalQuestion(q);
+    }
     onQuestionChange?.(q);
   };
-  const defaultDatasourceId =
-    defaultDs ?? datasources.find((d) => d.isDefault)?.id ?? datasources[0]?.id;
-  const [datasource, setDatasource] = useState(defaultDatasourceId);
-  const [aiProvider, setAiProvider] = useState(
-    defaultAiProvider ?? aiProviders.find((p) => p.isDefault)?.id ?? aiProviders[0]?.id,
+  const defaultDatasourceId = useMemo(
+    () => defaultDs ?? datasources.find((d) => d.isDefault)?.id ?? datasources[0]?.id,
+    [datasources, defaultDs],
   );
+  const defaultAiProviderId = useMemo(
+    () => defaultAiProvider ?? aiProviders.find((p) => p.isDefault)?.id ?? aiProviders[0]?.id,
+    [aiProviders, defaultAiProvider],
+  );
+  const [datasource, setDatasource] = useState(defaultDatasourceId);
+  const [aiProvider, setAiProvider] = useState(defaultAiProviderId);
   const [limit, setLimit] = useState(5);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!defaultDatasourceId) return;
+    if (!datasource || !datasources.some((item) => item.id === datasource)) {
+      setDatasource(defaultDatasourceId);
+      onDatasourceChange?.(defaultDatasourceId);
+    }
+  }, [datasource, datasources, defaultDatasourceId, onDatasourceChange]);
+
+  useEffect(() => {
+    if (!defaultAiProviderId) return;
+    if (!aiProvider || !aiProviders.some((item) => item.id === aiProvider)) {
+      setAiProvider(defaultAiProviderId);
+    }
+  }, [aiProvider, aiProviders, defaultAiProviderId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +102,9 @@ const QueryForm = ({
         >
           {/* 主要输入区域 */}
           <div className="bg-background rounded-t-xl">
+            <Label htmlFor="question" className="sr-only">
+              {t('Query')}
+            </Label>
             <Textarea
               id="question"
               rows={3}
@@ -119,15 +144,23 @@ const QueryForm = ({
             {/* Limit 输入 */}
             <div className="flex items-center gap-1.5">
               <Label htmlFor="limit" className="text-xs text-muted-foreground whitespace-nowrap">
-                Limit
+                {t('Limit')}
               </Label>
               <Input
                 id="limit"
+                name="limit"
                 type="number"
                 min={1}
                 max={1000}
                 value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
+                onChange={(e) => {
+                  const nextValue = Number(e.target.value);
+                  const safeValue = Number.isNaN(nextValue)
+                    ? 1
+                    : Math.min(1000, Math.max(1, nextValue));
+                  setLimit(safeValue);
+                }}
+                inputMode="numeric"
                 disabled={loading}
                 className="h-7 w-14 text-xs border-border/50 bg-background hover:bg-muted/50 px-2"
               />
@@ -144,13 +177,15 @@ const QueryForm = ({
               >
                 {loading ? (
                   <>
-                    <RiRefreshLine className="h-4 w-4 animate-spin" />
+                    <RiRefreshLine className="h-4 w-4 animate-spin" aria-hidden="true" />
                     {t('Querying')}
                   </>
                 ) : (
                   <>
                     {t('Run Query')}
-                    <span className="ml-1.5 text-[10px] opacity-60">⌘↵</span>
+                    <span className="ml-1.5 text-[10px] opacity-60" aria-hidden="true">
+                      ⌘↵
+                    </span>
                   </>
                 )}
               </Button>

@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Chart, Dataset } from '@/types/chart';
+import { useTranslations } from '@/i18n/use-translations';
 import type { DashboardWidget } from '@/types/dashboard';
 import { ChartWidget } from './chart-widget';
 import { DatasetWidget } from './dataset-widget';
@@ -11,8 +12,8 @@ import { WidgetMenu } from './widget-menu';
 interface WidgetProps {
   widget: DashboardWidget;
   refreshKey?: number;
-  charts?: Chart[]; // 图表列表，用于获取标题
-  datasets?: Dataset[]; // 数据集列表，用于获取标题
+  charts?: Map<number, Chart>; // 图表列表，用于获取标题
+  datasets?: Map<number, Dataset>; // 数据集列表，用于获取标题
   onRefresh?: (widgetId: number) => void;
   onEdit?: (widget: DashboardWidget) => void;
   onRemove?: (widgetId: number) => void;
@@ -21,12 +22,13 @@ interface WidgetProps {
 export function Widget({
   widget,
   refreshKey,
-  charts = [],
-  datasets = [],
+  charts = new Map<number, Chart>(),
+  datasets = new Map<number, Dataset>(),
   onRefresh,
   onEdit,
   onRemove,
 }: WidgetProps) {
+  const t = useTranslations();
   const handleEdit = () => {
     if (onEdit) {
       onEdit(widget);
@@ -51,7 +53,7 @@ export function Widget({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return <TextWidget config={widget.config as any} />;
       default:
-        return <div className="p-4 text-muted-foreground">未知的 Widget 类型</div>;
+        return <div className="p-4 text-muted-foreground">{t('Unknown widget type')}</div>;
     }
   };
 
@@ -65,11 +67,11 @@ export function Widget({
     // 否则使用来源对象的标题
     if (widget.type === 'chart') {
       const config = widget.config as { chartId: number };
-      const chart = charts.find((c) => c.id === config.chartId);
+      const chart = charts.get(config.chartId);
       return chart?.title || null;
     } else if (widget.type === 'dataset') {
       const config = widget.config as { datasetId: number };
-      const dataset = datasets.find((d) => d.id === config.datasetId);
+      const dataset = datasets.get(config.datasetId);
       return dataset?.name || null;
     }
 

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { LoadingState } from '@/components/loading-state';
 import { formatDateTime } from '@/lib/utils/date';
+import { truncate } from '@/lib/utils/format';
 import type { BotEvent } from '@/types/api';
 
 interface EventLogsProps {
@@ -37,7 +38,7 @@ export function EventLogs({ events = [], isLoading, error }: EventLogsProps) {
           <CardDescription>{t('Webhook events for this bot')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <LoadingState message={t('Loading events...')} />
+          <LoadingState message={t('Loading events…')} />
         </CardContent>
       </Card>
     );
@@ -99,10 +100,7 @@ export function EventLogs({ events = [], isLoading, error }: EventLogsProps) {
                   {t('User')}: {event.externalUserName || event.externalUserId}
                 </p>
                 {event.content && (
-                  <p className="text-sm break-words mb-1">
-                    {event.content.substring(0, 100)}
-                    {event.content.length > 100 ? '...' : ''}
-                  </p>
+                  <p className="text-sm break-words mb-1">{truncate(event.content, 100, '…')}</p>
                 )}
                 <p className="text-xs text-muted-foreground">{formatDateTime(event.createdAt)}</p>
               </div>

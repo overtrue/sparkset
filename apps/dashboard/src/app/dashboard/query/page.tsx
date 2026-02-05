@@ -33,7 +33,7 @@ const QueryPage = () => {
           title={t('Query')}
           description={t('Query database using natural language, AI generates SQL automatically')}
         />
-        <LoadingState message={t('Loading')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -62,7 +62,7 @@ const QueryPage = () => {
           title={t('No Datasources')}
           description={t('Please configure a datasource before querying')}
           actionText={t('Configure Datasource')}
-          actionLink="/dashboard"
+          actionHref="/dashboard/datasources"
         />
       </div>
     );
@@ -80,7 +80,7 @@ const QueryPage = () => {
           title={t('No AI Provider')}
           description={t('Please configure an AI Provider before using AI query')}
           actionText={t('Configure AI Provider')}
-          actionLink="/dashboard/ai-providers"
+          actionHref="/dashboard/ai-providers"
         />
       </div>
     );

@@ -1,10 +1,13 @@
-import { RiArrowRightSLine, RiMore2Line } from '@remixicon/react';
 import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
-import { cn } from '@/lib/utils';
+import { Slot } from 'radix-ui';
 
-function Breadcrumb({ ...props }: React.ComponentProps<'nav'>) {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
+import { cn } from '@/lib/utils';
+import { RiArrowRightSLine, RiMoreLine } from '@remixicon/react';
+
+function Breadcrumb({ className, ...props }: React.ComponentProps<'nav'>) {
+  return (
+    <nav aria-label="breadcrumb" data-slot="breadcrumb" className={cn(className)} {...props} />
+  );
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
@@ -12,7 +15,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        'text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5',
+        'text-muted-foreground gap-1.5 text-xs flex flex-wrap items-center wrap-break-word',
         className,
       )}
       {...props}
@@ -24,7 +27,7 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   return (
     <li
       data-slot="breadcrumb-item"
-      className={cn('inline-flex items-center gap-1.5', className)}
+      className={cn('gap-1 inline-flex items-center', className)}
       {...props}
     />
   );
@@ -37,7 +40,7 @@ function BreadcrumbLink({
 }: React.ComponentProps<'a'> & {
   asChild?: boolean;
 }) {
-  const Comp = asChild ? Slot : 'a';
+  const Comp = asChild ? Slot.Root : 'a';
 
   return (
     <Comp
@@ -81,10 +84,10 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<'span'
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn('flex size-9 items-center justify-center', className)}
+      className={cn('size-5 [&>svg]:size-4 flex items-center justify-center', className)}
       {...props}
     >
-      <RiMore2Line className="size-4" />
+      <RiMoreLine />
       <span className="sr-only">More</span>
     </span>
   );

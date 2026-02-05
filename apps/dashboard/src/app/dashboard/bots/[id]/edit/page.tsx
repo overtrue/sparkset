@@ -10,13 +10,12 @@ import { RiArrowLeftLine } from '@remixicon/react';
 import { useBot } from '@/lib/api/bots-hooks';
 import { BotForm } from '@/components/bots/form';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
 
 export default function EditBotPage() {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
-  const botId = useMemo(() => (params?.id ? Number(params.id) : null), [params?.id]);
+  const botId = params?.id ? Number(params.id) : null;
 
   const { data: bot, error, isLoading } = useBot(botId);
 
@@ -24,16 +23,16 @@ export default function EditBotPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t('Loading...')}
+          title={t('Loading…')}
           description={t('Fetching bot details')}
           action={
             <Button onClick={() => router.back()} variant="outline" disabled>
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
         />
-        <LoadingState message={t('Loading...')} />
+        <LoadingState message={t('Loading…')} />
       </div>
     );
   }
@@ -46,7 +45,7 @@ export default function EditBotPage() {
           description={t('Update bot configuration')}
           action={
             <Button onClick={() => router.back()} variant="outline">
-              <RiArrowLeftLine className="h-4 w-4" />
+              <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
               {t('Back')}
             </Button>
           }
@@ -63,7 +62,7 @@ export default function EditBotPage() {
         description={`${t('Update')} ${bot.name}`}
         action={
           <Button onClick={() => router.back()} variant="outline">
-            <RiArrowLeftLine className="h-4 w-4" />
+            <RiArrowLeftLine className="h-4 w-4" aria-hidden="true" />
             {t('Back')}
           </Button>
         }

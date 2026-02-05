@@ -3,7 +3,7 @@ import { RiArrowDownSLine, RiCheckLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -58,25 +58,28 @@ export function DatasourceSelector({
         {t('Datasource')}
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id="datasource"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className={cn(
-              'h-7 text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[140px] px-2 justify-between font-normal',
+        <PopoverTrigger
+          id="datasource"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={buttonVariants({
+            variant: 'outline',
+            size: 'sm',
+            className: cn(
+              'text-xs border-border/50 bg-background hover:bg-muted/50 min-w-[140px] px-2 justify-between font-normal text-left',
               triggerClassName,
-            )}
-          >
+            ),
+          })}
+        >
+          <span className="flex-1 min-w-0 truncate text-left">
             {selectedDatasource ? selectedDatasource.name : t('Select datasource')}
-            <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-          </Button>
+          </span>
+          <RiArrowDownSLine className="ml-2 h-3 w-3 shrink-0 opacity-50" aria-hidden="true" />
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
           <Command>
-            <CommandInput placeholder={t('Search datasource')} />
+            <CommandInput placeholder={t('Search datasource…')} />
             <CommandList>
               <CommandEmpty>{t('No datasource found')}</CommandEmpty>
               <CommandGroup>
@@ -95,6 +98,7 @@ export function DatasourceSelector({
                         'mr-2 h-3 w-3 shrink-0',
                         value === ds.id ? 'opacity-100' : 'opacity-0',
                       )}
+                      aria-hidden="true"
                     />
                     <span className="flex-1">{ds.name}</span>
                     {ds.isDefault && (

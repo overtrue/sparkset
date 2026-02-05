@@ -4,6 +4,7 @@
  * 使用 localStorage 存储 Access Token
  */
 
+import { API_BASE_URL } from '@/lib/config';
 import { apiPost } from '@/lib/fetch';
 
 // LocalStorage 键名
@@ -101,17 +102,14 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
     }
 
     // 使用带 token 的请求
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333'}/auth/local/status`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'omit', // 不使用 cookie
+    const response = await fetch(`${API_BASE_URL}/auth/local/status`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-    );
+      credentials: 'omit', // 不使用 cookie
+    });
 
     const data = await response.json();
 
@@ -188,17 +186,14 @@ export async function logout(): Promise<{ success: boolean; message?: string }> 
     const token = getAccessToken();
     if (token) {
       // 调用后端登出接口，撤销 token
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333'}/auth/local/logout`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'omit',
+      await fetch(`${API_BASE_URL}/auth/local/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
+        credentials: 'omit',
+      });
     }
 
     // 清除本地 token

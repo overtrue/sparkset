@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import type { ChartSpec, Dataset } from '@/types/chart';
 import { RiSaveLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import * as React from 'react';
 import { useCallback, useRef, useState } from 'react';
 
 interface ChartFormWrapperProps {
@@ -64,23 +63,9 @@ export function ChartFormWrapper({
     [],
   );
 
-  // Update form validity state periodically
-  // Since refs don't trigger re-renders, we poll the validity state
-  const formValidityRef = useRef(false);
   const t = useTranslations();
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      if (builderHandleRef.current) {
-        const currentValid = builderHandleRef.current.isValid;
-        if (currentValid !== formValidityRef.current) {
-          formValidityRef.current = currentValid;
-          setIsFormValid(currentValid);
-        }
-      }
-    }, 300); // Check every 300ms
-
-    return () => clearInterval(interval);
+  const handleStatusChange = useCallback((status: { isSubmitting: boolean; isValid: boolean }) => {
+    setIsFormValid(status.isValid);
   }, []);
 
   const title = mode === 'create' ? t('Create Chart') : t('Edit Chart');
@@ -104,7 +89,7 @@ export function ChartFormWrapper({
             title={!isFormValid ? t('Please fill in complete chart configuration') : ''}
           >
             <RiSaveLine className="h-4 w-4" />
-            {isSaving ? t('Saving') : t('Save')}
+            {isSaving ? t('Saving…') : t('Save')}
           </Button>
         }
       />
@@ -117,6 +102,7 @@ export function ChartFormWrapper({
         initialTitle={initialTitle}
         initialDescription={initialDescription}
         onReady={onReady} // Both modes need onReady for external save trigger
+        onStatusChange={handleStatusChange}
         showActions={false} // Don't show actions in preview panel
       />
     </div>

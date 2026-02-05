@@ -1,13 +1,14 @@
 'use client';
 import { RiArrowRightLine, RiDatabase2Line, RiFlashlightLine } from '@remixicon/react';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/client-routing';
 import {
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
+  EmptyTitle,
 } from '@/components/ui/empty';
 import { Button } from '@/components/ui/button';
 
@@ -16,7 +17,7 @@ interface QueryEmptyStateProps {
   title: string;
   description: string;
   actionText: string;
-  actionLink: string;
+  actionHref: string;
 }
 
 export function QueryEmptyState({
@@ -24,13 +25,13 @@ export function QueryEmptyState({
   title,
   description,
   actionText,
-  actionLink,
+  actionHref,
 }: QueryEmptyStateProps) {
   const icon =
     type === 'datasource' ? (
-      <RiDatabase2Line className="h-8 w-8 text-blue-500" />
+      <RiDatabase2Line className="h-8 w-8 text-blue-500" aria-hidden="true" />
     ) : (
-      <RiFlashlightLine className="h-8 w-8 text-yellow-500" />
+      <RiFlashlightLine className="h-8 w-8 text-yellow-500" aria-hidden="true" />
     );
 
   return (
@@ -38,23 +39,22 @@ export function QueryEmptyState({
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">{icon}</EmptyMedia>
-          <EmptyDescription className="text-xl font-semibold text-foreground text-center mt-2">
+          <EmptyTitle className="text-xl font-semibold text-foreground text-center mt-2">
             {title}
+          </EmptyTitle>
+          <EmptyDescription className="text-muted-foreground text-sm text-center max-w-md">
+            {description}
           </EmptyDescription>
-          <p className="text-muted-foreground text-sm mt-2 text-center max-w-md">{description}</p>
         </EmptyHeader>
-        <EmptyContent className="opacity-40">
-          <span className="text-xs tracking-widest">•••</span>
+        <EmptyContent>
+          <Button className="gap-2" asChild>
+            <Link href={actionHref} className="no-underline">
+              {actionText}
+              <RiArrowRightLine className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
         </EmptyContent>
       </Empty>
-      <div className="mt-6">
-        <Link href={actionLink} className="no-underline">
-          <Button className="gap-2">
-            {actionText}
-            <RiArrowRightLine className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }

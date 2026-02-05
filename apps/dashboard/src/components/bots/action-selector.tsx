@@ -70,7 +70,7 @@ export function ActionSelector({ bot, availableActions, onSave, isLoading }: Act
         <div className="relative">
           <RiSearch2Line className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t('Search actions...')}
+            placeholder={t('Search actions…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -139,7 +139,7 @@ export function ActionSelector({ bot, availableActions, onSave, isLoading }: Act
         {/* Save Button */}
         <div className="flex gap-2 pt-4">
           <Button onClick={handleSave} disabled={!isModified || saving || isLoading}>
-            {saving ? t('Saving...') : t('Save Changes')}
+            {saving ? t('Saving…') : t('Save Changes')}
           </Button>
           {isModified && !saving && (
             <Button

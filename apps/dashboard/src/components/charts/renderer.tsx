@@ -1,6 +1,8 @@
 'use client';
 
 import type { ChartConfig } from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
 import { getDefaultStyle } from './registry';
 import {
   AreaChartRenderer,
@@ -26,12 +28,30 @@ export interface ChartRendererProps {
   data: unknown[];
   /** Chart configuration (colors, labels) */
   config: ChartConfig;
-  /** Optional recharts props (legacy support) */
-  rechartsProps?: Record<string, unknown>;
   /** Optional style configuration */
   style?: ChartStyleConfig;
   /** Optional className */
   className?: string;
+}
+
+export interface ChartFrameProps {
+  chartType: ChartCategory;
+  className?: string;
+  children: ReactNode;
+}
+
+const CHART_FRAME_CLASS: Record<ChartCategory, string> = {
+  area: 'aspect-[16/9] min-h-[240px] w-full',
+  bar: 'aspect-[16/9] min-h-[240px] w-full',
+  line: 'aspect-[16/9] min-h-[240px] w-full',
+  pie: 'aspect-square min-h-[240px] w-full',
+  radar: 'aspect-square min-h-[240px] w-full',
+  radial: 'aspect-square min-h-[240px] w-full',
+  table: 'min-h-[240px] w-full overflow-auto',
+};
+
+export function ChartFrame({ chartType, className, children }: ChartFrameProps) {
+  return <div className={cn(CHART_FRAME_CLASS[chartType], className)}>{children}</div>;
 }
 
 // ============================================================================
@@ -47,7 +67,6 @@ export function ChartRenderer({
   variant,
   data,
   config,
-  rechartsProps = {},
   style: styleProp,
   className,
 }: ChartRendererProps) {
@@ -58,12 +77,6 @@ export function ChartRenderer({
   const style: ChartStyleConfig = {
     ...variantStyle,
     ...styleProp,
-    // Legacy support: extract style from rechartsProps
-    ...(rechartsProps.showLegend !== undefined && {
-      showLegend: rechartsProps.showLegend as boolean,
-    }),
-    ...(rechartsProps.showGrid !== undefined && { showGrid: rechartsProps.showGrid as boolean }),
-    ...(rechartsProps.stacked !== undefined && { stacked: rechartsProps.stacked as boolean }),
   };
 
   // Handle empty data
@@ -83,14 +96,16 @@ export function ChartRenderer({
   const xKey = dataKeys[0] || 'x';
   const yKeys = configKeys.length > 0 ? configKeys : dataKeys.slice(1);
 
-  // For categorical charts: use pieConfig from rechartsProps if available
-  const pieConfig = rechartsProps.pieConfig as { nameKey?: string; dataKey?: string } | undefined;
+  // For categorical charts: infer keys from data shape
   const valueKey =
-    pieConfig?.dataKey || dataKeys.find((k) => typeof chartData[0][k] === 'number') || 'value';
+    dataKeys.find((k) => typeof chartData[0][k] === 'number') ||
+    dataKeys[1] ||
+    dataKeys[0] ||
+    'value';
 
   // For radar/radial charts: use category field from spec, or infer from data
   // Radar/Radial charts should show category names (not values) on the angle axis
-  let nameKey = pieConfig?.nameKey;
+  let nameKey = dataKeys.find((k) => k !== valueKey);
   if (!nameKey && (chartType === 'radar' || chartType === 'radial')) {
     // For radar/radial, category field should be the first non-numeric field that's not in configKeys
     // This is the field used for grouping (e.g., "genre", "category")
@@ -109,21 +124,7 @@ export function ChartRenderer({
       dataKeys[0] ||
       'name';
   } else if (!nameKey) {
-    nameKey = dataKeys.find((k) => k !== valueKey) || 'name';
-  }
-
-  // Debug: Log for radar charts
-  if (chartType === 'radar' && process.env.NODE_ENV === 'development') {
-    console.log(
-      '[ChartRenderer] Radar chart - nameKey:',
-      nameKey,
-      'dataKeys:',
-      dataKeys,
-      'configKeys:',
-      configKeys,
-      'first data item:',
-      chartData[0],
-    );
+    nameKey = dataKeys[0] || 'name';
   }
 
   // Render based on chart type
@@ -211,9 +212,3 @@ export function ChartRenderer({
       );
   }
 }
-
-// ============================================================================
-// Legacy Export (for backward compatibility)
-// ============================================================================
-
-export type { ChartCategory, ChartStyleConfig, ChartVariant };

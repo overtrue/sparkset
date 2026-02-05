@@ -8,22 +8,30 @@ import { DashboardGrid } from '@/components/dashboard/grid';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { useDebounceCallback } from '@/hooks/use-debounce-callback';
-import { chartsApi } from '@/lib/api/charts';
-import { dashboardsApi } from '@/lib/api/dashboards';
-import { datasetsApi } from '@/lib/api/datasets';
+import { fetchCharts } from '@/lib/api/charts';
+import {
+  addWidget,
+  deleteWidget,
+  fetchDashboardById,
+  refreshWidget,
+  updateLayout,
+  updateWidget,
+} from '@/lib/api/dashboards';
+import { fetchDatasets } from '@/lib/api/datasets';
 import type { Chart, Dataset } from '@/types/chart';
 import type { Dashboard, DashboardWidget, TextWidgetConfig } from '@/types/dashboard';
 import { RiAddLine } from '@remixicon/react';
-import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from '@/i18n/use-translations';
+import { useRouter } from '@/i18n/client-routing';
 
 export default function DashboardDetailPage() {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
-  const dashboardId = Number(params.id);
+  const dashboardId = params?.id ? Number(params.id) : null;
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
@@ -37,51 +45,44 @@ export default function DashboardDetailPage() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
 
   const loadDashboard = useCallback(async () => {
+    if (!dashboardId) return;
     try {
       setLoading(true);
       const [data, chartsResult, datasetsResult] = await Promise.all([
-        dashboardsApi.get(dashboardId),
-        chartsApi.list(),
-        datasetsApi.list(),
+        fetchDashboardById(dashboardId),
+        fetchCharts(),
+        fetchDatasets(),
       ]);
       setDashboard(data);
       // 从关联数据中获取 widgets
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const widgetsData = (data as any).widgets || [];
       setWidgets(widgetsData);
-      setCharts(chartsResult.items);
-      setDatasets(datasetsResult.items);
+      setCharts(chartsResult.items || []);
+      setDatasets(datasetsResult.items || []);
     } catch {
       toast.error(t('Failed to load dashboard'));
       router.push('/dashboard/dashboards');
     } finally {
       setLoading(false);
     }
-  }, [dashboardId, router]);
+  }, [dashboardId, router, t]);
 
   useEffect(() => {
-    if (dashboardId) {
-      void loadDashboard();
-    }
-  }, [dashboardId, loadDashboard]); // 只在 dashboardId 变化时重新加载
+    void loadDashboard();
+  }, [loadDashboard]);
 
   // 防抖处理布局变更
-  const debouncedLayoutChange = useDebounceCallback(
+  const handleLayoutChange = useDebounceCallback(
     async (layouts: { id: number; x: number; y: number; w: number; h: number }[]) => {
+      if (!dashboardId) return;
       try {
-        await dashboardsApi.updateLayout(dashboardId, { layouts });
+        await updateLayout(dashboardId, { layouts });
       } catch {
         toast.error(t('Failed to save layout'));
       }
     },
     300,
-  );
-
-  const handleLayoutChange = useCallback(
-    (layouts: { id: number; x: number; y: number; w: number; h: number }[]) => {
-      debouncedLayoutChange(layouts);
-    },
-    [debouncedLayoutChange],
   );
 
   const handleAddWidget = async (
@@ -96,6 +97,7 @@ export default function DashboardDetailPage() {
       config: any;
     }[],
   ) => {
+    if (!dashboardId) return;
     try {
       // 计算新 widget 的位置：找到所有现有 widgets 的最底部，然后放在底部下方
       let maxY = -1;
@@ -118,7 +120,7 @@ export default function DashboardDetailPage() {
           y: currentY,
         };
 
-        const newWidget = await dashboardsApi.addWidget(dashboardId, widgetDataWithPosition);
+        const newWidget = await addWidget(dashboardId, widgetDataWithPosition);
         newWidgets.push(newWidget);
 
         // 计算下一个 widget 的 Y 位置（考虑 widget 高度和间距）
@@ -133,8 +135,9 @@ export default function DashboardDetailPage() {
   };
 
   const handleRefreshWidget = async (widgetId: number) => {
+    if (!dashboardId) return;
     try {
-      await dashboardsApi.refreshWidget(dashboardId, widgetId);
+      await refreshWidget(dashboardId, widgetId);
       // 更新 refreshKey 来触发 widget 重新加载
       setWidgetRefreshKeys((prev) => {
         const newMap = new Map(prev);
@@ -162,9 +165,10 @@ export default function DashboardDetailPage() {
     try {
       const widget = widgets.find((w) => w.id === widgetId);
       if (!widget || widget.type !== 'text') return;
+      if (!dashboardId) return;
 
       const config: TextWidgetConfig = { content };
-      await dashboardsApi.updateWidget(dashboardId, widgetId, { config });
+      await updateWidget(dashboardId, widgetId, { config });
       setWidgets((prev) => prev.map((w) => (w.id === widgetId ? { ...w, config: config } : w)));
       toast.success(t('Saved successfully'));
     } catch {
@@ -174,7 +178,8 @@ export default function DashboardDetailPage() {
 
   const handleSaveWidgetTitle = async (widgetId: number, title: string) => {
     try {
-      await dashboardsApi.updateWidget(dashboardId, widgetId, { title });
+      if (!dashboardId) return;
+      await updateWidget(dashboardId, widgetId, { title });
       setWidgets((prev) => prev.map((w) => (w.id === widgetId ? { ...w, title } : w)));
       toast.success(t('Title saved successfully'));
     } catch {
@@ -184,7 +189,8 @@ export default function DashboardDetailPage() {
 
   const handleRemoveWidget = async (widgetId: number) => {
     try {
-      await dashboardsApi.deleteWidget(dashboardId, widgetId);
+      if (!dashboardId) return;
+      await deleteWidget(dashboardId, widgetId);
       setWidgets((prev) => prev.filter((w) => w.id !== widgetId));
       toast.success(t('Widget removed'));
     } catch {
@@ -192,11 +198,17 @@ export default function DashboardDetailPage() {
     }
   };
 
+  const chartMap = useMemo(() => new Map(charts.map((chart) => [chart.id, chart])), [charts]);
+  const datasetMap = useMemo(
+    () => new Map(datasets.map((dataset) => [dataset.id, dataset])),
+    [datasets],
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title={t('Loading')} description="" />
-        <div className="text-center py-12 text-muted-foreground">{t('Loading')}</div>
+        <PageHeader title={t('Loading…')} description="" />
+        <div className="text-center py-12 text-muted-foreground">{t('Loading…')}</div>
       </div>
     );
   }
@@ -213,7 +225,7 @@ export default function DashboardDetailPage() {
         backButton={{ useRouter: true }}
         action={
           <Button size="sm" onClick={() => setAddWidgetOpen(true)}>
-            <RiAddLine className="h-4 w-4" />
+            <RiAddLine className="h-4 w-4" aria-hidden="true" />
             {t('Add Widget')}
           </Button>
         }
@@ -226,8 +238,8 @@ export default function DashboardDetailPage() {
           <DashboardGrid
             widgets={widgets}
             widgetRefreshKeys={widgetRefreshKeys}
-            charts={charts}
-            datasets={datasets}
+            charts={chartMap}
+            datasets={datasetMap}
             onLayoutChange={handleLayoutChange}
             onRefresh={handleRefreshWidget}
             onEdit={handleEditWidget}

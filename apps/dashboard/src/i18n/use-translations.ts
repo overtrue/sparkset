@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslationsContext } from './translations-context';
 
 function interpolate(template: string, values: Record<string, string | number>): string {
@@ -11,20 +12,23 @@ function interpolate(template: string, values: Record<string, string | number>):
 export function useTranslations() {
   const translations = useTranslationsContext();
 
-  return (key: string, values?: Record<string, string | number>): string => {
-    const translation = translations[key];
-    if (!translation) {
-      // 开发环境下警告缺失的翻译
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`Translation missing for key: "${key}"`);
+  return React.useCallback(
+    (key: string, values?: Record<string, string | number>): string => {
+      const translation = translations[key];
+      if (!translation) {
+        // 开发环境下警告缺失的翻译
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Translation missing for key: "${key}"`);
+        }
+        return key;
       }
-      return key;
-    }
 
-    if (values) {
-      return interpolate(translation, values);
-    }
+      if (values) {
+        return interpolate(translation, values);
+      }
 
-    return translation;
-  };
+      return translation;
+    },
+    [translations],
+  );
 }

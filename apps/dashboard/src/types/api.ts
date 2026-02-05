@@ -2,13 +2,8 @@
  * Unified API Type Definitions
  * All API-related types are centralized here for consistency and maintainability
  *
- * This file consolidates types from:
- * - lib/api.ts (legacy)
- * - types/chart.ts
- * - types/dashboard.ts
- * - lib/auth.ts
- * - lib/query.ts
- * - Various API modules
+ * This file consolidates types from multiple modules
+ * and keeps API contracts consistent across the app.
  */
 
 // ============================================================================
@@ -94,23 +89,6 @@ export interface TableSchemaDTO {
 export interface DatasourceDetailDTO extends Datasource {
   tables: TableSchemaDTO[];
 }
-
-// Legacy types from api.ts (for backward compatibility)
-export interface DatasourceDTO {
-  id: number;
-  name: string;
-  type: string;
-  host: string;
-  port: number;
-  username: string;
-  database: string;
-  isDefault: boolean;
-  lastSyncAt?: string;
-}
-
-export type CreateDatasourceInput = Omit<DatasourceDTO, 'id' | 'lastSyncAt'> & {
-  password: string;
-};
 
 // ============================================================================
 // Dataset Types
@@ -237,7 +215,6 @@ export interface ChartSpec {
   };
   transform?: { op: string; [key: string]: unknown }[];
   style?: ChartStyleConfig;
-  rechartsOverrides?: Record<string, unknown>;
 }
 
 export interface ChartRenderResult {
@@ -245,7 +222,6 @@ export interface ChartRenderResult {
   variant?: ChartVariant;
   data: unknown[];
   config: Record<string, { label: string; color?: string }>;
-  rechartsProps: Record<string, unknown>;
   style?: ChartStyleConfig;
   warnings?: string[];
 }

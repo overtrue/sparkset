@@ -9,12 +9,3 @@ export async function fetchConversations(): Promise<ApiListResponse<Conversation
 export async function fetchConversationById(id: number): Promise<ConversationDetailDTO> {
   return apiGet(`/conversations/${id}`);
 }
-
-// Alias for backward compatibility
-export const fetchConversation = fetchConversationById;
-
-// Legacy API object for backward compatibility - safe for server components
-export const conversationsApi = {
-  list: fetchConversations,
-  get: fetchConversationById,
-};

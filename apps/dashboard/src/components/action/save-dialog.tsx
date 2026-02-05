@@ -106,11 +106,12 @@ export function SaveActionDialog({
               <Label htmlFor="action-name">{t('Name')} *</Label>
               <Input
                 id="action-name"
+                name="action-name"
+                autoComplete="off"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t('Enter Action name')}
+                placeholder={t('Enter Action name…')}
                 disabled={saving}
-                autoFocus
               />
             </div>
 
@@ -118,9 +119,11 @@ export function SaveActionDialog({
               <Label htmlFor="action-description">{t('Description')}</Label>
               <Textarea
                 id="action-description"
+                name="action-description"
+                autoComplete="off"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={t('Enter Action description (optional)')}
+                placeholder={t('Describe the Action (optional)…')}
                 disabled={saving}
                 rows={3}
               />
@@ -143,7 +146,7 @@ export function SaveActionDialog({
               {t('Cancel')}
             </Button>
             <Button type="submit" disabled={saving || !name.trim()}>
-              {saving ? t('Saving') : t('Save')}
+              {saving ? t('Saving…') : t('Save')}
             </Button>
           </DialogFooter>
         </form>

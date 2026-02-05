@@ -41,9 +41,8 @@ export function PieChartRenderer({
     showLabels = false,
   } = style;
 
-  // Convert fixed values to percentage strings for better responsiveness
-  // If value > 100, treat as percentage; otherwise treat as ratio to scale
-  const innerRadius = rawInnerRadius > 0 ? `${Math.min(rawInnerRadius, 100) * 0.8}%` : 0;
+  // Convert values to percentage strings for better responsiveness
+  const innerRadius = rawInnerRadius > 0 ? `${Math.min(rawInnerRadius, 100)}%` : 0;
   const outerRadius = `${Math.min(rawOuterRadius, 100)}%`;
 
   // Enrich data with fill colors following shadcn pattern

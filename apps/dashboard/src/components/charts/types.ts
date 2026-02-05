@@ -146,7 +146,6 @@ export interface ChartSpec {
   encoding: ChartEncoding;
   transform?: { op: string; [key: string]: unknown }[];
   style?: ChartStyleConfig;
-  rechartsOverrides?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -286,7 +285,6 @@ export interface ChartRenderResult {
   variant?: ChartVariant;
   data: unknown[];
   config: ChartConfig;
-  rechartsProps: Record<string, unknown>;
   style?: ChartStyleConfig;
   warnings?: string[];
 }

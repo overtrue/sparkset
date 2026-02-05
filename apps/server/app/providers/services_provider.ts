@@ -35,23 +35,20 @@ export default class ServicesProvider {
    */
   async register() {
     // Try to get Lucid Database instance from container
-    let database: Database | null = null;
+    let database: Database;
     try {
       database = (await this.app.container.make('lucid.db')) as Database;
     } catch {
-      // If Lucid is not available, database will be null
-      // We'll use in-memory services in that case
+      throw new Error('未检测到数据库连接，请先配置 DATABASE_URL 并确保 Lucid 已正确启动。');
     }
 
     // Create repositories and services using factory functions
-    const repositories = createRepositories(database);
+    const repositories = createRepositories();
     const services = createServices({ database, repositories });
 
     // Register Database instance for dependency injection
-    if (database) {
-      this.app.container.singleton(Database, () => database!);
-      this.app.container.singleton('lucid.db', () => database!);
-    }
+    this.app.container.singleton(Database, () => database);
+    this.app.container.singleton('lucid.db', () => database);
 
     // Register all services to container
     this.registerServices(services);
@@ -103,15 +100,11 @@ export default class ServicesProvider {
     // Executors
     this.app.container.bind('executors/query', () => services.queryExecutor);
     this.app.container.bind('executors/action', () => services.actionExecutor);
-    if (services.actionExecutor) {
-      this.app.container.singleton(ActionExecutor, () => services.actionExecutor!);
-    }
+    this.app.container.singleton(ActionExecutor, () => services.actionExecutor);
 
     // Bot Processor (Phase 2.6)
-    if (services.botProcessor) {
-      this.app.container.singleton(BotProcessor, () => services.botProcessor!);
-      this.app.container.singleton('BotProcessor', () => services.botProcessor!);
-    }
+    this.app.container.singleton(BotProcessor, () => services.botProcessor);
+    this.app.container.singleton('BotProcessor', () => services.botProcessor);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function

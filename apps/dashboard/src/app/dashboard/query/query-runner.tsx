@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QueryResponse, runQuery } from '@/lib/query';
 import { RiAlertLine, RiChat3Line, RiCloseLine, RiFileCopyLine } from '@remixicon/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import QueryForm from './query-form';
 import { useTranslations } from '@/i18n/use-translations';
 import { toast } from 'sonner';
@@ -24,12 +24,38 @@ interface Props {
   apiBase?: string;
 }
 
+const SQL_ERROR_PATTERNS = [
+  /SQL:\s*(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*?(?=\s*(?:--|;|$))/i,
+  /^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*?(?=\s*-\s*|$)/i,
+];
+
+const parseQueryError = (error: unknown, fallbackMessage: string): QueryError => {
+  const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+  const sqlMatch = SQL_ERROR_PATTERNS.map((pattern) => errorMessage.match(pattern)).find(Boolean);
+  const extractedSql = sqlMatch ? sqlMatch[0].replace(/^SQL:\s*/i, '').trim() : undefined;
+  const cleanedMessage = sqlMatch
+    ? errorMessage
+        .replace(sqlMatch[0], '')
+        .replace(/^\s*-\s*/, '')
+        .replace(/\s*;\s*$/, '')
+        .trim()
+    : errorMessage;
+
+  return {
+    message: cleanedMessage || errorMessage,
+    sql: extractedSql,
+  };
+};
+
 export default function QueryRunner({ datasources, aiProviders, initialResult }: Props) {
   const t = useTranslations();
   const [result, setResult] = useState<QueryResponse | null>(initialResult);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<QueryError | null>(null);
-  const defaultDatasourceId = datasources.find((d) => d.isDefault)?.id ?? datasources[0]?.id;
+  const defaultDatasourceId = useMemo(
+    () => datasources.find((d) => d.isDefault)?.id ?? datasources[0]?.id,
+    [datasources],
+  );
   const [activeDatasource, setActiveDatasource] = useState<number | undefined>(defaultDatasourceId);
   const [question, setQuestion] = useState<string>('');
 
@@ -43,6 +69,13 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
     }
   }, [result]);
 
+  useEffect(() => {
+    if (!defaultDatasourceId) return;
+    if (!activeDatasource || !datasources.some((item) => item.id === activeDatasource)) {
+      setActiveDatasource(defaultDatasourceId);
+    }
+  }, [activeDatasource, datasources, defaultDatasourceId]);
+
   const handleRun = async (body: Parameters<typeof runQuery>[0]) => {
     setActiveDatasource(body.datasource);
     setQuestion(body.question || '');
@@ -53,28 +86,8 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
       setResult(res);
     } catch (err) {
       console.error(err);
-      setResult(null); // Clear previous results on error
-      const errorMessage = err instanceof Error ? err.message : t('Query failed, please check API');
-      // Try to extract SQL from the error message - supports "SQL: ..." format
-      const sqlPrefixMatch = errorMessage.match(
-        /SQL:\s*(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*?(?=\s*(?:--|;|$))/i,
-      );
-      const directSqlMatch = errorMessage.match(
-        /^(SELECT|INSERT|UPDATE|DELETE|WITH)[\s\S]*?(?=\s*-\s*|$)/i,
-      );
-      const sqlMatch = sqlPrefixMatch || directSqlMatch;
-      const extractedSql = sqlMatch ? sqlMatch[0].replace(/^SQL:\s*/i, '').trim() : undefined;
-      const cleanedMessage = sqlMatch
-        ? errorMessage
-            .replace(sqlMatch[0], '')
-            .replace(/^\s*-\s*/, '')
-            .replace(/\s*;\s*$/, '')
-            .trim()
-        : errorMessage;
-      setError({
-        message: cleanedMessage || errorMessage,
-        sql: extractedSql,
-      });
+      setResult(null);
+      setError(parseQueryError(err, t('Query failed, please check API')));
     } finally {
       setLoading(false);
     }
@@ -82,9 +95,10 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
 
   const handleRerun = (rerunQuestion: string) => {
     setQuestion(rerunQuestion);
+    const datasourceId = activeDatasource ?? defaultDatasourceId;
     void handleRun({
       question: rerunQuestion,
-      datasource: activeDatasource,
+      datasource: datasourceId,
       limit: 5,
     });
   };
@@ -118,7 +132,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                  <RiAlertLine className="h-5 w-5 text-destructive" />
+                  <RiAlertLine className="h-5 w-5 text-destructive" aria-hidden="true" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-start justify-between gap-2">
@@ -132,9 +146,10 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 shrink-0"
+                      aria-label={t('Close')}
                       onClick={() => setError(null)}
                     >
-                      <RiCloseLine className="h-4 w-4" />
+                      <RiCloseLine className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                   {error.sql && (
@@ -152,7 +167,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
                             toast.success(t('Copied'));
                           }}
                         >
-                          <RiFileCopyLine className="h-3 w-3 mr-1" />
+                          <RiFileCopyLine className="h-3 w-3" aria-hidden="true" />
                           {t('Copy')}
                         </Button>
                       </div>
@@ -194,7 +209,7 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
         {!result && !loading && !error && (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
-              <RiChat3Line className="h-24 w-24 mb-4 opacity-20 mx-auto" />
+              <RiChat3Line className="h-24 w-24 mb-4 opacity-20 mx-auto" aria-hidden="true" />
               <p className="text-lg font-medium">{t('Start Querying')}</p>
               <p className="text-sm mt-1">
                 {t('Enter your question below, AI will generate SQL and execute')}

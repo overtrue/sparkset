@@ -3,7 +3,7 @@ import { RiArrowDownSLine, RiArrowRightSLine, RiChat3Line } from '@remixicon/rea
 import { useTranslations } from '@/i18n/use-translations';
 
 import { useState } from 'react';
-import { fetchConversation } from '../../lib/api/conversations-api';
+import { fetchConversationById } from '../../lib/api/conversations-api';
 import type { ConversationDTO, ConversationDetailDTO } from '@/types/api';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -66,7 +66,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
     }
 
     try {
-      const detail = await fetchConversation(id);
+      const detail = await fetchConversationById(id);
       setDetails((prev) => new Map(prev).set(id, detail));
     } catch (error) {
       console.error('Failed to fetch conversation detail:', error);
@@ -79,7 +79,10 @@ export function ConversationList({ conversations }: ConversationListProps) {
     return (
       <Card className="shadow-none">
         <CardContent className="py-12 text-center">
-          <RiChat3Line className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+          <RiChat3Line
+            className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4"
+            aria-hidden="true"
+          />
           <p className="text-sm text-muted-foreground">{t('No conversation history')}</p>
         </CardContent>
       </Card>
@@ -108,9 +111,15 @@ export function ConversationList({ conversations }: ConversationListProps) {
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div className="mt-0.5">
                         {isExpanded ? (
-                          <RiArrowDownSLine className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <RiArrowDownSLine
+                            className="h-4 w-4 text-muted-foreground shrink-0"
+                            aria-hidden="true"
+                          />
                         ) : (
-                          <RiArrowRightSLine className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <RiArrowRightSLine
+                            className="h-4 w-4 text-muted-foreground shrink-0"
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -136,7 +145,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
                 <CardContent className="pt-0 pb-4">
                   {isLoading ? (
                     <div className="py-8 text-center text-sm text-muted-foreground">
-                      {t('Loading')}...
+                      {t('Loading…')}
                     </div>
                   ) : detail ? (
                     <ConversationDetail conversation={detail} />

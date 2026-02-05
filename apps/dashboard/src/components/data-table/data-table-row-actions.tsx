@@ -1,6 +1,7 @@
 'use client';
 import { RiMore2Line } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
+import { Link } from '@/i18n/client-routing';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +14,8 @@ import {
 
 export interface RowAction {
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
+  href?: string;
   icon?: React.ReactNode;
   variant?: 'default' | 'destructive';
   disabled?: boolean;
@@ -27,6 +29,34 @@ export function DataTableRowActions({ actions }: DataTableRowActionsProps) {
   const t = useTranslations();
   const regularActions = actions.filter((a) => a.variant !== 'destructive');
   const destructiveActions = actions.filter((a) => a.variant === 'destructive');
+
+  const renderAction = (action: RowAction, key: string) => {
+    const content = (
+      <>
+        {action.icon}
+        {action.label}
+      </>
+    );
+    const itemProps = {
+      onClick: action.onClick,
+      disabled: action.disabled,
+      variant: action.variant ?? 'default',
+    };
+
+    if (action.href) {
+      return (
+        <DropdownMenuItem key={key} {...itemProps} asChild>
+          <Link href={action.href}>{content}</Link>
+        </DropdownMenuItem>
+      );
+    }
+
+    return (
+      <DropdownMenuItem key={key} {...itemProps}>
+        {content}
+      </DropdownMenuItem>
+    );
+  };
 
   return (
     <DropdownMenu>
@@ -43,29 +73,9 @@ export function DataTableRowActions({ actions }: DataTableRowActionsProps) {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        {regularActions.map((action, index) => (
-          <DropdownMenuItem
-            key={index}
-            onClick={action.onClick}
-            disabled={action.disabled}
-            className="gap-2"
-          >
-            {action.icon}
-            {action.label}
-          </DropdownMenuItem>
-        ))}
+        {regularActions.map((action, index) => renderAction(action, String(index)))}
         {destructiveActions.length > 0 && regularActions.length > 0 && <DropdownMenuSeparator />}
-        {destructiveActions.map((action, index) => (
-          <DropdownMenuItem
-            key={`destructive-${index}`}
-            onClick={action.onClick}
-            disabled={action.disabled}
-            className="gap-2 text-destructive focus:text-destructive"
-          >
-            {action.icon}
-            {action.label}
-          </DropdownMenuItem>
-        ))}
+        {destructiveActions.map((action, index) => renderAction(action, `destructive-${index}`))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

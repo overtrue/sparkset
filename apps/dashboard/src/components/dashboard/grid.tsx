@@ -14,8 +14,8 @@ import { Widget } from './widget';
 interface DashboardGridProps {
   widgets: DashboardWidget[];
   widgetRefreshKeys?: Map<number, number>; // widgetId -> refreshKey
-  charts?: Chart[]; // 图表列表，用于获取标题
-  datasets?: Dataset[]; // 数据集列表，用于获取标题
+  charts?: Map<number, Chart>; // 图表列表，用于获取标题
+  datasets?: Map<number, Dataset>; // 数据集列表，用于获取标题
   onLayoutChange?: (layouts: { id: number; x: number; y: number; w: number; h: number }[]) => void;
   onRefresh?: (widgetId: number) => void;
   onEdit?: (widget: DashboardWidget) => void;
@@ -38,14 +38,16 @@ const GRID_CONFIG = {
 export function DashboardGrid({
   widgets,
   widgetRefreshKeys,
-  charts = [],
-  datasets = [],
+  charts = new Map<number, Chart>(),
+  datasets = new Map<number, Dataset>(),
   onLayoutChange,
   onRefresh,
   onEdit,
   onRemove,
 }: DashboardGridProps) {
   const { width, containerRef, mounted } = useContainerWidth();
+  const chartMap = charts;
+  const datasetMap = datasets;
 
   // 根据当前宽度计算对应的 cols
   const currentCols = useMemo(() => {
@@ -127,8 +129,8 @@ export function DashboardGrid({
               <Widget
                 widget={widget}
                 refreshKey={widgetRefreshKeys?.get(widget.id)}
-                charts={charts}
-                datasets={datasets}
+                charts={chartMap}
+                datasets={datasetMap}
                 onRefresh={onRefresh}
                 onEdit={onEdit}
                 onRemove={onRemove}

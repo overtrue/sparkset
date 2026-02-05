@@ -71,7 +71,7 @@ export function BotTestDrawer({
     const pendingMsg: TestMessage = {
       id: pendingId,
       type: 'pending',
-      content: t('Processing...'),
+      content: t('Processing…'),
       timestamp: new Date().toLocaleTimeString(),
     };
 
@@ -89,12 +89,12 @@ export function BotTestDrawer({
         const errorMsg: TestMessage = {
           id: `error_${Date.now()}`,
           type: 'error',
-          content: response.error || 'Test failed',
+          content: response.error || t('Test failed'),
           timestamp: new Date().toLocaleTimeString(),
           processingTimeMs: response.processingTimeMs,
         };
         setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(errorMsg));
-        toast.error(response.error || 'Test failed');
+        toast.error(response.error || t('Test failed'));
       } else {
         // 显示 bot 的响应
         const receivedMsg: TestMessage = {
@@ -105,13 +105,13 @@ export function BotTestDrawer({
           processingTimeMs: response.processingTimeMs,
         };
         setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(receivedMsg));
-        toast.success('Response received');
+        toast.success(t('Response received'));
       }
     } catch (error) {
       const errorMsg: TestMessage = {
         id: `error_${Date.now()}`,
         type: 'error',
-        content: error instanceof Error ? error.message : 'Request failed',
+        content: error instanceof Error ? error.message : t('Request failed'),
         timestamp: new Date().toLocaleTimeString(),
       };
       setMessages((prev) => prev.filter((m) => m.id !== pendingId).concat(errorMsg));
@@ -130,11 +130,7 @@ export function BotTestDrawer({
       <DrawerContent className="flex h-screen w-[600px] flex-col">
         <DrawerHeader className="border-b">
           <DrawerTitle>{t('Test Bot')}</DrawerTitle>
-          <DrawerDescription>
-            {t(
-              'Test how your bot responds to messages by sending test messages through the webhook',
-            )}
-          </DrawerDescription>
+          <DrawerDescription>{t('Test how your bot responds to messages')}</DrawerDescription>
         </DrawerHeader>
 
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -155,12 +151,17 @@ export function BotTestDrawer({
                       <div className="mt-1 flex-shrink-0">
                         {msg.type === 'sent' && <div className="h-2 w-2 rounded-full bg-primary" />}
                         {msg.type === 'pending' && (
-                          <RiLoader4Line className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <RiLoader4Line
+                            className="h-4 w-4 animate-spin text-muted-foreground"
+                            aria-hidden="true"
+                          />
                         )}
                         {msg.type === 'received' && (
-                          <RiCheckLine className="h-4 w-4 text-green-500" />
+                          <RiCheckLine className="h-4 w-4 text-green-500" aria-hidden="true" />
                         )}
-                        {msg.type === 'error' && <RiCloseLine className="h-4 w-4 text-red-500" />}
+                        {msg.type === 'error' && (
+                          <RiCloseLine className="h-4 w-4 text-red-500" aria-hidden="true" />
+                        )}
                       </div>
 
                       {/* Message Bubble */}
@@ -181,7 +182,7 @@ export function BotTestDrawer({
                         )}
                         {msg.processingTimeMs !== undefined && (
                           <p className="text-xs mt-1 opacity-70">
-                            {t('Processing time')}: {msg.processingTimeMs}ms
+                            {t('Processing Time')}: {msg.processingTimeMs}ms
                           </p>
                         )}
                       </div>
@@ -209,11 +210,16 @@ export function BotTestDrawer({
                 disabled={isLoading}
                 className="flex-1"
               />
-              <Button onClick={handleSendMessage} disabled={isLoading || !input.trim()} size="sm">
+              <Button
+                onClick={handleSendMessage}
+                disabled={isLoading || !input.trim()}
+                size="sm"
+                aria-label={t('Send Test Message')}
+              >
                 {isLoading ? (
-                  <RiLoader4Line className="h-4 w-4 animate-spin" />
+                  <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <RiSendPlaneLine className="h-4 w-4" />
+                  <RiSendPlaneLine className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
               {messages.length > 0 && (
@@ -227,8 +233,8 @@ export function BotTestDrawer({
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-2 space-y-1 text-xs text-blue-900 dark:text-blue-100">
               <p className="font-medium">{t('Test Information')}:</p>
               <ul className="space-y-0.5 ml-4 list-disc">
-                <li>{t('Messages are processed synchronously through the bot engine')}</li>
-                <li>{t('Helpful for verifying bot logic before production')}</li>
+                <li>{t('Test messages are not actually sent to external platforms')}</li>
+                <li>{t('This helps verify bot logic before deploying to production')}</li>
               </ul>
             </div>
           </div>

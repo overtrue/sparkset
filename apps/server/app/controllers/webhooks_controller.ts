@@ -9,11 +9,7 @@
 import type { HttpContext } from '@adonisjs/core/http';
 import app from '@adonisjs/core/services/app';
 import { botAdapterRegistry } from '../adapters/bot_adapter_registry.js';
-import {
-  BotProcessor,
-  botProcessor as simpleBotProcessor,
-  type BotProcessInput,
-} from '../services/bot_processor.js';
+import { BotProcessor, type BotProcessInput } from '../services/bot_processor.js';
 import Bot from '../models/bot.js';
 import BotEvent from '../models/bot_event.js';
 import { toId } from '../utils/validation.js';
@@ -21,15 +17,10 @@ import { toId } from '../utils/validation.js';
 export default class WebhooksController {
   /**
    * 获取 BotProcessor 实例
-   * 从 IoC 容器获取，如果不可用则返回 null
+   * 从 IoC 容器获取，失败时直接抛错
    */
-  private async getBotProcessor(): Promise<BotProcessor | null> {
-    try {
-      return await app.container.make(BotProcessor);
-    } catch {
-      // BotProcessor 未注册或创建失败
-      return null;
-    }
+  private async getBotProcessor(): Promise<BotProcessor> {
+    return app.container.make(BotProcessor);
   }
 
   /**
@@ -194,7 +185,7 @@ export default class WebhooksController {
 
   /**
    * 异步处理消息
-   * Phase 2.6: 使用完整的 BotProcessor（如果可用）
+   * Phase 2.6: 使用完整的 BotProcessor
    *
    * 流程：
    * 1. 更新事件状态为 processing
@@ -235,15 +226,10 @@ export default class WebhooksController {
       };
 
       // Phase 2.6: 使用完整的 BotProcessor（如果可用）
-      let result;
       const botProcessor = await this.getBotProcessor();
-      if (botProcessor) {
-        // 使用完整的处理器（带会话追踪、意图识别等）
-        result = await botProcessor.process(bot, event, input);
-      } else {
-        // 回退到简化版本
-        result = await simpleBotProcessor.process(bot, input);
-      }
+
+      // 使用完整的处理器（带会话追踪、意图识别等）
+      const result = await botProcessor.process(bot, event, input);
 
       const processingTimeMs = Date.now() - startTime;
 

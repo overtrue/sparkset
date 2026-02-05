@@ -1,23 +1,8 @@
-import { RiMore2Line, RiArrowLeftSLine, RiArrowRightSLine } from '@remixicon/react';
 import * as React from 'react';
+
 import { cn } from '@/lib/utils';
-import { buttonVariants, type Button } from '@/components/ui/button';
-
-interface PaginationLabels {
-  previous?: string;
-  next?: string;
-  morePages?: string;
-  goToPreviousPage?: string;
-  goToNextPage?: string;
-}
-
-const defaultLabels: PaginationLabels = {
-  previous: 'Previous',
-  next: 'Next',
-  morePages: 'More pages',
-  goToPreviousPage: 'Go to previous page',
-  goToNextPage: 'Go to next page',
-};
+import { Button } from '@/components/ui/button';
+import { RiArrowLeftSLine, RiArrowRightSLine, RiMoreLine } from '@remixicon/react';
 
 function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   return (
@@ -35,7 +20,7 @@ function PaginationContent({ className, ...props }: React.ComponentProps<'ul'>) 
   return (
     <ul
       data-slot="pagination-content"
-      className={cn('flex flex-row items-center gap-1', className)}
+      className={cn('gap-0.5 flex items-center', className)}
       {...props}
     />
   );
@@ -52,75 +37,66 @@ type PaginationLinkProps = {
 
 function PaginationLink({ className, isActive, size = 'icon', ...props }: PaginationLinkProps) {
   return (
-    <a
-      aria-current={isActive ? 'page' : undefined}
-      data-slot="pagination-link"
-      data-active={isActive}
-      className={cn(
-        buttonVariants({
-          variant: isActive ? 'outline' : 'ghost',
-          size,
-        }),
-        className,
-      )}
-      {...props}
-    />
+    <Button asChild variant={isActive ? 'outline' : 'ghost'} size={size} className={cn(className)}>
+      <a
+        aria-current={isActive ? 'page' : undefined}
+        data-slot="pagination-link"
+        data-active={isActive}
+        {...props}
+      />
+    </Button>
   );
 }
 
-type PaginationPreviousProps = React.ComponentProps<typeof PaginationLink> & {
-  labels?: Pick<PaginationLabels, 'previous' | 'goToPreviousPage'>;
-};
-
-function PaginationPrevious({ className, labels, ...props }: PaginationPreviousProps) {
-  const mergedLabels = { ...defaultLabels, ...labels };
+function PaginationPrevious({
+  className,
+  text = 'Previous',
+  ...props
+}: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
   return (
     <PaginationLink
-      aria-label={mergedLabels.goToPreviousPage}
+      aria-label="Go to previous page"
       size="default"
-      className={cn('gap-1 px-2.5 sm:pl-2.5', className)}
+      className={cn('pl-1.5!', className)}
       {...props}
     >
-      <RiArrowLeftSLine />
-      <span className="hidden sm:block">{mergedLabels.previous}</span>
+      <RiArrowLeftSLine data-icon="inline-start" />
+      <span className="hidden sm:block">{text}</span>
     </PaginationLink>
   );
 }
 
-type PaginationNextProps = React.ComponentProps<typeof PaginationLink> & {
-  labels?: Pick<PaginationLabels, 'next' | 'goToNextPage'>;
-};
-
-function PaginationNext({ className, labels, ...props }: PaginationNextProps) {
-  const mergedLabels = { ...defaultLabels, ...labels };
+function PaginationNext({
+  className,
+  text = 'Next',
+  ...props
+}: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
   return (
     <PaginationLink
-      aria-label={mergedLabels.goToNextPage}
+      aria-label="Go to next page"
       size="default"
-      className={cn('gap-1 px-2.5 sm:pr-2.5', className)}
+      className={cn('pr-1.5!', className)}
       {...props}
     >
-      <span className="hidden sm:block">{mergedLabels.next}</span>
-      <RiArrowRightSLine />
+      <span className="hidden sm:block">{text}</span>
+      <RiArrowRightSLine data-icon="inline-end" />
     </PaginationLink>
   );
 }
 
-type PaginationEllipsisProps = React.ComponentProps<'span'> & {
-  labels?: Pick<PaginationLabels, 'morePages'>;
-};
-
-function PaginationEllipsis({ className, labels, ...props }: PaginationEllipsisProps) {
-  const mergedLabels = { ...defaultLabels, ...labels };
+function PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'>) {
   return (
     <span
       aria-hidden
       data-slot="pagination-ellipsis"
-      className={cn('flex size-9 items-center justify-center', className)}
+      className={cn(
+        "size-8 [&_svg:not([class*='size-'])]:size-4 flex items-center justify-center",
+        className,
+      )}
       {...props}
     >
-      <RiMore2Line className="size-4" />
-      <span className="sr-only">{mergedLabels.morePages}</span>
+      <RiMoreLine />
+      <span className="sr-only">More pages</span>
     </span>
   );
 }
@@ -128,9 +104,9 @@ function PaginationEllipsis({ className, labels, ...props }: PaginationEllipsisP
 export {
   Pagination,
   PaginationContent,
-  PaginationLink,
-  PaginationItem,
-  PaginationPrevious,
-  PaginationNext,
   PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 };

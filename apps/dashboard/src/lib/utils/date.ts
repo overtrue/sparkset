@@ -8,13 +8,36 @@
  * @param fallback - Value to return if date is invalid (default: '-')
  * @returns Formatted date string or fallback value
  */
-export function formatDateTime(value: string | Date | null | undefined, fallback = '-'): string {
+const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getDateTimeFormatter(locale: string): Intl.DateTimeFormat {
+  const cached = dateTimeFormatters.get(locale);
+  if (cached) return cached;
+
+  const formatter = new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  dateTimeFormatters.set(locale, formatter);
+  return formatter;
+}
+
+export function formatDateTime(
+  value: string | Date | null | undefined,
+  fallback = '-',
+  locale = 'sv-SE',
+): string {
   if (!value) return fallback;
 
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return fallback;
 
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+  return getDateTimeFormatter(locale).format(date).replace(',', '');
 }
 
 /**

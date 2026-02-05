@@ -1,10 +1,10 @@
 'use client';
 
-import { chartsApi } from '@/lib/api/charts';
+import { createChart, updateChart } from '@/lib/api/charts';
 import type { ChartSpec as ApiChartSpec } from '@/types/api';
 import { useTranslations } from '@/i18n/use-translations';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRouter } from '@/i18n/client-routing';
+import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { ChartBuilder, type ChartBuilderHandle, type ChartSaveData, type Dataset } from './builder';
 import type { ChartSpec } from './types';
@@ -23,9 +23,19 @@ interface ChartBuilderClientProps {
     isSubmitting: boolean;
     isValid: boolean;
   }) => void;
+  onStatusChange?: (status: { isSubmitting: boolean; isValid: boolean }) => void;
   // Show action buttons in preview panel
   showActions?: boolean;
 }
+
+const toApiSpec = (spec: ChartSpec): ApiChartSpec => ({
+  specVersion: spec.specVersion,
+  chartType: spec.chartType,
+  variant: spec.variant,
+  encoding: spec.encoding,
+  transform: spec.transform,
+  style: spec.style,
+});
 
 export function ChartBuilderClient({
   datasets,
@@ -35,59 +45,48 @@ export function ChartBuilderClient({
   initialTitle,
   initialDescription,
   onReady,
+  onStatusChange,
   showActions = false,
 }: ChartBuilderClientProps) {
   const t = useTranslations();
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isSaving, setIsSaving] = useState(false);
   const builderRef = useRef<ChartBuilderHandle>(null);
 
-  const handleSave = async (data: ChartSaveData) => {
-    try {
-      setIsSaving(true);
+  const handleSave = useCallback(
+    async (data: ChartSaveData) => {
+      try {
+        const apiSpec = toApiSpec(data.spec);
 
-      // Convert local ChartSpec to API ChartSpec
-      const apiSpec: ApiChartSpec = {
-        specVersion: data.spec.specVersion,
-        chartType: data.spec.chartType,
-        variant: data.spec.variant,
-        encoding: data.spec.encoding,
-        transform: data.spec.transform,
-        style: data.spec.style,
-        rechartsOverrides: data.spec.rechartsOverrides,
-      };
+        if (chartId) {
+          // Update existing chart
+          await updateChart(chartId, {
+            datasetId: data.datasetId,
+            title: data.title,
+            description: data.description,
+            chartType: data.chartType,
+            spec: apiSpec,
+          });
+          toast.success(t('Chart updated successfully'));
+        } else {
+          // Create new chart
+          await createChart({
+            datasetId: data.datasetId,
+            title: data.title,
+            description: data.description,
+            chartType: data.chartType,
+            spec: apiSpec,
+          });
+          toast.success(t('Chart created successfully'));
+        }
 
-      if (chartId) {
-        // Update existing chart
-        await chartsApi.update(chartId, {
-          datasetId: data.datasetId,
-          title: data.title,
-          description: data.description,
-          chartType: data.chartType,
-          spec: apiSpec,
-        });
-        toast.success(t('Chart updated successfully'));
-      } else {
-        // Create new chart
-        await chartsApi.create({
-          datasetId: data.datasetId,
-          title: data.title,
-          description: data.description,
-          chartType: data.chartType,
-          spec: apiSpec,
-        });
-        toast.success(t('Chart created successfully'));
+        router.push('/dashboard/charts');
+      } catch (error) {
+        toast.error(chartId ? t('Failed to update chart') : t('Failed to create chart'));
+        console.error(error);
       }
-
-      router.push('/dashboard/charts');
-    } catch (error) {
-      toast.error(chartId ? t('Failed to update chart') : t('Failed to create chart'));
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    },
+    [chartId, router, t],
+  );
 
   // Expose submitForm to parent - only once
   const onReadyCalled = useRef(false);
@@ -117,6 +116,7 @@ export function ChartBuilderClient({
       initialDescription={initialDescription}
       autoPreview={!!chartId} // Auto-preview in edit mode
       showActions={showActions} // Show actions in preview panel for new chart
+      onStatusChange={onStatusChange}
     />
   );
 }

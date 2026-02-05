@@ -16,9 +16,6 @@ export async function fetchActionById(id: number): Promise<ActionDTO> {
   return apiGet(`/actions/${id}`);
 }
 
-// Alias for backward compatibility
-export const getAction = fetchActionById;
-
 export async function createAction(payload: CreateActionInput): Promise<ActionDTO> {
   return apiPost('/actions', payload);
 }
@@ -41,14 +38,3 @@ export async function generateActionSQL(
 ): Promise<GenerateActionSQLResult> {
   return apiPost('/actions/generate-sql', input);
 }
-
-// Legacy API object for backward compatibility - safe for server components
-export const actionsApi = {
-  list: fetchActions,
-  get: fetchActionById,
-  create: createAction,
-  update: updateAction,
-  delete: deleteAction,
-  execute: executeAction,
-  generateSQL: generateActionSQL,
-};

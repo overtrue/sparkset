@@ -5,7 +5,7 @@ import type { ChartCategory, ChartStyleConfig, ChartVariant } from '@/components
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { chartsApi } from '@/lib/api/charts';
+import { renderChart } from '@/lib/api/charts';
 import type { ChartWidgetConfig } from '@/types/dashboard';
 import { useTranslations } from '@/i18n/use-translations';
 import { useEffect, useState } from 'react';
@@ -15,7 +15,6 @@ interface ChartRenderResult {
   variant?: ChartVariant;
   data: unknown[];
   config: ChartConfig;
-  rechartsProps?: Record<string, unknown>;
   style?: ChartStyleConfig;
   warnings?: string[];
 }
@@ -35,7 +34,7 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
     try {
       setLoading(true);
       setError(null);
-      const result = await chartsApi.render(config.chartId, false);
+      const result = await renderChart(config.chartId, false);
       setChartData(result as ChartRenderResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('Failed to load chart'));
@@ -84,7 +83,6 @@ export function ChartWidget({ config, refreshKey }: ChartWidgetProps) {
         data={chartData.data}
         config={chartData.config}
         style={chartData.style}
-        rechartsProps={chartData.rechartsProps}
         className="h-full w-full"
       />
     </div>

@@ -36,7 +36,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableSpacer,
 } from '@/components/ui/table';
 
 import { cn } from '@/lib/utils';
@@ -177,9 +176,9 @@ export function DataTable<TData, TValue>({
                     table.getColumn(searchKey)?.setFilterValue(e.target.value);
                   }
                 }}
-                placeholder={searchPlaceholder || t('Search...')}
+                placeholder={searchPlaceholder || t('Search…')}
                 type="text"
-                aria-label={searchPlaceholder || t('Search...')}
+                aria-label={searchPlaceholder || t('Search…')}
               />
               <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/40 peer-disabled:opacity-50">
                 <RiSearch2Line className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -242,7 +241,6 @@ export function DataTable<TData, TValue>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableSpacer />
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
@@ -262,7 +260,6 @@ export function DataTable<TData, TValue>({
             </TableRow>
           )}
         </TableBody>
-        <TableSpacer />
       </Table>
 
       {/* Pagination */}

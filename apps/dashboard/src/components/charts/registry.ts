@@ -359,7 +359,7 @@ export const CHART_VARIANTS: Record<ChartVariant, ChartVariantConfig> = {
       showTooltip: true,
       showLegend: true,
       innerRadius: 30,
-      outerRadius: 110,
+      outerRadius: 80,
     },
   },
   'radial-label': {
@@ -372,7 +372,7 @@ export const CHART_VARIANTS: Record<ChartVariant, ChartVariantConfig> = {
       showLegend: true,
       showLabels: true,
       innerRadius: 30,
-      outerRadius: 110,
+      outerRadius: 80,
     },
   },
   'radial-grid': {
@@ -385,7 +385,7 @@ export const CHART_VARIANTS: Record<ChartVariant, ChartVariantConfig> = {
       showLegend: true,
       showGrid: true,
       innerRadius: 30,
-      outerRadius: 110,
+      outerRadius: 80,
     },
   },
   'radial-text': {
@@ -397,7 +397,7 @@ export const CHART_VARIANTS: Record<ChartVariant, ChartVariantConfig> = {
       showTooltip: true,
       showLegend: true,
       innerRadius: 30,
-      outerRadius: 110,
+      outerRadius: 80,
     },
   },
   'radial-stacked': {
@@ -410,7 +410,7 @@ export const CHART_VARIANTS: Record<ChartVariant, ChartVariantConfig> = {
       showLegend: true,
       stacked: true,
       innerRadius: 30,
-      outerRadius: 110,
+      outerRadius: 80,
     },
   },
 

@@ -17,7 +17,6 @@ import {
   DataSourceConfig,
 } from '@sparkset/core';
 import type { Repositories } from './repository_factory.js';
-import { InMemoryDBClient } from '../db/in-memory.js';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 import { ActionService } from '../services/action_service.js';
 import { AIProviderService } from '../services/ai_provider_service.js';
@@ -51,16 +50,16 @@ export interface Services {
   chartCompiler: ChartCompiler;
   dashboard: DashboardService;
   dashboardWidget: DashboardWidgetService;
-  queryExecutor?: QueryExecutor;
-  actionExecutor?: ActionExecutor;
-  botProcessor?: BotProcessor;
+  queryExecutor: QueryExecutor;
+  actionExecutor: ActionExecutor;
+  botProcessor: BotProcessor;
 }
 
 /**
  * Options for creating services
  */
 export interface ServiceFactoryOptions {
-  database: Database | null;
+  database: Database;
   repositories: Repositories;
 }
 
@@ -76,13 +75,8 @@ export function createServices(options: ServiceFactoryOptions): Services {
   const conversationService = new ConversationService(repositories.conversation);
   const aiProviderService = new AIProviderService(repositories.aiProvider);
 
-  // Create DB client factory based on database availability
-  let createDBClientFactory: (config: DataSourceConfig) => DBClient;
-  if (database) {
-    createDBClientFactory = createLucidDBClientFactory(database);
-  } else {
-    createDBClientFactory = () => new InMemoryDBClient();
-  }
+  // Create DB client factory
+  const createDBClientFactory = createLucidDBClientFactory(database);
 
   // Helper to get datasource config by ID
   const getDatasourceConfig = async (id: number): Promise<DataSourceConfig> => {
@@ -123,81 +117,61 @@ export function createServices(options: ServiceFactoryOptions): Services {
     aiProviderService,
   });
 
-  // Create executors (only if database is available)
-  let queryExecutor: QueryExecutor | undefined;
-  let actionExecutor: ActionExecutor | undefined;
-
-  if (database) {
-    queryExecutor = new QueryExecutor({
-      getDBClient,
-      getDatasourceConfig,
-    });
-
-    // Build action executor registry
-    const registry = new ActionRegistry();
-    const sqlActionExecutor = new SqlActionExecutor({
-      getDBClient,
-      getDatasourceConfig,
-    });
-    registry.register(
-      createSqlActionHandler({
-        executor: sqlActionExecutor,
-        defaultDatasourceId: async () => {
-          const list = await datasourceService.list();
-          return list.find((d) => d.isDefault)?.id;
-        },
-      }),
-    );
-    registry.register(createEchoHandler('api'));
-    registry.register(createEchoHandler('file'));
-    actionExecutor = new ActionExecutor(registry);
-  }
-
-  // Create query service
-  const queryService = new QueryService({
-    datasourceService,
-    actionService,
-    schemaService,
-    aiProviderService,
-    executor: queryExecutor,
+  // Create executors (query always available, actions require database)
+  const queryExecutor = new QueryExecutor({
     getDBClient,
     getDatasourceConfig,
   });
 
-  // Create chart services (requires database)
-  const chartCompiler = new ChartCompiler();
-  let datasetService: DatasetService;
-  let chartService: ChartService;
+  // Build action executor registry
+  const registry = new ActionRegistry();
+  const sqlActionExecutor = new SqlActionExecutor({
+    getDBClient,
+    getDatasourceConfig,
+  });
+  registry.register(
+    createSqlActionHandler({
+      executor: sqlActionExecutor,
+      defaultDatasourceId: async () => {
+        const list = await datasourceService.list();
+        return list.find((d) => d.isDefault)?.id;
+      },
+    }),
+  );
+  registry.register(createEchoHandler('api'));
+  registry.register(createEchoHandler('file'));
+  const actionExecutor = new ActionExecutor(registry);
 
-  if (database) {
-    datasetService = new DatasetService(database, datasourceService);
-    chartService = new ChartService(datasetService, chartCompiler);
-  } else {
-    // Create placeholder services that will throw errors when used without database
-    datasetService = null as unknown as DatasetService;
-    chartService = null as unknown as ChartService;
-  }
+  // Create query service
+  const queryService = new QueryService({
+    datasourceService,
+    schemaService,
+    aiProviderService,
+    executor: queryExecutor,
+  });
+
+  // Create chart services
+  const chartCompiler = new ChartCompiler();
+  const datasetService = new DatasetService(database, datasourceService);
+  const chartService = new ChartService(datasetService, chartCompiler);
 
   // Create dashboard services
   const dashboardService = new DashboardService();
   const dashboardWidgetService = new DashboardWidgetService();
 
   // Create bot processor (Phase 2.6: Full integration)
-  let botProcessor: BotProcessor | undefined;
-  if (database && actionExecutor) {
-    const botQueryProcessor = new BotQueryProcessor(queryService);
-    const botActionExecutor = new BotActionExecutor(actionService, datasetService, actionExecutor);
-    const parameterExtractor = createParameterExtractor(repositories.aiProvider);
-    const conversationTracker = createConversationTracker(repositories.conversation);
+  const botQueryProcessor = new BotQueryProcessor(queryService);
+  const botActionExecutor = new BotActionExecutor(actionService, datasetService, actionExecutor);
+  const parameterExtractor = createParameterExtractor(repositories.aiProvider);
+  const conversationTracker = createConversationTracker(repositories.conversation);
 
-    botProcessor = createBotProcessor(
-      botQueryProcessor,
-      botActionExecutor,
-      repositories.aiProvider,
-      parameterExtractor,
-      conversationTracker,
-    );
-  }
+  const botProcessor = createBotProcessor(
+    botQueryProcessor,
+    botActionExecutor,
+    repositories.aiProvider,
+    parameterExtractor,
+    conversationTracker,
+  );
 
   return {
     datasource: datasourceService,

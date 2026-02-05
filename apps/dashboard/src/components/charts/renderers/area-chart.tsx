@@ -37,6 +37,7 @@ export function AreaChartRenderer({
     stacked = false,
     curveType = 'natural',
     gradient = false,
+    fillOpacity = 0.4,
   } = style;
 
   // Map curve type to recharts type - shadcn uses 'natural' for smooth curves
@@ -74,15 +75,7 @@ export function AreaChartRenderer({
 
         {showGrid && <CartesianGrid vertical={false} />}
 
-        <XAxis
-          dataKey={xKey}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) =>
-            typeof value === 'string' && value.length > 3 ? value.slice(0, 3) : String(value)
-          }
-        />
+        <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} minTickGap={12} />
 
         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
 
@@ -97,7 +90,7 @@ export function AreaChartRenderer({
             type={getCurveTypeValue(curveType)}
             fill={gradient ? `url(#${chartId}-fill-${key})` : `var(--color-${key})`}
             stroke={`var(--color-${key})`}
-            fillOpacity={0.4}
+            fillOpacity={fillOpacity}
             stackId={stacked ? 'stack' : undefined}
             name={String(config[key]?.label || key)}
           />

@@ -1,7 +1,7 @@
 'use client';
 import { RiDatabase2Line, RiRefreshLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchSchema } from '@/lib/api/datasources-api';
 import type { TableSchemaDTO } from '@/types/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -31,29 +31,32 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadSchema = async (id?: number) => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchSchema(id);
-      setSchema(res);
-    } catch (err) {
-      setError((err as Error)?.message ?? t('Failed to load schema'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadSchema = useCallback(
+    async (id?: number) => {
+      if (!id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchSchema(id);
+        setSchema(res);
+      } catch (err) {
+        setError((err as Error)?.message ?? t('Failed to load schema'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (open && datasourceId) {
       void loadSchema(datasourceId);
     }
-  }, [open, datasourceId]);
+  }, [open, datasourceId, loadSchema]);
 
   const defaultTrigger = (
     <Button variant="outline" size="sm" className="gap-2 shrink-0">
-      <RiDatabase2Line className="h-4 w-4" />
+      <RiDatabase2Line className="h-4 w-4" aria-hidden="true" />
       {t('View Schema')}
     </Button>
   );
@@ -66,7 +69,7 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
           <div className="flex items-center justify-between pr-6">
             <div>
               <SheetTitle className="flex items-center gap-2">
-                <RiDatabase2Line className="h-5 w-5" />
+                <RiDatabase2Line className="h-5 w-5" aria-hidden="true" />
                 {t('Schema Cache')}
               </SheetTitle>
               <SheetDescription className="mt-2">
@@ -79,12 +82,16 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
               size="sm"
               variant="ghost"
               className="h-8 w-8 p-0"
+              aria-label={t('Refresh')}
               onClick={() => {
                 void loadSchema(datasourceId);
               }}
               disabled={loading}
             >
-              <RiRefreshLine className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RiRefreshLine
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
             </Button>
           </div>
         </SheetHeader>
