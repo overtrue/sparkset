@@ -273,8 +273,8 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                 <AccordionItem key={table.id} value={`table-${table.id}`}>
                   <div className="flex items-start justify-between gap-3">
                     <AccordionTrigger className="hover:no-underline">
-                      <div className="flex min-w-0 flex-1 items-center justify-between pr-4">
-                        <div className="flex min-w-0 flex-col items-start">
+                      <div className="flex min-w-0 flex-1 items-center gap-3 pr-4">
+                        <div className="flex min-w-0 flex-1 flex-col items-start">
                           <span className="w-full truncate font-medium">{table.tableName}</span>
                           {table.tableComment && (
                             <span className="w-full truncate text-xs text-muted-foreground">
@@ -282,7 +282,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="shrink-0 text-xs text-muted-foreground">
                           <span>{t('{count} columns', { count: table.columns.length })}</span>
                         </div>
                       </div>

@@ -41,13 +41,13 @@ export interface ChartFrameProps {
 }
 
 const CHART_FRAME_CLASS: Record<ChartCategory, string> = {
-  area: 'aspect-[16/9] min-h-[240px] w-full',
-  bar: 'aspect-[16/9] min-h-[240px] w-full',
-  line: 'aspect-[16/9] min-h-[240px] w-full',
-  pie: 'aspect-square min-h-[240px] w-full',
-  radar: 'aspect-square min-h-[240px] w-full',
-  radial: 'aspect-square min-h-[240px] w-full',
-  table: 'min-h-[240px] w-full overflow-auto',
+  area: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
+  bar: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
+  line: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
+  pie: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
+  radar: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
+  radial: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
+  table: 'w-full min-h-[240px] max-h-[560px] overflow-auto',
 };
 
 export function ChartFrame({ chartType, className, children }: ChartFrameProps) {

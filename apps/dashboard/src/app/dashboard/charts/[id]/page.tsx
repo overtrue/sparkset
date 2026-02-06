@@ -146,47 +146,52 @@ export default function ChartDetailPage({ params }: Props) {
         }
       />
 
-      {/* Configuration info */}
-      <div className="flex flex-wrap gap-4 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-        <span>
-          {t('Chart Type')}：
-          <span className="font-medium text-foreground">{chartData.chartType}</span>
-        </span>
-        <span>
-          {t('Dataset')}：
-          <span className="font-medium text-foreground">
-            {chartData.dataset?.name || chartData.datasetId}
-          </span>
-        </span>
-        <span>
-          {t('Created At')}：
-          <span className="font-medium text-foreground">
-            {new Date(chartData.createdAt).toLocaleDateString()}
-          </span>
-        </span>
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        {/* Basic info */}
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle>{t('Basic Information')}</CardTitle>
+            <CardDescription>{chartData.title}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t('Chart Type')}</p>
+              <p className="font-medium">{chartData.chartType.toUpperCase()}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t('Dataset')}</p>
+              <p className="font-medium">{chartData.dataset?.name || chartData.datasetId}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t('Created At')}</p>
+              <p className="font-medium">{new Date(chartData.createdAt).toLocaleDateString()}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Chart display */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('Live Preview')}</CardTitle>
-          <CardDescription>
-            {chartData.chartType.toUpperCase()} | {t('Dataset')}：{chartData.dataset?.name || 'N/A'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChartFrame chartType={chartData.chartType}>
-            <ChartRenderer
-              chartType={chartData.chartType}
-              variant={chartData.specJson.variant}
-              data={previewData}
-              config={previewConfig}
-              style={chartData.specJson.style}
-              className="h-full w-full"
-            />
-          </ChartFrame>
-        </CardContent>
-      </Card>
+        {/* Chart display */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('Live Preview')}</CardTitle>
+            <CardDescription>
+              {chartData.chartType.toUpperCase()} | {t('Dataset')}：
+              {chartData.dataset?.name || 'N/A'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartFrame chartType={chartData.chartType}>
+              <ChartRenderer
+                chartType={chartData.chartType}
+                variant={chartData.specJson.variant}
+                data={previewData}
+                config={previewConfig}
+                style={chartData.specJson.style}
+                className="h-full w-full"
+              />
+            </ChartFrame>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Delete confirmation dialog */}
       <ConfirmDialog
