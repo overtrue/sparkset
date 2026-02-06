@@ -8,8 +8,8 @@
 import { RiNotification3Line } from '@remixicon/react';
 import type React from 'react';
 
-import { UserMenu } from '@/components/auth/user-menu';
 import { AppSidebar } from '@/components/app-sidebar';
+import { UserMenu } from '@/components/auth/user-menu';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b">
           <div className="flex flex-1 items-center gap-2 px-3">
             <SidebarTrigger className="-ml-4" />
-            <Separator orientation="vertical" className="mr-2 !h-4" />
+            <Separator orientation="vertical" className="mr-2 h-4!" />
             <div className="text-sm text-muted-foreground">Sparkset</div>
           </div>
           <div className="flex gap-3 ml-auto">

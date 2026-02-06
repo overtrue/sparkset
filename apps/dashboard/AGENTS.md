@@ -15,6 +15,19 @@
 
 ## 强制规则
 
+### 0. 禁止修改 shadcn UI 组件
+
+- ❌ **绝对禁止修改 `src/components/ui/` 目录下的任何组件**
+- 这些是 shadcn 原子组件，通过 CLI 维护，可能被自动更新/替换
+- 直接修改会在通过 CLI 更新 shadcn 组件时产生冲突
+- 重新生成组件时修改会丢失
+
+**自定义方式**:
+
+- ✅ 在业务页面/组件级别应用自定义样式（使用 `className`、`style` props 或包装组件）
+- ✅ 在 `src/components/`（非 `src/components/ui/`）创建扩展或组合 shadcn 组件的高阶组件
+- ✅ 在 `src/components/{module}/` 创建模块特定的包装组件
+
 ### 1. 禁止使用旧模式
 
 - ❌ 禁止在 URL 中使用语言前缀
