@@ -104,12 +104,14 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [isVerified, setIsVerified] = useState(false);
 
   const trimmedName = form.name.trim();
+  const apiKeyValue = form.apiKey ?? '';
+  const baseURLValue = form.baseURL ?? '';
   const requiresApiKey = API_KEY_REQUIRED_TYPES.has(form.type);
   const requiresBaseURL = form.type === 'openai-compatible';
   const canTest =
     Boolean(form.type) &&
-    ((requiresApiKey && form.apiKey.trim().length > 0) ||
-      (requiresBaseURL && form.baseURL.trim().length > 0) ||
+    ((requiresApiKey && apiKeyValue.trim().length > 0) ||
+      (requiresBaseURL && baseURLValue.trim().length > 0) ||
       (!requiresApiKey && !requiresBaseURL));
   const canSubmit = isVerified && trimmedName.length > 0 && Boolean(form.type);
 

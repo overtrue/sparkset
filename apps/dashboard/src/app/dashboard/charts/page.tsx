@@ -9,7 +9,7 @@ import {
 } from '@/components/data-table/data-table-row-actions';
 import { DashboardSelector } from '@/components/dashboard-selector';
 import { PageHeader } from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/client-routing';
@@ -24,15 +24,19 @@ import {
   RiDashboardLine,
   RiLineChartLine,
   RiPieChartLine,
+  RiRadarLine,
   RiTableLine,
 } from '@remixicon/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
 import { formatDateTime } from '@/lib/utils/date';
+import type { VariantProps } from 'class-variance-authority';
 import { useCallback, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
+
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
 export default function ChartsPage() {
   const t = useTranslations();
@@ -53,17 +57,21 @@ export default function ChartsPage() {
       bar: RiBarChartLine,
       area: RiLineChartLine,
       pie: RiPieChartLine,
+      radar: RiRadarLine,
+      radial: RiPieChartLine,
       table: RiTableLine,
     }),
     [],
   );
 
-  const chartTypeBadgeVariant = useMemo(
+  const chartTypeBadgeVariant = useMemo<Record<Chart['chartType'], BadgeVariant>>(
     () => ({
       line: 'default',
       bar: 'secondary',
       area: 'outline',
       pie: 'destructive',
+      radar: 'outline',
+      radial: 'secondary',
       table: 'secondary',
     }),
     [],
@@ -117,7 +125,7 @@ export default function ChartsPage() {
       return <Icon className="h-4 w-4" aria-hidden="true" />;
     };
 
-    const makeBadgeVariant = (chartType: Chart['chartType']) =>
+    const makeBadgeVariant = (chartType: Chart['chartType']): BadgeVariant =>
       chartTypeBadgeVariant[chartType] ?? 'default';
 
     return [

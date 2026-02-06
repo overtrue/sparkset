@@ -1,7 +1,7 @@
 'use client';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,11 +21,13 @@ import {
   RiEyeLine,
   RiLineChartLine,
   RiPieChartLine,
+  RiRadarLine,
   RiTableLine,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { Link } from '@/i18n/client-routing';
 import { formatDateTime } from '@/lib/utils/date';
+import type { VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -34,6 +36,8 @@ interface ChartListProps {
   datasets: Dataset[];
   onRefresh?: () => void;
 }
+
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
 export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
   const t = useTranslations();
@@ -56,16 +60,20 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
       bar: RiBarChartLine,
       area: RiLineChartLine,
       pie: RiPieChartLine,
+      radar: RiRadarLine,
+      radial: RiPieChartLine,
       table: RiTableLine,
     }),
     [],
   );
-  const chartTypeBadgeVariant = React.useMemo(
+  const chartTypeBadgeVariant = React.useMemo<Record<Chart['chartType'], BadgeVariant>>(
     () => ({
       line: 'default',
       bar: 'secondary',
       area: 'outline',
       pie: 'destructive',
+      radar: 'outline',
+      radial: 'secondary',
       table: 'secondary',
     }),
     [],
@@ -74,7 +82,7 @@ export function ChartList({ charts, datasets, onRefresh }: ChartListProps) {
     const Icon = chartTypeIcons[chartType] ?? RiBarChartLine;
     return <Icon className="h-5 w-5" aria-hidden="true" />;
   };
-  const getChartBadgeVariant = (chartType: Chart['chartType']) =>
+  const getChartBadgeVariant = (chartType: Chart['chartType']): BadgeVariant =>
     chartTypeBadgeVariant[chartType] ?? 'default';
 
   const handleDeleteClick = (chart: Chart) => {

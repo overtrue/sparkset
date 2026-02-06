@@ -43,5 +43,11 @@
   },
   "dependencies": {
     "mysql2": "^3.16.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@remixicon/react": "patches/@remixicon__react.patch",
+      "react-resizable-panels": "patches/react-resizable-panels.patch"
+    }
   }
 }

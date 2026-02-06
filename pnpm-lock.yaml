@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@remixicon/react':
+    hash: ab5e6rardtghliewauq3smah4q
+    path: patches/@remixicon__react.patch
+  react-resizable-panels:
+    hash: ng2yt323b73tnvvzddm7omwqmu
+    path: patches/react-resizable-panels.patch
+
 importers:
 
   .:
@@ -146,7 +154,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@remixicon/react':
         specifier: ^4.7.0
-        version: 4.7.0(react@19.2.3)
+        version: 4.7.0(patch_hash=ab5e6rardtghliewauq3smah4q)(react@19.2.3)
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -212,7 +220,7 @@ importers:
         version: 2.7.2(@types/react@19.2.7)(react@19.2.3)
       react-resizable-panels:
         specifier: ^3.0.6
-        version: 3.0.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+        version: 3.0.6(patch_hash=ng2yt323b73tnvvzddm7omwqmu)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react-syntax-highlighter:
         specifier: ^16.1.0
         version: 16.1.0(react@19.2.3)
@@ -8024,7 +8032,7 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@remixicon/react@4.7.0(react@19.2.3)':
+  '@remixicon/react@4.7.0(patch_hash=ab5e6rardtghliewauq3smah4q)(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
@@ -10930,7 +10938,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.7
 
-  react-resizable-panels@3.0.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+  react-resizable-panels@3.0.6(patch_hash=ng2yt323b73tnvvzddm7omwqmu)(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)

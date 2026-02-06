@@ -44,6 +44,7 @@
 
 ## 更新记录
 
+- 2026-02-06：修复 Dashboard 构建缺失的 Form 组件与 react-resizable-panels 别名导出，解除 turbo build 阻塞
 - 2026-02-03：Dashboard 数据源模块重构（拆分列表组件与 Schema 编辑器、统一日期格式、占位符与可访问性改进）
 - 2026-02-03：Chart Builder 可访问性与占位符一致性优化，补齐 i18n 文案
 - 2026-02-03：Chart Builder 与 Schema 编辑器补齐示例占位符（含省略号）与新文案

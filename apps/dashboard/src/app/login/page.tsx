@@ -14,16 +14,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -145,7 +138,7 @@ export default function LoginPage() {
                 <TabsContent value="login">
                   <Form {...loginForm}>
                     <form
-                      onSubmit={(e) => void loginForm.handleSubmit(onLogin)(e)}
+                      onSubmit={(event) => void loginForm.handleSubmit(onLogin)(event)}
                       className="space-y-4"
                     >
                       <FormField
@@ -185,7 +178,7 @@ export default function LoginPage() {
                 <TabsContent value="register">
                   <Form {...registerForm}>
                     <form
-                      onSubmit={(e) => void registerForm.handleSubmit(onRegister)(e)}
+                      onSubmit={(event) => void registerForm.handleSubmit(onRegister)(event)}
                       className="space-y-4"
                     >
                       <FormField

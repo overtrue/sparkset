@@ -71,12 +71,23 @@ export function RadialChartRenderer({
     () =>
       enrichedData.map((entry, index) => {
         const fillColor = (entry.fill as string) || getChartColor(index);
+        const legendName = entry[nameKey];
+        const legendValue =
+          typeof legendName === 'string' ||
+          typeof legendName === 'number' ||
+          typeof legendName === 'boolean'
+            ? String(legendName)
+            : '';
         return {
-          value: entry[nameKey],
+          value: legendValue,
           type: 'rect' as const,
           color: fillColor,
           dataKey: nameKey,
-          payload: entry,
+          payload: {
+            strokeDasharray: '',
+            value: legendValue,
+            ...entry,
+          },
         };
       }),
     [enrichedData, nameKey],

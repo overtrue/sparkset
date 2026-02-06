@@ -1,0 +1,74 @@
+diff --git a/dist/declarations/src/index.d.ts b/dist/declarations/src/index.d.ts
+index f3f0d1b1436560ce07abe498061115f4de8e4bfd..e909a974ea1c646e98bfa5fb025da19b05e4aeae 100644
+--- a/dist/declarations/src/index.d.ts
++++ b/dist/declarations/src/index.d.ts
+@@ -20,4 +20,8 @@ import type { ImperativePanelGroupHandle, PanelGroupOnLayout, PanelGroupProps, P
+ import type { PanelResizeHandleOnDragging, PanelResizeHandleProps } from "./PanelResizeHandle.js";
+ import type { PointerHitAreaMargins } from "./PanelResizeHandleRegistry.js";
+ import type { CustomCursorStyleConfig } from "./utils/cursor.js";
+-export { ImperativePanelGroupHandle, ImperativePanelHandle, PanelGroupOnLayout, PanelGroupProps, PanelGroupStorage, PanelOnCollapse, PanelOnExpand, PanelOnResize, PanelProps, PanelResizeHandleOnDragging, PanelResizeHandleProps, PointerHitAreaMargins, Panel, PanelGroup, PanelResizeHandle, usePanelGroupContext, assert, getIntersectingRectangle, intersects, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, setNonce, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, CustomCursorStyleConfig, DATA_ATTRIBUTES, };
++declare const Group: typeof PanelGroup;
++declare const Separator: typeof PanelResizeHandle;
++type GroupProps = PanelGroupProps;
++type SeparatorProps = PanelResizeHandleProps;
++export { ImperativePanelGroupHandle, ImperativePanelHandle, PanelGroupOnLayout, PanelGroupProps, GroupProps, PanelGroupStorage, PanelOnCollapse, PanelOnExpand, PanelOnResize, PanelProps, PanelResizeHandleOnDragging, PanelResizeHandleProps, SeparatorProps, PointerHitAreaMargins, Panel, PanelGroup, Group, PanelResizeHandle, Separator, usePanelGroupContext, assert, getIntersectingRectangle, intersects, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, setNonce, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, CustomCursorStyleConfig, DATA_ATTRIBUTES, };
+diff --git a/dist/react-resizable-panels.browser.development.js b/dist/react-resizable-panels.browser.development.js
+index 4fc935aa3bbf52a6adcf651b87e2e951d40b9a3c..d58044b73f8331d75b8329c89d965840da55ec7a 100644
+--- a/dist/react-resizable-panels.browser.development.js
++++ b/dist/react-resizable-panels.browser.development.js
+@@ -2589,4 +2589,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
+diff --git a/dist/react-resizable-panels.browser.js b/dist/react-resizable-panels.browser.js
+index ce003a5fe6de15871f2e53672be39c4f35708696..b58d1d454379ea164e6d4e973acf803c1bd1d650 100644
+--- a/dist/react-resizable-panels.browser.js
++++ b/dist/react-resizable-panels.browser.js
+@@ -2483,4 +2483,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
+diff --git a/dist/react-resizable-panels.development.edge-light.js b/dist/react-resizable-panels.development.edge-light.js
+index 88cf2f74a7862b9520bce15a21640cf054d0caad..e60bf8094dc3e9103a2e506ab54ffbb7766a4912 100644
+--- a/dist/react-resizable-panels.development.edge-light.js
++++ b/dist/react-resizable-panels.development.edge-light.js
+@@ -2362,4 +2362,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
+diff --git a/dist/react-resizable-panels.development.js b/dist/react-resizable-panels.development.js
+index dff86f05906ae3df4e3479ad332582dc2cf74866..5b92876729f9724e7ebd7d62309b413eb823b52b 100644
+--- a/dist/react-resizable-panels.development.js
++++ b/dist/react-resizable-panels.development.js
+@@ -2596,4 +2596,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
+diff --git a/dist/react-resizable-panels.edge-light.js b/dist/react-resizable-panels.edge-light.js
+index c84d4bfb44ea4ccd5d0b21c392f83ba89ff66d65..4b60a88d51d21ab5b2509559cde044e9fd028a2f 100644
+--- a/dist/react-resizable-panels.edge-light.js
++++ b/dist/react-resizable-panels.edge-light.js
+@@ -2261,4 +2261,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
+diff --git a/dist/react-resizable-panels.js b/dist/react-resizable-panels.js
+index e572ddfdbe17e9656fa4d652f4a658fadcc3143c..87a25bc6161e79beb9c89c84a54af7e6e576702b 100644
+--- a/dist/react-resizable-panels.js
++++ b/dist/react-resizable-panels.js
+@@ -2485,4 +2485,4 @@ function getIntersectingRectangle(rectOne, rectTwo, strict) {
+   };
+ }
+ 
+-export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelResizeHandle, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };
++export { DATA_ATTRIBUTES, Panel, PanelGroup, PanelGroup as Group, PanelResizeHandle, PanelResizeHandle as Separator, assert, customizeGlobalCursorStyles, disableGlobalCursorStyles, enableGlobalCursorStyles, getIntersectingRectangle, getPanelElement, getPanelElementsForGroup, getPanelGroupElement, getResizeHandleElement, getResizeHandleElementIndex, getResizeHandleElementsForGroup, getResizeHandlePanelIds, intersects, setNonce, usePanelGroupContext };

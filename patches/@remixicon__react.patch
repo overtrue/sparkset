@@ -1,0 +1,21 @@
+diff --git a/index.d.ts b/index.d.ts
+index 19b84eaea452e45c1689ff98527ba92a1855f886..6f3597275931784e7d7156eafd4b4a778ea76259 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -2,14 +2,14 @@
+  * @remixicon/react v4.1.0 - Apache-2.0
+  */
+ 
+-import { ComponentType, SVGProps } from 'react';
++import { ComponentType, SVGProps, ReactNode } from 'react';
+ 
+ type AllSVGProps = SVGProps<SVGSVGElement>
+ type ReservedProps = 'color' | 'size' | 'width' | 'height' | 'fill' | 'viewBox'
+ interface RemixiconProps extends Pick<AllSVGProps, Exclude<keyof AllSVGProps, ReservedProps>> {
+   color?: string;
+   size?: number | string;
+-  children?: never;
++  children?: ReactNode;
+ }
+ type RemixiconComponentType = ComponentType<RemixiconProps>;
+ 
