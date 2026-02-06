@@ -16,6 +16,149 @@
 
 ---
 
+## 当前修复批次（2026-02-06）
+
+## Stage 1: 会话访问控制设计梳理
+
+**Goal**: 明确会话查询与写入的用户边界，避免跨用户读写
+**Success Criteria**:
+
+- 明确 `ConversationRepository` 和 `ConversationService` 的 userId 查询能力
+- 明确 `ConversationsController` 与 `QueriesController` 的归属校验路径
+
+**Tests**:
+
+- 代码静态检查（接口与调用点一致）
+
+**Status**: Complete
+
+## Stage 2: 会话列表与写入鉴权实现
+
+**Goal**: 增加按用户查询能力，并在会话追加消息时执行归属校验
+**Success Criteria**:
+
+- `ConversationRepository` 支持按 userId 列表查询
+- `ConversationsController.index` 不再全量拉取后内存过滤
+- `ConversationsController.appendMessage` 校验会话归属
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/server test`
+
+**Status**: Complete
+
+## Stage 3: 查询接口会话归属保护
+
+**Goal**: 在 Query 执行落库时校验 conversationId 是否属于当前用户
+**Success Criteria**:
+
+- 使用外部传入 `conversationId` 时进行归属校验
+- 非归属会话返回明确拒绝，不写入消息
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/server test`
+
+**Status**: Complete
+
+## Stage 4: 图表更新目标数据集校验修复
+
+**Goal**: 修复图表更新时切换数据集后的 schema 校验对象
+**Success Criteria**:
+
+- `ChartService.update` 使用目标 `datasetId`（新值或旧值）做 spec 校验
+- 避免“按旧 dataset 校验、按新 dataset 保存”的不一致
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/server test`
+
+**Status**: Complete
+
+## Stage 5: 回归验证与计划收尾
+
+**Goal**: 完成本批次回归并同步计划状态
+**Success Criteria**:
+
+- 相关 lint/typecheck/test 通过
+- 本批次 Stage 状态全部更新为 Complete
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server lint`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/server test`
+
+**Status**: Complete
+
+---
+
+## 当前修复批次（2026-02-06，UI 布局与可读性）
+
+## Stage 1: 数据源结构信息可读性修复
+
+**Goal**: 修复“表名 + 列数”视觉粘连问题，提升结构信息扫描效率
+**Success Criteria**:
+
+- 表名与列数信息有明确视觉分隔
+- 长表名场景下列数信息仍清晰可见
+
+**Tests**:
+
+- Dashboard 本地页面手工验证（数据源详情页）
+
+**Status**: Complete
+
+## Stage 2: 图表详情页布局优化
+
+**Goal**: 优化图表详情页为稳定双列布局，避免图表区域过度膨胀
+**Success Criteria**:
+
+- 常见桌面宽度下使用双列（基础信息 + 图表预览）
+- 图表区域不会出现超屏级膨胀
+
+**Tests**:
+
+- Dashboard 本地页面手工验证（图表详情页）
+
+**Status**: Complete
+
+## Stage 3: 图表渲染容器尺寸约束
+
+**Goal**: 统一约束图表渲染容器高度，避免详情/编辑页图表过大
+**Success Criteria**:
+
+- 各图表类型具备合理最大高度
+- 图表在详情页和编辑页视觉比例一致
+
+**Tests**:
+
+- Dashboard 本地页面手工验证（图表详情页、图表编辑页）
+
+**Status**: Complete
+
+## Stage 4: 回归验证与收尾
+
+**Goal**: 完成本批次验证并同步计划状态
+**Success Criteria**:
+
+- 变更文件 lint 与构建验证通过
+- Chrome MCP 验证无新增前端错误
+- 本批次 Stage 状态更新为 Complete
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard exec eslint src/components/datasource/schema-editor.tsx src/components/charts/renderer.tsx src/components/charts/builder.tsx src/components/charts/builder-preview.tsx 'src/app/dashboard/charts/[id]/page.tsx'`
+- `pnpm --filter @sparkset/dashboard build`
+- Chrome MCP 功能验证
+
+**Status**: Complete
+
+---
+
 ## 🎯 Phase 1: 基础用户系统（必须）| 预计 2-3 天
 
 ### Stage 1.1: 数据库迁移

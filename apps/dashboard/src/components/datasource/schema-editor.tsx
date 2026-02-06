@@ -282,8 +282,10 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                             </span>
                           )}
                         </div>
-                        <div className="shrink-0 text-xs text-muted-foreground">
-                          <span>{t('{count} columns', { count: table.columns.length })}</span>
+                        <div className="shrink-0 pl-2">
+                          <span className="inline-flex items-center rounded-md border border-border/70 bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+                            {t('{count} columns', { count: table.columns.length })}
+                          </span>
                         </div>
                       </div>
                     </AccordionTrigger>

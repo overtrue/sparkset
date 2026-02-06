@@ -156,6 +156,12 @@ export class InMemoryConversationRepository implements ConversationRepository {
     return Array.from(this.conversationsStore.values());
   }
 
+  async listByUserId(userId: number): Promise<Conversation[]> {
+    return Array.from(this.conversationsStore.values()).filter((conversation) => {
+      return conversation.userId === userId;
+    });
+  }
+
   async get(id: number): Promise<Conversation | null> {
     return this.conversationsStore.get(id) ?? null;
   }

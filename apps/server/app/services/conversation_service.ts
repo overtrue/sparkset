@@ -25,6 +25,10 @@ export class ConversationService {
     return this.repo.list();
   }
 
+  async listByUserId(userId: number): Promise<Conversation[]> {
+    return this.repo.listByUserId(userId);
+  }
+
   async get(id: number): Promise<Conversation | null | undefined> {
     return this.repo.get(id);
   }

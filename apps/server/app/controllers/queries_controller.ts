@@ -11,41 +11,51 @@ export default class QueriesController {
     private conversationService: ConversationService,
   ) {}
 
+  private getAuthUserId(ctx: HttpContext): number | undefined {
+    const auth = (ctx as unknown as { auth?: { user?: { id: number } } }).auth;
+    return auth?.user?.id;
+  }
+
   async run(ctx: HttpContext) {
     try {
       const parsed = queryRequestSchema.parse(ctx.request.body());
+      const userId = this.getAuthUserId(ctx);
+      if (!userId) {
+        return ctx.response.status(401).send({
+          error: 'Unauthorized',
+          message: 'User not authenticated',
+        });
+      }
+
+      let existingConversation: Awaited<ReturnType<ConversationService['get']>> = null;
+      if (parsed.conversationId) {
+        existingConversation = await this.conversationService.get(parsed.conversationId);
+        if (existingConversation && existingConversation.userId !== userId) {
+          return ctx.response.status(403).send({
+            error: 'Forbidden',
+            message: 'Conversation does not belong to current user',
+          });
+        }
+      }
+
       const result = await this.service.run(parsed);
 
       try {
         // 获取或创建会话（如果请求中提供了 conversationId，使用它；否则创建新会话）
         let conversationId: number;
-        if (parsed.conversationId) {
+        if (existingConversation) {
+          conversationId = existingConversation.id;
+        } else if (parsed.conversationId) {
           conversationId = parsed.conversationId;
-          // 验证会话是否存在
-          const existingConv = await this.conversationService.get(conversationId);
-          if (!existingConv) {
-            ctx.logger.warn(`Conversation ${conversationId} not found, creating new one`);
-            const auth = (ctx as unknown as { auth?: { user?: { id: number } } }).auth;
-            const userId = auth?.user?.id;
-            if (!userId) {
-              ctx.logger.error('User not authenticated when creating conversation');
-              throw new Error('User not authenticated');
-            }
-            const newConv = await this.conversationService.create({
-              title: parsed.question.slice(0, 50),
-              userId,
-            });
-            conversationId = newConv.id;
-          }
+          ctx.logger.warn(`Conversation ${conversationId} not found, creating new one`);
+          const newConv = await this.conversationService.create({
+            title: parsed.question.slice(0, 50),
+            userId,
+          });
+          conversationId = newConv.id;
         } else {
           // 创建新会话
           ctx.logger.info('Creating new conversation');
-          const auth = (ctx as unknown as { auth?: { user?: { id: number } } }).auth;
-          const userId = auth?.user?.id;
-          if (!userId) {
-            ctx.logger.error('User not authenticated when creating conversation');
-            throw new Error('User not authenticated');
-          }
           const newConv = await this.conversationService.create({
             title: parsed.question.slice(0, 50),
             userId,

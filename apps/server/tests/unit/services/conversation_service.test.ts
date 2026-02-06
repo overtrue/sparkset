@@ -45,6 +45,19 @@ describe('ConversationService', () => {
     });
   });
 
+  describe('listByUserId', () => {
+    it('should return only conversations for the specified user', async () => {
+      await service.create({ title: 'User A 1', userId: 1 });
+      await service.create({ title: 'User B 1', userId: 2 });
+      await service.create({ title: 'User A 2', userId: 1 });
+
+      const result = await service.listByUserId(1);
+
+      expect(result).toHaveLength(2);
+      expect(result.every((conversation) => conversation.userId === 1)).toBe(true);
+    });
+  });
+
   describe('get', () => {
     it('should return null for non-existent id', async () => {
       const result = await service.get(999);

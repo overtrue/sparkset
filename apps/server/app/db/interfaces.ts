@@ -28,6 +28,7 @@ export interface ActionRepository {
  */
 export interface ConversationRepository {
   list(): Promise<Conversation[]>;
+  listByUserId(userId: number): Promise<Conversation[]>;
   get(id: number): Promise<Conversation | null>;
   create(input: { title?: string; userId?: number }): Promise<Conversation>;
   appendMessage(input: {

@@ -485,7 +485,7 @@ export const ChartBuilder = React.forwardRef<ChartBuilderHandle, ChartBuilderPro
     );
 
     return (
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
         <ChartConfigForm
           formRef={formRef}
           control={control}

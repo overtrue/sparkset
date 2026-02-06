@@ -198,6 +198,16 @@ describe('InMemoryConversationRepository', () => {
     expect(list).toHaveLength(2);
   });
 
+  it('should list conversations by userId', async () => {
+    await repo.create({ title: 'User A 1', userId: 1 });
+    await repo.create({ title: 'User B 1', userId: 2 });
+    await repo.create({ title: 'User A 2', userId: 1 });
+
+    const list = await repo.listByUserId(1);
+    expect(list).toHaveLength(2);
+    expect(list.every((conversation) => conversation.userId === 1)).toBe(true);
+  });
+
   it('should get conversation by id', async () => {
     const created = await repo.create({ title: 'Test' });
 

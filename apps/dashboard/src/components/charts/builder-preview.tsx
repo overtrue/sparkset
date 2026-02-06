@@ -36,7 +36,7 @@ export function ChartPreviewPanel({
   const t = useTranslations();
 
   return (
-    <div className="space-y-4 lg:col-span-2">
+    <div className="space-y-4 lg:min-w-0">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <div>

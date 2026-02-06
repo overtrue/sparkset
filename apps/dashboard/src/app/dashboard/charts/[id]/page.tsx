@@ -146,7 +146,7 @@ export default function ChartDetailPage({ params }: Props) {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Basic info */}
         <Card className="h-fit">
           <CardHeader>

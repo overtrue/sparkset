@@ -9,6 +9,11 @@ export class LucidConversationRepository implements ConversationRepository {
     return rows.map(this.mapConversation);
   }
 
+  async listByUserId(userId: number): Promise<Conversation[]> {
+    const rows = await ConversationModel.query().where('userId', userId).orderBy('id', 'desc');
+    return rows.map(this.mapConversation);
+  }
+
   async get(id: number): Promise<Conversation | null> {
     const row = await ConversationModel.find(id);
     return row ? this.mapConversation(row) : null;

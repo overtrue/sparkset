@@ -75,6 +75,7 @@ export class ChartService {
   async update(
     id: number,
     data: Partial<{
+      datasetId: number;
       title: string;
       description: string;
       chartType: ChartSpec['chartType'];
@@ -86,23 +87,35 @@ export class ChartService {
       throw new Error('Invalid chart ID');
     }
     const chart = await Chart.findOrFail(validId);
+    const targetDatasetId = data.datasetId ?? chart.datasetId;
+    const nextSpec = data.spec ?? chart.specJson;
 
-    // 如果更新 spec，需要验证
-    if (data.spec) {
-      const dataset = await Dataset.findOrFail(chart.datasetId);
-      const validation = this.chartCompiler.validate(data.spec, dataset.schemaJson);
+    // 如果更新 spec 或 datasetId，需要按目标数据集验证最终 spec
+    if (data.spec || data.datasetId !== undefined) {
+      const dataset = await Dataset.findOrFail(targetDatasetId);
+      const validation = this.chartCompiler.validate(nextSpec, dataset.schemaJson);
 
       if (!validation.valid) {
         throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
       }
     }
 
-    // Transform spec to specJson for the model
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = { ...data };
-    if (updateData.spec) {
-      updateData.specJson = updateData.spec;
-      delete updateData.spec;
+    const updateData: Partial<{
+      datasetId: number;
+      title: string;
+      description: string;
+      chartType: ChartSpec['chartType'];
+      specJson: ChartSpec;
+    }> = {
+      datasetId: data.datasetId,
+      title: data.title,
+      description: data.description,
+      chartType: data.chartType,
+      specJson: data.spec,
+    };
+
+    if (updateData.specJson === undefined) {
+      delete updateData.specJson;
     }
 
     chart.merge(updateData);

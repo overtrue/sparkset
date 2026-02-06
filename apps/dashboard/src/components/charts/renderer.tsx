@@ -41,13 +41,13 @@ export interface ChartFrameProps {
 }
 
 const CHART_FRAME_CLASS: Record<ChartCategory, string> = {
-  area: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
-  bar: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
-  line: 'mx-auto w-full max-w-[960px] min-h-[240px] aspect-[16/9]',
-  pie: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
-  radar: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
-  radial: 'mx-auto w-full max-w-[560px] min-h-[240px] aspect-square',
-  table: 'w-full min-h-[240px] max-h-[560px] overflow-auto',
+  area: 'mx-auto w-full max-w-[860px] min-h-[240px] aspect-[16/9] max-h-[420px]',
+  bar: 'mx-auto w-full max-w-[860px] min-h-[240px] aspect-[16/9] max-h-[420px]',
+  line: 'mx-auto w-full max-w-[860px] min-h-[240px] aspect-[16/9] max-h-[420px]',
+  pie: 'mx-auto w-full max-w-[460px] min-h-[240px] aspect-square max-h-[420px]',
+  radar: 'mx-auto w-full max-w-[460px] min-h-[240px] aspect-square max-h-[420px]',
+  radial: 'mx-auto w-full max-w-[460px] min-h-[240px] aspect-square max-h-[420px]',
+  table: 'w-full min-h-[240px] max-h-[460px] overflow-auto',
 };
 
 export function ChartFrame({ chartType, className, children }: ChartFrameProps) {
