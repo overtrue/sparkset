@@ -212,7 +212,8 @@ export const parseConversationMessageMetadata = (
   const parsedHasResult = parseBoolean(meta.hasResult);
   const rowCount = nested.rowCount ?? rootRowCount ?? null;
   const summary = nested.summary ?? toText(meta.summary);
-  const hasResult = nested.hasResult ?? (rowCount !== null ? rowCount > 0 : parsedHasResult);
+  const hasResult =
+    parsedHasResult ?? nested.hasResult ?? (rowCount !== null ? rowCount > 0 : undefined);
   const datasourceId = nested.datasourceId ?? parsedDatasourceId;
   const aiProviderId = nested.aiProviderId ?? parsedAiProviderId;
   const limit = nested.limit ?? parsedLimit;
@@ -307,7 +308,14 @@ export const getConversationMessageRowCount = (
   fallbackContent?: string,
 ): number | null => {
   const parsed = parseConversationMessageMetadata(metadata);
-  if (parsed?.rowCount !== null) {
+  if (!parsed) {
+    if (!fallbackContent) {
+      return null;
+    }
+    return parseLegacyResultRowCountFromMessageContent(fallbackContent);
+  }
+
+  if (parsed.rowCount !== null) {
     return parsed.rowCount;
   }
   if (parsed?.hasResult === false) {
@@ -328,6 +336,9 @@ export const buildConversationMessageMetadata = (
   const rows = Array.isArray(result.rows) ? (parseRows(result.rows) ?? []) : [];
   const parsedRowCount = parsePositiveInt(result.rowCount, true);
   const rowCount = parsedRowCount ?? rows.length;
+  const datasourceId = parsePositiveInt(result.datasourceId) ?? parsed.datasource;
+  const aiProviderId = parsePositiveInt(result.aiProviderId) ?? parsed.aiProvider;
+  const limit = parsePositiveInt(result.limit) ?? parsed.limit;
 
   return {
     schemaVersion: CONVERSATION_MESSAGE_METADATA_VERSION,
@@ -342,16 +353,12 @@ export const buildConversationMessageMetadata = (
       ...(result.summary ? { summary: result.summary } : {}),
       rowCount,
       hasResult: rowCount > 0,
-      ...(parsePositiveInt(result.datasourceId)
-        ? { datasourceId: parsePositiveInt(result.datasourceId) }
-        : {}),
-      ...(parsePositiveInt(result.aiProviderId)
-        ? { aiProviderId: parsePositiveInt(result.aiProviderId) }
-        : {}),
-      ...(parsePositiveInt(result.limit) ? { limit: parsePositiveInt(result.limit) } : {}),
+      ...(datasourceId ? { datasourceId } : {}),
+      ...(aiProviderId ? { aiProviderId } : {}),
+      ...(limit ? { limit } : {}),
     },
-    datasourceId: parsePositiveInt(result.datasourceId) ?? parsed.datasource,
-    aiProviderId: parsePositiveInt(result.aiProviderId) ?? parsed.aiProvider,
-    limit: parsePositiveInt(result.limit) ?? parsed.limit,
+    ...(datasourceId ? { datasourceId } : {}),
+    ...(aiProviderId ? { aiProviderId } : {}),
+    ...(limit ? { limit } : {}),
   };
 };
