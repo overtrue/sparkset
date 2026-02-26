@@ -156,27 +156,31 @@ export const buildInternalQueryErrorResponse = (error: unknown): QueryErrorEnvel
       : error &&
           typeof error === 'object' &&
           'message' in error &&
-          typeof error.message === 'string'
-        ? error.message
-        : typeof error === 'number' || typeof error === 'boolean'
-          ? String(error)
-          : error == null
-            ? 'An unexpected error occurred'
-            : (() => {
-                try {
-                  return JSON.stringify(error) || 'An unexpected error occurred';
-                } catch {
-                  return 'An unexpected error occurred';
-                }
-              })();
+          typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'An unexpected error occurred';
 
-  const message =
-    typeof errorText === 'string' && errorText.trim() ? errorText : 'An unexpected error occurred';
-  return buildQueryErrorResponsePayload({
+  const message = errorText.trim() ? errorText : 'An unexpected error occurred';
+  const envelope = buildQueryErrorResponsePayload({
     errorMessage: message,
     errorCode: extractErrorCode(error),
     errorStatus: extractErrorStatus(error),
     details: extractErrorDetails(error),
     retryAfter: extractErrorRetryAfter(error),
   });
+
+  if (
+    envelope.payload.code === QUERY_ERROR_CODES.INTERNAL_ERROR &&
+    message === 'An unexpected error occurred'
+  ) {
+    return {
+      ...envelope,
+      payload: {
+        ...envelope.payload,
+        message: 'An unexpected error occurred',
+      },
+    };
+  }
+
+  return envelope;
 };

@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpContext } from '@adonisjs/core/http';
 import QueriesController from '../../../app/controllers/queries_controller.js';
@@ -24,11 +25,13 @@ interface ConversationServiceMock {
 interface MockResponse {
   statusCode: number;
   headers: Record<string, string>;
-  payload: ({ [key: string]: unknown; details?: unknown[] } & {
-    code?: unknown;
-    message?: unknown;
-    retryAfter?: unknown;
-  }) | undefined;
+  payload:
+    | ({ [key: string]: unknown; details?: unknown[] } & {
+        code?: unknown;
+        message?: unknown;
+        retryAfter?: unknown;
+      })
+    | undefined;
   status: (code: number) => MockResponse;
   header: (name: string, value: string) => MockResponse;
   send: (payload: Record<string, unknown>) => Record<string, unknown>;
@@ -36,7 +39,7 @@ interface MockResponse {
 
 const createMockResponse = (): MockResponse => {
   const response: MockResponse = {
-    statusCode: 0,
+    statusCode: 200,
     headers: {},
     payload: undefined,
     status(code) {
@@ -56,7 +59,10 @@ const createMockResponse = (): MockResponse => {
   return response;
 };
 
-interface Logger { error: ReturnType<typeof vi.fn> }
+interface Logger {
+  error: ReturnType<typeof vi.fn>;
+  info: ReturnType<typeof vi.fn>;
+}
 
 const createMockContext = ({
   body,
@@ -75,6 +81,7 @@ const createMockContext = ({
     auth: userId ? { user: { id: userId } } : undefined,
     logger: {
       error: vi.fn(),
+      info: vi.fn(),
     },
   } as unknown as HttpContext & { logger: Logger };
 };
