@@ -98,7 +98,7 @@ const getErrorAdvice = (
     return t(QUERY_ERROR_MESSAGES[QUERY_ERROR_CODES.CONVERSATION_NOT_FOUND]);
   }
 
-  if (status >= 500) {
+  if (status !== undefined && status >= 500) {
     return t(QUERY_ERROR_MESSAGES[QUERY_ERROR_CODES.INTERNAL_ERROR]);
   }
 
@@ -413,7 +413,7 @@ export const parseQueryError = (
   if (!(error instanceof ApiError)) {
     const message = error instanceof Error ? error.message?.trim() : undefined;
     const localizedValidationMessage = message ? localizeValidationMessage(message, t) : undefined;
-    if (localizedValidationMessage) {
+    if (localizedValidationMessage && message) {
       const parseForCode = message.toLowerCase().trim();
       const isValidationError =
         parseForCode.includes('question is required') ||
@@ -584,9 +584,11 @@ export const getQueryErrorAction = (
       return null;
     }
 
-    const isCoolingDown = typeof ctx.retryCountdown === 'number' && ctx.retryCountdown > 0;
+    const retryCountdown =
+      typeof ctx.retryCountdown === 'number' && ctx.retryCountdown > 0 ? ctx.retryCountdown : 0;
+    const isCoolingDown = retryCountdown > 0;
     const label = isCoolingDown
-      ? t('Retry in {seconds} seconds', { seconds: ctx.retryCountdown })
+      ? t('Retry in {seconds} seconds', { seconds: retryCountdown })
       : t('Retry');
     return {
       label,

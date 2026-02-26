@@ -1,4 +1,9 @@
-import type { ConversationDTO, ConversationDetailDTO, ApiListResponse } from '@/types/api';
+import type {
+  ApiListResponse,
+  ConversationDTO,
+  ConversationDetailDTO,
+  MessageDTO,
+} from '@/types/api';
 import { apiGet, apiPost } from '@/lib/fetch';
 
 // API functions - can be used in both server and client components
@@ -33,7 +38,7 @@ function hasMessageList(value: unknown): value is { messages: unknown[] } {
 
 function normalizeConversationDetail(payload: ConversationShowPayload): ConversationDetailDTO {
   if (hasConversationFields(payload) && hasMessageList(payload)) {
-    return payload;
+    return payload as ConversationDetailDTO;
   }
 
   const conversation = isRecord(payload) ? payload.conversation : undefined;
@@ -43,7 +48,7 @@ function normalizeConversationDetail(payload: ConversationShowPayload): Conversa
 
   return {
     ...conversation,
-    messages: payload.messages,
+    messages: payload.messages as MessageDTO[],
   };
 }
 

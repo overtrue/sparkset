@@ -70,7 +70,13 @@ export default function QueryRunner({ datasources, aiProviders, initialResult }:
       return;
     }
 
-    let remaining = Math.max(1, Math.floor(error.retryAfter));
+    const retryAfter = error.retryAfter;
+    if (typeof retryAfter !== 'number') {
+      setRetryCountdown(null);
+      return;
+    }
+
+    let remaining = Math.max(1, Math.floor(retryAfter));
     setRetryCountdown(remaining);
 
     const timer = window.setInterval(() => {

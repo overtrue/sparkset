@@ -7,7 +7,7 @@ import {
 export type ParsedQueryResultRow = Record<string, unknown>;
 
 export interface ParsedQueryResponse {
-  sql?: string;
+  sql: string;
   rows: ParsedQueryResultRow[];
   summary?: string;
   rowCount?: number;
@@ -152,7 +152,7 @@ const parseMetadataResult = (value: unknown, fallbackSql?: string): ParsedMetada
 
   if (isValidResponse || rows !== undefined) {
     const result: ParsedQueryResponse = {
-      ...(sql ? { sql } : {}),
+      sql: sql ?? '',
       rows: rows ?? [],
       ...(summary ? { summary } : {}),
       ...(parsedRowCount !== undefined ? { rowCount: parsedRowCount } : {}),
