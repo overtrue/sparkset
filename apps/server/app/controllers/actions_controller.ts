@@ -59,23 +59,32 @@ export default class ActionsController {
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
-    if (!this.actionExecutor)
-      return response.ok({ message: 'Action executed (stub)', action: item });
+    if (!this.actionExecutor) {
+      return response.serviceUnavailable({
+        message: 'Action executor is not available on this server',
+      });
+    }
 
     // 从请求体中获取 parameters，如果没有则使用 Action 中存储的 parameters
     const requestParameters = (request.body() as { parameters?: unknown })?.parameters;
     const parameters = requestParameters !== undefined ? requestParameters : item.parameters;
 
-    const result = await this.actionExecutor.run({
-      id: item.id,
-      type: item.type,
-      payload: item.payload,
-      parameters,
-    });
-    if (!result.success) {
-      return response.status(400).send({ message: result.error?.message ?? 'Execution failed' });
+    try {
+      const result = await this.actionExecutor.run({
+        id: item.id,
+        type: item.type,
+        payload: item.payload,
+        parameters,
+      });
+      if (!result.success) {
+        return response.status(400).send({ message: result.error?.message ?? 'Execution failed' });
+      }
+      return response.ok({ actionId: item.id, result: result.data });
+    } catch (error) {
+      return response
+        .status(500)
+        .send({ message: error instanceof Error ? error.message : 'Execution failed' });
     }
-    return response.ok({ actionId: item.id, result: result.data });
   }
 
   async generateSQL({ request, response, logger }: HttpContext) {

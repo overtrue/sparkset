@@ -2,7 +2,7 @@
  * AI Client interface and prompt building utilities
  */
 
-import { TableSchema } from '../db/types.js';
+import { TableSchema } from '../db/types';
 
 export interface ModelCallOptions {
   model?: string;

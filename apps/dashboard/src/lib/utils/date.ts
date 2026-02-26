@@ -64,6 +64,38 @@ export function formatRelativeTime(dateString: string, now: Date = new Date()): 
   return formatDateTime(date) || dateString;
 }
 
+export function formatRelativeTimeText(
+  dateString: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+  locale = 'en-US',
+  now: Date = new Date(),
+): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return t('Just now');
+  if (diffMins < 60) return t('{n} minutes ago', { n: diffMins });
+  if (diffHours < 24) return t('{n} hours ago', { n: diffHours });
+  if (diffDays < 7) return t('{n} days ago', { n: diffDays });
+
+  return formatShortDate(dateString, locale);
+}
+
+export function getDocumentLocale(fallback = 'en-US'): string {
+  if (typeof document === 'undefined') {
+    return fallback;
+  }
+
+  return document.documentElement.lang || fallback;
+}
+
 /**
  * Format a date to a short date string (e.g., "Jan 15, 2024")
  * @param dateString - ISO date string

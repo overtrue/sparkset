@@ -45,6 +45,27 @@ test('MessageDispatcher should detect query intent with keywords', async ({ expe
   expect(result.confidence).toBeGreaterThan(0);
 });
 
+test('MessageDispatcher should match action names that contain query-like terms', async ({
+  expect,
+}) => {
+  const dispatcher = new MessageDispatcher();
+
+  const bot = {
+    id: 1,
+    enabledActions: [1],
+    enableQuery: true,
+  } as Partial<typeof Bot> as Bot;
+
+  const message = createMessage('请先帮我查订单明细。');
+  const result = await dispatcher.detectIntent(bot, message, [
+    { id: 1, name: '查订单', description: '获取订单明细' },
+  ]);
+
+  expect(result.type).toBe('action');
+  expect(result.actionId).toBe(1);
+  expect(result.actionName).toBe('查订单');
+});
+
 test('MessageDispatcher should detect unknown intent when no match', async ({ expect }) => {
   const dispatcher = new MessageDispatcher();
 

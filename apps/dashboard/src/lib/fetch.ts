@@ -8,6 +8,87 @@ import { getAccessToken } from '@/lib/auth';
 
 export const API_BASE = '';
 
+export interface ApiErrorPayload {
+  error?: string;
+  message?: string;
+  code?: string;
+  details?: unknown[];
+  retryAfter?: number;
+}
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  payload?: ApiErrorPayload;
+
+  constructor(message: string, status: number, payload?: ApiErrorPayload, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.payload = payload;
+  }
+}
+
+const normalizeErrorPayload = (json: unknown): ApiErrorPayload | undefined => {
+  if (!json || typeof json !== 'object') {
+    return undefined;
+  }
+
+  const payload = json as ApiErrorPayload;
+  const message = payload.message;
+
+  if (
+    typeof message !== 'string' &&
+    typeof payload.error !== 'string' &&
+    payload.code === undefined
+  ) {
+    return undefined;
+  }
+
+  return payload;
+};
+
+const parseRetryAfterHeader = (value: string | null): number | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const asSeconds = Number(trimmed);
+  if (Number.isFinite(asSeconds) && asSeconds > 0) {
+    return Math.min(120, Math.max(1, Math.floor(asSeconds)));
+  }
+
+  const parsedDate = new Date(trimmed);
+  if (Number.isFinite(parsedDate.getTime())) {
+    const diffSeconds = Math.floor((parsedDate.getTime() - Date.now()) / 1000);
+    if (diffSeconds > 0) {
+      return Math.min(120, Math.max(1, diffSeconds));
+    }
+  }
+
+  return undefined;
+};
+
+const buildApiErrorMessage = (payload: ApiErrorPayload | undefined, fallback: string): string => {
+  if (payload) {
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message;
+    }
+
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error;
+    }
+  }
+
+  return fallback;
+};
+
 // Helper to check if we're in a server context
 function isServerContext(): boolean {
   return typeof window === 'undefined';
@@ -62,27 +143,58 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
 
   const text = await res.text();
   let json: unknown | undefined;
+  let rawTextPayload: ApiErrorPayload | undefined;
+  const retryAfter = parseRetryAfterHeader(res.headers.get('Retry-After'));
 
   // Safely parse JSON, handle empty responses or invalid JSON
   if (text) {
     try {
       json = JSON.parse(text) as unknown;
     } catch {
-      // If JSON parsing fails, use the text as error message
+      rawTextPayload = {
+        error: text,
+      };
+
       if (!res.ok) {
-        throw new Error(text || `API error ${res.status}`);
+        const normalizedPayload = normalizeErrorPayload(rawTextPayload);
+        const payload = normalizedPayload
+          ? {
+              ...normalizedPayload,
+              ...(normalizedPayload.retryAfter === undefined && retryAfter ? { retryAfter } : {}),
+            }
+          : rawTextPayload;
+        const message = buildApiErrorMessage(payload, text || `API error ${res.status}`);
+        throw new ApiError(message, res.status, payload, payload?.code);
       }
+
       // If response is OK but not JSON, return undefined
       json = undefined;
     }
   }
 
   if (!res.ok) {
-    const message =
-      typeof json === 'object' && json && 'message' in json
-        ? (json as { message: string }).message
-        : text || `API error ${res.status}`;
-    throw new Error(message);
+    const normalizedPayload = normalizeErrorPayload(json);
+    const mergedPayload: ApiErrorPayload | undefined = normalizedPayload
+      ? {
+          ...normalizedPayload,
+          ...(normalizedPayload.retryAfter === undefined && retryAfter ? { retryAfter } : {}),
+        }
+      : undefined;
+
+    if (!mergedPayload && rawTextPayload) {
+      const fallbackPayload = normalizeErrorPayload(rawTextPayload) ?? rawTextPayload;
+      const fallbackMessage = buildApiErrorMessage(
+        fallbackPayload,
+        text || `API error ${res.status}`,
+      );
+      throw new ApiError(fallbackMessage, res.status, fallbackPayload, fallbackPayload?.code);
+    }
+
+    const payload = mergedPayload ?? normalizeErrorPayload(json) ?? {};
+    const payloadWithRetryAfter =
+      payload.retryAfter === undefined && retryAfter ? { ...payload, retryAfter } : payload;
+    const message = buildApiErrorMessage(payloadWithRetryAfter, text || `API error ${res.status}`);
+    throw new ApiError(message, res.status, payloadWithRetryAfter, payloadWithRetryAfter?.code);
   }
 
   return json as T;

@@ -2,6 +2,7 @@ import { HttpContext } from '@adonisjs/core/http';
 import type { GuardContract } from '@adonisjs/auth/types';
 import User from '#models/user';
 import AccessToken from '#models/access_token';
+import { AuthenticationException } from '#exceptions/app_exceptions';
 import { DateTime } from 'luxon';
 import crypto from 'crypto';
 
@@ -78,7 +79,7 @@ export class AccessTokenGuard implements GuardContract<User> {
    */
   getUserOrFail(): User {
     if (!this._user) {
-      throw new Error('User not authenticated');
+      throw new AuthenticationException('User not authenticated');
     }
     return this._user;
   }
@@ -110,13 +111,13 @@ export class AccessTokenGuard implements GuardContract<User> {
     // 从请求头获取令牌
     const token = this.extractTokenFromRequest();
     if (!token) {
-      throw new Error('No access token provided');
+      throw new AuthenticationException('No access token provided');
     }
 
     // 验证令牌
     const user = await this.verifyToken(token);
     if (!user) {
-      throw new Error('Invalid or expired access token');
+      throw new AuthenticationException('Invalid or expired access token');
     }
 
     // 更新令牌使用时间

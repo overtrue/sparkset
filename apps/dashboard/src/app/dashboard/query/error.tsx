@@ -7,8 +7,8 @@ export default function ErrorBoundary({ error }: { error: Error }) {
   console.error(error);
   return (
     <div className="p-6 text-destructive">
-      {t('Error loading query page')}
-      {t('Please check API service')}
+      <p>{t('Error loading query page')}</p>
+      <p className="mt-1">{t('Please check API service')}</p>
     </div>
   );
 }

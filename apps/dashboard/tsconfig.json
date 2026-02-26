@@ -12,8 +12,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@sparkset/core": ["../../packages/core/src/index.ts"],
       "@sparkset/core/*": ["../../packages/core/src/*"],
+      "@sparkset/utils": ["../../packages/utils/src/index.ts"],
       "@sparkset/utils/*": ["../../packages/utils/src/*"],
+      "@sparkset/config": ["../../packages/config/src/index.ts"],
       "@sparkset/config/*": ["../../packages/config/src/*"]
     }
   },

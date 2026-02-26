@@ -1,5 +1,5 @@
-import { DBClient, DataSourceConfig, QueryResult } from '../db/types.js';
-import { ExecutionResult, SqlSnippet } from './types.js';
+import { DBClient, DataSourceConfig, QueryResult } from '../db/types';
+import { ExecutionResult, SqlSnippet } from './types';
 
 export interface ExecutorDeps {
   getDBClient: (datasourceId: number) => Promise<DBClient>;

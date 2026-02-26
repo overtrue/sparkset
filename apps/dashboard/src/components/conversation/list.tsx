@@ -2,36 +2,18 @@
 import { RiArrowDownSLine, RiArrowRightSLine, RiChat3Line } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 
-import { useState } from 'react';
-import { fetchConversationById } from '../../lib/api/conversations-api';
-import type { ConversationDTO, ConversationDetailDTO } from '@/types/api';
+import { useMemo, useState } from 'react';
+import type { ConversationDTO } from '@/types/api';
+import { formatRelativeTimeText, getDocumentLocale } from '@/lib/utils/date';
+import { useConversationDetails } from '@/hooks/use-conversation-details';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { ConversationDetail } from './detail';
 
 interface ConversationListProps {
   conversations: ConversationDTO[];
-}
-
-function formatDate(dateString: string, t: ReturnType<typeof useTranslations>): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return t('Just now');
-  if (diffMins < 60) return t('{n} minutes ago', { n: diffMins });
-  if (diffHours < 24) return t('{n} hours ago', { n: diffHours });
-  if (diffDays < 7) return t('{n} days ago', { n: diffDays });
-
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 function getConversationTitle(
@@ -47,8 +29,16 @@ function getConversationTitle(
 export function ConversationList({ conversations }: ConversationListProps) {
   const t = useTranslations();
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
-  const [details, setDetails] = useState<Map<number, ConversationDetailDTO>>(new Map());
+  const { details, detailErrors, loadingId, loadConversationDetail } = useConversationDetails({
+    t,
+    fallbackErrorMessage: t('Failed to load, please retry'),
+  });
+  const locale = useMemo(() => getDocumentLocale(), []);
+
+  const handleRetry = async (id: number) => {
+    setExpandedId(id);
+    await loadConversationDetail(id, { force: true });
+  };
 
   const handleToggle = async (id: number) => {
     if (expandedId === id) {
@@ -57,22 +47,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
     }
 
     setExpandedId(id);
-    setLoadingId(id);
-
-    // 如果已经加载过，直接显示
-    if (details.has(id)) {
-      setLoadingId(null);
-      return;
-    }
-
-    try {
-      const detail = await fetchConversationById(id);
-      setDetails((prev) => new Map(prev).set(id, detail));
-    } catch (error) {
-      console.error('Failed to fetch conversation detail:', error);
-    } finally {
-      setLoadingId(null);
-    }
+    await loadConversationDetail(id);
   };
 
   if (conversations.length === 0) {
@@ -95,13 +70,21 @@ export function ConversationList({ conversations }: ConversationListProps) {
         const isExpanded = expandedId === conversation.id;
         const isLoading = loadingId === conversation.id;
         const detail = details.get(conversation.id);
+        const detailError = detailErrors.get(conversation.id);
 
         return (
           <Collapsible
             key={conversation.id}
             open={isExpanded}
-            onOpenChange={() => {
-              void handleToggle(conversation.id);
+            onOpenChange={(nextOpen) => {
+              if (nextOpen) {
+                void handleToggle(conversation.id);
+                return;
+              }
+
+              if (expandedId === conversation.id) {
+                setExpandedId(null);
+              }
             }}
           >
             <Card className="shadow-none">
@@ -128,7 +111,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">
-                            {formatDate(conversation.createdAt, t)}
+                            {formatRelativeTimeText(conversation.createdAt, t, locale)}
                           </span>
                           {detail && (
                             <Badge variant="secondary" className="text-xs">
@@ -146,6 +129,39 @@ export function ConversationList({ conversations }: ConversationListProps) {
                   {isLoading ? (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                       {t('Loading…')}
+                    </div>
+                  ) : detailError ? (
+                    <div className="py-8 text-center text-sm text-destructive">
+                      <p>{detailError.message}</p>
+                      {(detailError.status || detailError.code) && (
+                        <p className="text-xs text-destructive/80 mt-1">
+                          {detailError.status && `HTTP ${detailError.status}`}
+                          {detailError.status && detailError.code ? ' · ' : ''}
+                          {detailError.code}
+                        </p>
+                      )}
+                      {detailError.details && detailError.details.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-left px-1">
+                          {detailError.details.map((detail, index) => (
+                            <li
+                              key={`${index}-${detail}`}
+                              className="list-disc list-inside break-all text-xs"
+                            >
+                              {detail}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          void handleRetry(conversation.id);
+                        }}
+                      >
+                        {t('Retry')}
+                      </Button>
                     </div>
                   ) : detail ? (
                     <ConversationDetail conversation={detail} />

@@ -1,8 +1,21 @@
 import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
+import {
+  type QueryErrorEnvelope,
+  QUERY_ERROR_CODES,
+  QUERY_ERROR_MESSAGES,
+  buildConversationMessageMetadata,
+} from '@sparkset/core';
 import { ConversationService } from '../services/conversation_service';
 import { QueryService } from '../services/query_service';
 import { queryRequestSchema } from '../validators/query';
+import {
+  buildInternalQueryErrorResponse,
+  buildQueryErrorResponsePayload,
+  buildQueryValidationErrorResponse,
+  extractValidationIssues,
+  isZodError,
+} from '../utils/query_error_response';
 
 @inject()
 export default class QueriesController {
@@ -16,52 +29,82 @@ export default class QueriesController {
     return auth?.user?.id;
   }
 
+  private getQueryExecutionErrorResponse(
+    errorMessage: string,
+    errorCode?: string,
+    errorStatus?: number | string,
+    details?: string[],
+    retryAfter?: number,
+  ): QueryErrorEnvelope {
+    return buildQueryErrorResponsePayload({
+      errorMessage,
+      errorCode,
+      errorStatus,
+      ...(details ? { details } : {}),
+      ...(retryAfter !== undefined && retryAfter !== null ? { retryAfter } : {}),
+    });
+  }
+
+  private sendQueryError(ctx: HttpContext, errorResponse: QueryErrorEnvelope) {
+    const response = ctx.response.status(errorResponse.status);
+    if (
+      errorResponse.status === 429 &&
+      errorResponse.payload.retryAfter !== undefined &&
+      errorResponse.payload.retryAfter !== null
+    ) {
+      response.header('Retry-After', String(errorResponse.payload.retryAfter));
+    }
+
+    return response.send(errorResponse.payload);
+  }
+
   async run(ctx: HttpContext) {
+    const userId = this.getAuthUserId(ctx);
+    if (!userId) {
+      const unauthorizedError = this.getQueryExecutionErrorResponse(
+        QUERY_ERROR_MESSAGES[QUERY_ERROR_CODES.UNAUTHENTICATED],
+        QUERY_ERROR_CODES.UNAUTHENTICATED,
+        401,
+      );
+      return this.sendQueryError(ctx, unauthorizedError);
+    }
+
     try {
       const parsed = queryRequestSchema.parse(ctx.request.body());
-      const userId = this.getAuthUserId(ctx);
-      if (!userId) {
-        return ctx.response.status(401).send({
-          error: 'Unauthorized',
-          message: 'User not authenticated',
-        });
-      }
 
       let existingConversation: Awaited<ReturnType<ConversationService['get']>> = null;
       if (parsed.conversationId) {
         existingConversation = await this.conversationService.get(parsed.conversationId);
-        if (existingConversation && existingConversation.userId !== userId) {
-          return ctx.response.status(403).send({
-            error: 'Forbidden',
-            message: 'Conversation does not belong to current user',
-          });
+        if (!existingConversation) {
+          const notFoundError = this.getQueryExecutionErrorResponse(
+            QUERY_ERROR_MESSAGES[QUERY_ERROR_CODES.CONVERSATION_NOT_FOUND],
+            QUERY_ERROR_CODES.CONVERSATION_NOT_FOUND,
+            404,
+          );
+          return this.sendQueryError(ctx, notFoundError);
         }
       }
 
+      if (existingConversation && existingConversation.userId !== userId) {
+        const forbiddenError = this.getQueryExecutionErrorResponse(
+          QUERY_ERROR_MESSAGES[QUERY_ERROR_CODES.CONVERSATION_FORBIDDEN],
+          QUERY_ERROR_CODES.CONVERSATION_FORBIDDEN,
+          403,
+        );
+        return this.sendQueryError(ctx, forbiddenError);
+      }
+
+      let conversationId = existingConversation?.id ?? 0;
       const result = await this.service.run(parsed);
 
       try {
-        // 获取或创建会话（如果请求中提供了 conversationId，使用它；否则创建新会话）
-        let conversationId: number;
-        if (existingConversation) {
-          conversationId = existingConversation.id;
-        } else if (parsed.conversationId) {
-          conversationId = parsed.conversationId;
-          ctx.logger.warn(`Conversation ${conversationId} not found, creating new one`);
-          const newConv = await this.conversationService.create({
-            title: parsed.question.slice(0, 50),
-            userId,
-          });
-          conversationId = newConv.id;
-        } else {
-          // 创建新会话
-          ctx.logger.info('Creating new conversation');
-          const newConv = await this.conversationService.create({
-            title: parsed.question.slice(0, 50),
-            userId,
-          });
-          conversationId = newConv.id;
-          ctx.logger.info(`Created conversation ${conversationId}`);
+        if (!conversationId) {
+          conversationId = (
+            await this.conversationService.create({
+              userId,
+              title: parsed.question.trim().slice(0, 50) || 'New Conversation',
+            })
+          ).id;
         }
 
         // 保存用户消息
@@ -73,34 +116,28 @@ export default class QueriesController {
         });
 
         // 保存助手消息（包含 SQL 和查询结果）
+        const rowCount =
+          typeof result.rowCount === 'number'
+            ? result.rowCount
+            : Array.isArray(result.rows)
+              ? result.rows.length
+              : 0;
         const assistantContent =
-          result.rows.length > 0
-            ? `查询成功，返回 ${result.rows.length} 行数据。${result.summary || ''}`
-            : result.summary || '查询执行完成';
+          rowCount > 0
+            ? `Query executed successfully, returned ${rowCount} rows${
+                result.summary ? `. ${result.summary}` : ''
+              }`
+            : result.summary || 'Query executed successfully with no data returned';
 
         ctx.logger.info(`Saving assistant message to conversation ${conversationId}`);
         await this.conversationService.appendMessage({
           conversationId,
           role: 'assistant',
           content: assistantContent,
-          metadata: {
-            sql: result.sql,
-            result: {
-              sql: result.sql,
-              rows: result.rows,
-              summary: result.summary,
-            },
-            datasourceId: result.datasourceId ?? parsed.datasource,
-          },
+          metadata: buildConversationMessageMetadata(parsed, result),
         });
 
         ctx.logger.info(`Successfully saved conversation ${conversationId}`);
-
-        // 在响应中添加 conversationId，方便前端使用
-        return ctx.response.send({
-          ...result,
-          conversationId,
-        });
       } catch (convError) {
         // 如果保存会话失败，记录错误但不影响查询结果返回
         ctx.logger.error(convError, 'Failed to save conversation');
@@ -110,44 +147,21 @@ export default class QueriesController {
         });
       }
 
-      return ctx.response.send(result);
+      return ctx.response.send({
+        ...result,
+        ...(conversationId > 0 ? { conversationId } : {}),
+      });
     } catch (error) {
       ctx.logger.error(error, 'Query execution error');
-      if (error instanceof Error && error.name === 'ZodError') {
-        return ctx.response.status(400).send({
-          error: 'Validation error',
-          message: error.message,
-        });
+      if (isZodError(error)) {
+        return this.sendQueryError(
+          ctx,
+          buildQueryValidationErrorResponse(extractValidationIssues(error)),
+        );
       }
 
-      // 检查是否是数据库表不存在的错误
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('不存在') || errorMessage.includes("doesn't exist")) {
-        return ctx.response.status(400).send({
-          error: 'Database error',
-          message:
-            errorMessage +
-            '。请确保数据源的 schema 已正确同步，并且 AI 生成的 SQL 只使用 schema 中存在的表。',
-        });
-      }
-
-      // 检查是否是 API 限流错误（429 Too many requests）
-      if (
-        errorMessage.includes('429') ||
-        errorMessage.includes('Too many requests') ||
-        errorMessage.includes('rate limit')
-      ) {
-        return ctx.response.status(429).send({
-          error: 'Rate limit exceeded',
-          message:
-            'AI 服务请求过于频繁，已达到速率限制。请稍等片刻后重试，或考虑配置备用 AI 提供商。',
-        });
-      }
-
-      return ctx.response.status(500).send({
-        error: 'Internal server error',
-        message: errorMessage,
-      });
+      const errorResponse = buildInternalQueryErrorResponse(error);
+      return this.sendQueryError(ctx, errorResponse);
     }
   }
 }

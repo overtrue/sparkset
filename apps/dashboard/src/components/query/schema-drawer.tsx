@@ -33,7 +33,12 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
 
   const loadSchema = useCallback(
     async (id?: number) => {
-      if (!id) return;
+      if (!id) {
+        setSchema([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
@@ -49,9 +54,17 @@ export function SchemaDrawer({ datasourceId, trigger, open, onOpenChange }: Sche
   );
 
   useEffect(() => {
-    if (open && datasourceId) {
-      void loadSchema(datasourceId);
+    if (!open) {
+      return;
     }
+
+    if (datasourceId) {
+      void loadSchema(datasourceId);
+      return;
+    }
+
+    setSchema([]);
+    setError(null);
   }, [open, datasourceId, loadSchema]);
 
   const defaultTrigger = (

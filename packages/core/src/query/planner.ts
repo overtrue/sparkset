@@ -1,6 +1,6 @@
-import { AIClient, buildPrompt } from '../ai/index.js';
-import { TableSchema } from '../db/types.js';
-import { PlannedQuery, SqlSnippet } from './types.js';
+import { AIClient, buildPrompt } from '../ai/index';
+import { TableSchema } from '../db/types';
+import { PlannedQuery, SqlSnippet } from './types';
 
 export interface SchemaHint {
   datasourceId: number;

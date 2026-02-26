@@ -22,8 +22,7 @@ export class LucidConversationRepository implements ConversationRepository {
   async create(input: { title?: string; userId?: number }): Promise<Conversation> {
     const row = await ConversationModel.create({
       title: input.title ?? null,
-      // Use provided userId, or fall back to 1 (Anonymous User) if not provided
-      userId: input.userId ?? 1,
+      userId: input.userId ?? null,
     });
     return this.mapConversation(row);
   }
@@ -48,9 +47,7 @@ export class LucidConversationRepository implements ConversationRepository {
   }): Promise<Conversation> {
     const row = await ConversationModel.create({
       title: input.title ?? null,
-      // Use provided userId, or fall back to 1 (Anonymous User) if not provided
-      // This is required because user_id is NOT NULL in the database
-      userId: input.userId ?? 1,
+      userId: input.userId ?? null,
       botId: input.botId,
       externalUserId: input.externalUserId,
     });

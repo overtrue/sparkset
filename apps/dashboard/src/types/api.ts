@@ -429,12 +429,19 @@ export interface QueryRequest {
   action?: number;
   limit?: number;
   aiProvider?: number;
+  conversationId?: number;
 }
 
 export interface QueryResponse {
   sql: string;
   rows: Record<string, unknown>[];
   summary?: string;
+  rowCount?: number;
+  hasResult?: boolean;
+  conversationId?: number;
+  datasourceId?: number;
+  aiProviderId?: number;
+  limit?: number;
 }
 
 // ============================================================================

@@ -83,14 +83,26 @@ export class ExternalServiceException extends Exception {
 }
 
 /**
+ * Exception for query/database execution errors
+ */
+export class DatabaseException extends Exception {
+  static status = 400;
+  static code = 'E_DATABASE_ERROR';
+
+  constructor(message: string) {
+    super(message, { status: 400, code: 'E_DATABASE_ERROR' });
+  }
+}
+
+/**
  * Exception for configuration errors
  */
 export class ConfigurationException extends Exception {
-  static status = 500;
+  static status = 400;
   static code = 'E_CONFIGURATION_ERROR';
 
   constructor(message: string) {
-    super(message, { status: 500, code: 'E_CONFIGURATION_ERROR' });
+    super(message, { status: 400, code: 'E_CONFIGURATION_ERROR' });
   }
 }
 

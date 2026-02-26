@@ -1,6 +1,7 @@
 'use client';
 
 import type { ConversationDetailDTO } from '@/types/api';
+import { useTranslations } from '@/i18n/use-translations';
 import { MessageItem } from './message';
 
 interface ConversationDetailProps {
@@ -8,8 +9,14 @@ interface ConversationDetailProps {
 }
 
 export function ConversationDetail({ conversation }: ConversationDetailProps) {
+  const t = useTranslations();
+
   if (!conversation.messages || conversation.messages.length === 0) {
-    return <div className="py-8 text-center text-sm text-muted-foreground">该会话暂无消息</div>;
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        {t('No messages in this conversation')}
+      </div>
+    );
   }
 
   return (

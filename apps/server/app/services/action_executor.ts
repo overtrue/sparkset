@@ -63,8 +63,6 @@ export class BotActionExecutor {
         id: action.id,
         type: action.type,
         payload: action.payload,
-        // Parameters would come from the parsed message (Phase 2.3)
-        // For now, use the action's default parameters
         parameters: action.parameters,
       });
 

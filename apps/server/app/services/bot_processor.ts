@@ -16,6 +16,8 @@ import type { ConversationTracker, ConversationContext } from './conversation_tr
 import type { Action } from '../models/types.js';
 import { createLanguageModel } from '../ai/index.js';
 import type { AIProviderRepository } from '../db/interfaces.js';
+import { messageDispatcher } from './message_dispatcher.js';
+import type { ParsedMessage } from '../types/bot_adapter.js';
 
 /**
  * Bot 处理输入
@@ -47,6 +49,12 @@ export interface BotProcessResult {
   processingTimeMs: number;
 }
 
+interface NamedAction {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 /**
  * 用户意图
  */
@@ -57,6 +65,10 @@ export interface UserIntent {
   originalText: string;
   /** 意图识别的理由 */
   reasoning: string;
+  /** 匹配的动作 ID（如果识别为 action） */
+  actionId?: number;
+  /** 匹配的动作名称（如果识别为 action） */
+  actionName?: string;
   /** 置信度 (0-1) */
   confidence: number;
 }
@@ -96,11 +108,22 @@ export class BotProcessor {
       // 1. 获取或创建会话上下文
       const conversationContext = await this.createConversationContext(bot, input);
 
+      const enabledActions = this.actionExecutor
+        ? await this.actionExecutor.listEnabledActions(bot)
+        : [];
+
       // 2. 识别用户意图（包含会话上下文）
-      const intent = await this.identifyIntent(bot, input.text);
+      const intent = await this.identifyIntent(bot, input.text, enabledActions);
 
       // 3. 根据意图类型路由处理
-      const result = await this.routeIntent(bot, event as BotEvent, input, intent, startTime);
+      const result = await this.routeIntent(
+        bot,
+        event as BotEvent,
+        input,
+        intent,
+        startTime,
+        enabledActions,
+      );
 
       // 4. 记录会话历史
       await this.trackConversation(event as BotEvent, conversationContext, result);
@@ -165,13 +188,26 @@ export class BotProcessor {
     input: BotProcessInput,
     intent: UserIntent,
     startTime: number,
+    enabledActions: Action[] = [],
   ): Promise<BotProcessResult> {
     if (intent.type === 'query' && bot.enableQuery && this.queryProcessor) {
       return this.handleQuery(bot, event, input, startTime);
     }
 
+    if (intent.type === 'query' && !bot.enableQuery) {
+      return this.buildErrorResult('此 Bot 未启用查询功能', startTime);
+    }
+
+    if (intent.type === 'query' && !this.queryProcessor) {
+      return this.buildErrorResult('Query processor not configured', startTime);
+    }
+
     if (intent.type === 'action' && this.actionExecutor) {
-      return this.handleAction(bot, event, input, startTime);
+      return this.handleAction(bot, event, input, startTime, intent, enabledActions);
+    }
+
+    if (intent.type === 'action' && !this.actionExecutor) {
+      return this.buildErrorResult('Action executor not configured', startTime);
     }
 
     // 无法处理的意图
@@ -238,14 +274,16 @@ export class BotProcessor {
     event: BotEvent,
     input: BotProcessInput,
     startTime: number,
+    intent?: UserIntent,
+    enabledActions: Action[] = [],
   ): Promise<BotProcessResult> {
     try {
       if (!this.actionExecutor) {
         throw new Error('Action executor not configured');
       }
 
-      // 1. 获取 bot 支持的所有动作
-      const enabledActions = await this.actionExecutor.listEnabledActions(bot);
+      // 1. 选择目标动作
+      const targetAction = await this.resolveActionForInput(bot, input, intent, enabledActions);
 
       if (enabledActions.length === 0) {
         return {
@@ -256,10 +294,15 @@ export class BotProcessor {
         };
       }
 
-      // 2. 从用户输入中提取参数
-      // 优先使用第一个可用动作作为上下文
-      // 在 Phase 2.4 中可以改进为让 AI 选择最合适的动作
-      const targetAction = enabledActions[0];
+      if (!targetAction) {
+        return {
+          success: false,
+          response: '',
+          error: this.buildActionClarificationQuestion(enabledActions),
+          processingTimeMs: Date.now() - startTime,
+        };
+      }
+
       let extractedParams: Record<string, unknown> = {};
 
       if (this.parameterExtractor && targetAction.inputSchema) {
@@ -291,7 +334,8 @@ export class BotProcessor {
       // 3. 执行动作
       const executionResult = await this.actionExecutor.execute(bot, event, {
         ...targetAction,
-        parameters: extractedParams,
+        parameters:
+          Object.keys(extractedParams).length > 0 ? extractedParams : targetAction.parameters,
       });
 
       // 4. 生成用户友好的响应消息
@@ -351,6 +395,14 @@ export class BotProcessor {
   }
 
   /**
+   * 构建动作澄清问题
+   */
+  private buildActionClarificationQuestion(enabledActions: Action[]): string {
+    const actionNames = enabledActions.map((action) => action.name).join('、');
+    return `无法明确识别到具体动作。可选动作：${actionNames}`;
+  }
+
+  /**
    * 格式化动作成功后的响应消息
    * @private
    */
@@ -365,29 +417,72 @@ export class BotProcessor {
    * @param userText 用户输入文本
    * @returns 识别的意图
    */
-  private async identifyIntent(bot: Bot, userText: string): Promise<UserIntent> {
+  private async identifyIntent(
+    bot: Bot,
+    userText: string,
+    enabledActions: Action[] = [],
+  ): Promise<UserIntent> {
     try {
+      const parsedMessage: ParsedMessage = {
+        externalUserId: 'system',
+        text: userText,
+        messageType: 'text',
+        rawPayload: {},
+      };
+
+      const detectedIntent = await messageDispatcher.detectIntent(
+        bot,
+        parsedMessage,
+        this.toNamedActions(enabledActions),
+      );
+
+      if (detectedIntent.type === 'action') {
+        return {
+          type: 'action',
+          originalText: userText,
+          reasoning: detectedIntent.reasoning,
+          confidence: detectedIntent.confidence,
+          actionId: detectedIntent.actionId,
+          actionName: detectedIntent.actionName,
+        };
+      }
+
+      if (detectedIntent.type === 'query') {
+        return {
+          type: 'query',
+          originalText: userText,
+          reasoning: detectedIntent.reasoning,
+          confidence: detectedIntent.confidence,
+          actionId: detectedIntent.actionId,
+          actionName: detectedIntent.actionName,
+        };
+      }
+
       // 如果配置了 AI Provider，使用 AI 识别
       if (this.aiProviderRepository && bot.aiProviderId) {
-        const aiIntent = await this.identifyIntentWithAI(bot, userText);
+        const aiIntent = await this.identifyIntentWithAI(bot, userText, enabledActions);
         if (aiIntent) {
           return aiIntent;
         }
       }
 
       // 降级到规则匹配
-      return this.identifyIntentWithRules(userText);
+      return this.identifyIntentWithRules(userText, enabledActions);
     } catch (error) {
       console.warn('Failed to identify intent:', error);
       // 降级到规则匹配
-      return this.identifyIntentWithRules(userText);
+      return this.identifyIntentWithRules(userText, enabledActions);
     }
   }
 
   /**
    * 使用 AI 识别意图
    */
-  private async identifyIntentWithAI(bot: Bot, userText: string): Promise<UserIntent | null> {
+  private async identifyIntentWithAI(
+    bot: Bot,
+    userText: string,
+    enabledActions: Action[] = [],
+  ): Promise<UserIntent | null> {
     try {
       if (!this.aiProviderRepository || !bot.aiProviderId) {
         return null;
@@ -402,7 +497,7 @@ export class BotProcessor {
       }
 
       // 构建提示词
-      const prompt = this.buildIntentPrompt(userText, bot);
+      const prompt = this.buildIntentPrompt(userText, bot, enabledActions);
 
       // 创建 AI 模型
       const model = createLanguageModel(
@@ -420,7 +515,7 @@ export class BotProcessor {
       });
 
       // 解析 AI 响应
-      return this.parseIntentResponse(result.text, userText);
+      return this.parseIntentResponse(result.text, userText, enabledActions);
     } catch (error) {
       console.warn('AI intent identification failed:', error);
       return null;
@@ -430,7 +525,7 @@ export class BotProcessor {
   /**
    * 使用规则匹配识别意图
    */
-  private identifyIntentWithRules(userText: string): UserIntent {
+  private identifyIntentWithRules(userText: string, enabledActions: Action[] = []): UserIntent {
     const lowerText = userText.toLowerCase();
 
     // 查询关键词
@@ -496,11 +591,14 @@ export class BotProcessor {
     }
 
     if (isAction) {
+      const defaultAction = enabledActions.length === 1 ? enabledActions[0] : undefined;
       return {
         type: 'action',
         originalText: userText,
         reasoning: '检测到操作相关关键词',
         confidence: 0.7,
+        actionId: defaultAction?.id,
+        actionName: defaultAction?.name,
       };
     }
 
@@ -515,10 +613,13 @@ export class BotProcessor {
   /**
    * 构建意图识别提示词
    */
-  private buildIntentPrompt(userText: string, bot: Bot): string {
+  private buildIntentPrompt(userText: string, bot: Bot, enabledActions: Action[] = []): string {
     const enabledActionsCount = bot.enabledActions?.length || 0;
     const enabledDataSourcesCount = bot.enabledDataSources?.length || 0;
     const queryEnabled = bot.enableQuery ? '是' : '否';
+    const actionHints = this.toNamedActions(enabledActions)
+      .map((item) => `${item.id}: ${item.name}${item.description ? `（${item.description}）` : ''}`)
+      .join('\n');
 
     // 添加会话上下文（如果有）
     let conversationHistory = '';
@@ -535,6 +636,7 @@ Bot 配置信息：
 - 支持查询功能: ${queryEnabled}
 - 已启用的 Actions 数量: ${enabledActionsCount}
 - 已启用的数据源数量: ${enabledDataSourcesCount}
+- 已启用动作列表: ${actionHints || '无'}
 ${conversationHistory ? `\n${conversationHistory}` : ''}
 请分析以下用户输入，判断用户的意图是属于以下哪一种类型：
 1. query: 用户想要查询或获取数据信息
@@ -547,14 +649,20 @@ ${conversationHistory ? `\n${conversationHistory}` : ''}
 {
   "type": "query" 或 "action" 或 "unknown",
   "reasoning": "简要说明判断原因（不超过 20 个字）",
-  "confidence": 0.0 到 1.0 之间的数字，表示置信度
+  "confidence": 0.0 到 1.0 之间的数字，表示置信度,
+  "actionId": "动作 ID（可选，若能匹配则返回）",
+  "actionName": "动作名称（可选）"
 }`;
   }
 
   /**
    * 解析 AI 意图识别响应
    */
-  private parseIntentResponse(aiResponse: string, userText: string): UserIntent | null {
+  private parseIntentResponse(
+    aiResponse: string,
+    userText: string,
+    enabledActions: Action[] = [],
+  ): UserIntent | null {
     try {
       // 移除可能的 markdown 代码块
       let jsonText = aiResponse
@@ -571,11 +679,26 @@ ${conversationHistory ? `\n${conversationHistory}` : ''}
         (parsed.type === 'query' || parsed.type === 'action' || parsed.type === 'unknown') &&
         typeof parsed.confidence === 'number'
       ) {
+        const actionId =
+          typeof parsed.actionId === 'number'
+            ? parsed.actionId
+            : typeof parsed.actionId === 'string' && Number.isFinite(Number(parsed.actionId.trim()))
+              ? Number(parsed.actionId.trim())
+              : undefined;
+
+        const actionName =
+          typeof parsed.actionName === 'string' && parsed.actionName.trim().length > 0
+            ? parsed.actionName
+            : undefined;
+
+        const matchedAction = this.resolveActionFromIntent(enabledActions, actionId, actionName);
         return {
           type: parsed.type,
           originalText: userText,
           reasoning: parsed.reasoning || '',
           confidence: Math.max(0, Math.min(1, parsed.confidence)), // 确保在 0-1 之间
+          actionId: matchedAction?.id,
+          actionName: matchedAction?.name,
         };
       }
 
@@ -584,6 +707,101 @@ ${conversationHistory ? `\n${conversationHistory}` : ''}
       console.warn('Failed to parse intent response:', error);
       return null;
     }
+  }
+
+  /**
+   * 解析动作候选
+   */
+  private resolveActionFromIntent(
+    enabledActions: Action[],
+    actionId?: number,
+    actionName?: string,
+  ): Action | null {
+    if (actionId !== undefined) {
+      const action = enabledActions.find((item) => item.id === actionId);
+      if (action) {
+        return action;
+      }
+    }
+
+    if (!actionName) {
+      return null;
+    }
+
+    const target = actionName.toLowerCase().trim();
+    if (!target) {
+      return null;
+    }
+
+    const exactMatch = enabledActions.find((action) => action.name.toLowerCase().trim() === target);
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    return (
+      enabledActions.find(
+        (action) =>
+          action.name.toLowerCase().includes(target) || target.includes(action.name.toLowerCase()),
+      ) || null
+    );
+  }
+
+  /**
+   * 将动作转换为 Dispatcher 需要的命名格式
+   */
+  private toNamedActions(enabledActions: Action[]): NamedAction[] {
+    return enabledActions.map((action) => ({
+      id: action.id,
+      name: action.name,
+      description: action.description ?? undefined,
+    }));
+  }
+
+  /**
+   * 从意图上下文中解析具体动作
+   */
+  private async resolveActionForInput(
+    bot: Bot,
+    input: BotProcessInput,
+    intent: UserIntent | undefined,
+    enabledActions: Action[],
+  ): Promise<Action | null> {
+    if (enabledActions.length === 0 || !intent || intent.type !== 'action') {
+      return null;
+    }
+
+    const fromIntent = this.resolveActionFromIntent(
+      enabledActions,
+      intent.actionId,
+      intent.actionName,
+    );
+    if (fromIntent) {
+      return fromIntent;
+    }
+
+    const detected = await messageDispatcher.detectIntent(
+      bot,
+      {
+        externalUserId: input.externalUserId || 'system',
+        text: input.text,
+        messageType: 'text',
+        rawPayload: {},
+      },
+      this.toNamedActions(enabledActions),
+    );
+
+    if (detected.type === 'action' && detected.actionId !== undefined) {
+      const byId = enabledActions.find((item) => item.id === detected.actionId);
+      if (byId) {
+        return byId;
+      }
+    }
+
+    if (enabledActions.length === 1) {
+      return enabledActions[0];
+    }
+
+    return null;
   }
 }
 

@@ -29,11 +29,12 @@ const formatCellValue = (value: unknown): string => {
 
 export function ResultTable({ rows }: ResultTableProps) {
   const t = useTranslations();
-  // Generate columns dynamically from data
+  // Generate columns dynamically from all rows to avoid missing fields in first row
   const columns: ColumnDef<Record<string, unknown>>[] = useMemo(() => {
     if (rows.length === 0) return [];
 
-    const columnKeys = Object.keys(rows[0] ?? {});
+    const columnKeys = Array.from(new Set(rows.flatMap((row) => Object.keys(row ?? {}))));
+
     return columnKeys.map((key) => ({
       accessorKey: key,
       header: ({ column }) => <DataTableColumnHeader column={column} title={key} />,

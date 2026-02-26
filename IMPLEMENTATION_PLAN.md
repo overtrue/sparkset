@@ -140,7 +140,25 @@
 
 **Status**: Complete
 
-## Stage 4: 回归验证与收尾
+## Stage 5: 会话查询元数据与结果协议统一
+
+**Goal**: 统一查询元数据解析链路与行数/结果协议，减少展示口径漂移
+
+**Success Criteria**:
+
+- 会话消息解析从 `parseConversationMessageMetadata` 和 `getConversationMessageRowCount` 统一抽到共享工具
+- Message 和历史列表使用同一元数据与重跑上下文抽取逻辑
+- 查询结果展示与历史条目均基于同一 `rowCount` 口径
+- `QueryResponse` 增加 `rowCount/hasResult` 并向前端类型同步
+
+**Tests**:
+
+- 仪表盘页面手工验证：会话历史、消息卡片、结果展示的一致性
+- `packages/core` 元数据解析与 `apps/server` 响应模型相关单元测试
+
+**Status**: Complete
+
+## Stage 6: 回归验证与收尾
 
 **Goal**: 完成本批次验证并同步计划状态
 **Success Criteria**:
@@ -711,6 +729,84 @@ Part of #auth-system"
 
 ---
 
+## 当前修复批次（2026-02-26，查询结果协议与空结果体验）
+
+### Stage A: 协议兼容能力增强
+
+**Goal**: 扩展查询结果元数据空结果兼容解析，并用测试锁定关键边界行为
+**Success Criteria**:
+
+- `parseLegacyResultRowCountFromMessageContent` 覆盖主流中文/英文表达（含 0 行/found/returned）.
+- 空结果元数据（`rowCount: '0'` / `hasResult: false`）可被稳定解析
+- 空结果构建元数据测试通过
+
+**Tests**:
+
+- `pnpm --filter @sparkset/core test -- --run packages/core/src/query/protocol.test.ts`
+
+**Status**: Complete
+
+### Stage B: 查询展示文本一致性收口
+
+**Goal**: 统一查询结果页、历史记录、会话详情对“返回行数/无数据”文案的展示策略
+**Success Criteria**:
+
+- 同一行数语义在历史记录、会话详情、结果卡片中一致
+- 无结果场景中按钮语义（Action/Chart）与业务预期一致
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard exec eslint src/components/query/result.tsx src/components/query/history-drawer.tsx src/components/conversation/message.tsx`
+
+**Status**: Complete
+
+### Stage C: 用户体验验证与回归
+
+**Goal**: 用手工验证覆盖关键交互链路（无结果查询、历史回放、无数据保存行为）
+**Success Criteria**:
+
+- 无结果查询可正常保存为 Action
+- 历史记录可回放且保留执行上下文
+- 空结果卡片状态不影响无结果重试
+
+**Tests**:
+
+- Dashboard 手工验证：无结果查询流程、历史面板与回放
+- Chrome MCP 快照/交互回归检查
+
+**Status**: Complete
+
+### Stage E: 结果协议标准化与历史解析复用
+
+**Goal**: 让结果计数在执行结果、历史面板、会话详情中共用同一数据源，并移除重复解析逻辑
+**Success Criteria**:
+
+- `QueryService` 响应包含 `rowCount`，前端 `QueryResult` 统一使用 `rowCount`/`rows.length` 作为主计数源
+- 会话详情与历史列表共用同一 `query-message-metadata` 解析工具
+- 重复解析逻辑回归率下降（`history-drawer` 与 `conversation/message` 不再各自维护 `rowCount` 解析分支）
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- queryService`
+- `pnpm --filter @sparkset/server test -- queries_controller`
+- `pnpm --filter @sparkset/dashboard exec eslint src/components/query/history-drawer.tsx src/components/conversation/message.tsx src/components/query/result.tsx`
+
+**Status**: Complete
+
+### Stage D: 会话历史行数解析兼容性补强
+
+**Goal**: 兼容带千分位数字等常见模型文本，避免历史回放在数字格式异常时展示异常
+**Success Criteria**:
+
+- `parseLegacyResultRowCountFromMessageContent` 识别含千分位分隔符的返回行数字符串
+- 关键用例通过 `protocol.test.ts` 边界验证
+
+**Tests**:
+
+- `pnpm --filter @sparkset/core test -- --run packages/core/src/query/protocol.test.ts`
+
+**Status**: Complete
+
 ## 📚 相关文档
 
 - [设计文档](docs/auth-spect.md) - 原始设计思路
@@ -733,4 +829,4 @@ npm run test
 # 创建数据库迁移文件
 ```
 
-**当前状态**: ✅ 计划完成，准备开始 Stage 1.1
+**当前状态**: ✅ 计划完成，准备开始 Phase 1.1

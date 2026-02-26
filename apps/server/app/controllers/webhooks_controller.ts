@@ -104,15 +104,20 @@ export default class WebhooksController {
         request.header('Timestamp') ||
         null;
 
-      if (signature && timestamp) {
-        const isValid = adapter.verifySignature(payload, signature, timestamp);
-        if (!isValid) {
-          console.warn(`[Webhook] Invalid signature for bot ${botId}`);
-          return response.unauthorized({
-            success: false,
-            message: 'Invalid webhook signature',
-          });
-        }
+      if (!signature || !timestamp) {
+        return response.unauthorized({
+          success: false,
+          message: 'Missing webhook signature or timestamp',
+        });
+      }
+
+      const isValid = adapter.verifySignature(payload, signature, timestamp);
+      if (!isValid) {
+        console.warn(`[Webhook] Invalid signature for bot ${botId}`);
+        return response.unauthorized({
+          success: false,
+          message: 'Invalid webhook signature',
+        });
       }
 
       // ============ 第六步：解析消息为统一格式 ============

@@ -17,6 +17,7 @@ import {
   AuthenticationException,
   AuthorizationException,
   BusinessException,
+  DatabaseException,
   ExternalServiceException,
   RateLimitException,
 } from './app_exceptions.js';
@@ -47,6 +48,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     AuthenticationException,
     AuthorizationException,
     BusinessException,
+    DatabaseException,
     ExternalServiceException,
     RateLimitException,
   ];
@@ -173,6 +175,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
     if (error instanceof AuthenticationException) return 'Authentication Failed';
     if (error instanceof AuthorizationException) return 'Authorization Failed';
     if (error instanceof BusinessException) return 'Business Error';
+    if (error instanceof DatabaseException) return 'Database Error';
     if (error instanceof ExternalServiceException) return 'External Service Error';
     if (error instanceof RateLimitException) return 'Rate Limit Exceeded';
     return 'Error';
