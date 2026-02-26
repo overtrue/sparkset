@@ -40,7 +40,12 @@ export const extractMessageQueryMetadata = (
 
   return {
     sql: parsed?.sql,
-    result: parsed?.result,
+    result: parsed?.result
+      ? {
+          ...parsed.result,
+          sql: parsed.result.sql ?? '',
+        }
+      : undefined,
     datasourceId: parsed?.datasourceId,
     resultRowCount: resultRowCount ?? undefined,
     resultSummary: parsed?.summary,
