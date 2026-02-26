@@ -97,7 +97,7 @@ export function normalizeQueryErrorCode(rawCode: unknown): QueryErrorCode | unde
     return undefined;
   }
 
-  if (QUERY_ERROR_CODE_SET.has(normalized)) {
+  if (QUERY_ERROR_CODE_SET.has(normalized as QueryErrorCode)) {
     return normalized as QueryErrorCode;
   }
 

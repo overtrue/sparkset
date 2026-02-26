@@ -7,7 +7,7 @@ import {
 export type ParsedQueryResultRow = Record<string, unknown>;
 
 export interface ParsedQueryResponse {
-  sql: string;
+  sql?: string;
   rows: ParsedQueryResultRow[];
   summary?: string;
   rowCount?: number;
