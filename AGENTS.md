@@ -1,5 +1,22 @@
 # Development Guidelines
 
+## Maintenance guidelines
+
+- Prefer minimal, high-confidence changes.
+- Do not change public APIs unless the issue explicitly requires it.
+- Do not introduce new dependencies without a clear reason.
+- Keep diffs small and reviewable.
+- For PHP projects, check composer scripts first; prefer the smallest relevant PHPUnit/Pest/PHPStan command.
+- For JavaScript/TypeScript projects, check package scripts first; prefer targeted tests/lint/typecheck.
+- Never merge PRs, publish releases, close controversial issues, or modify security policy automatically.
+
+## Review guidelines
+
+- Flag regressions, missing tests, BC breaks, security risks, and unclear behavior.
+- Do not block on subjective style unless it violates existing project conventions.
+- Treat documentation typos as low priority unless they change meaning.
+- When suggesting changes, be specific and include the reason.
+
 ## Strict Prohibited Operations
 
 ### Git Operation Restrictions
@@ -33,7 +50,7 @@
 - **Learning from existing code** - Study and plan before implementing
 - **Pragmatic over dogmatic** - Adapt to project reality
 - **Clear intent over clever code** - Be boring and obvious
-- **No backward compatibility required** - This is a new project, all changes can be breaking changes
+- **Public API stability** - Do not change public APIs unless the issue explicitly requires it; unreleased internals can change when needed
 
 ### Simplicity Means
 
@@ -108,7 +125,7 @@ Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 - **Interfaces over singletons** - Enable testing and flexibility
 - **Explicit over implicit** - Clear data flow and dependencies
 - **Test-driven when possible** - Never disable tests, fix them
-- **No backward compatibility** - This is a new, unreleased project. All refactoring can be breaking changes. Don't maintain deprecated code or compatibility layers unless absolutely necessary
+- **Public API stability** - Do not change public APIs unless the issue explicitly requires it; do not maintain deprecated internals unless needed for a clear compatibility requirement
 
 ### Code Quality
 
