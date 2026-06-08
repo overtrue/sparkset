@@ -9,7 +9,7 @@ export interface CreateBotRequest {
   name: string;
   description?: string;
   type: 'wecom' | 'discord' | 'telegram' | 'slack' | 'custom';
-  webhookUrl: string;
+  webhookUrl?: string;
   adapterConfig?: unknown;
   enabledActions?: number[];
   enabledDataSources?: number[];

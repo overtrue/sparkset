@@ -72,13 +72,10 @@ export function BotForm({ bot, isLoading, onSuccess }: BotFormProps) {
         await updateBot({ id: bot.id, data: updateData });
         toast.success(t('Bot updated successfully'));
       } else {
-        // Create new bot - generate webhook URL
-        const webhookUrl = `${window.location.origin}/api/webhooks/bot/[id]/${Math.random().toString(36).slice(2, 11)}`;
         const createData: CreateBotDto = {
           name: formData.name,
           description: formData.description,
           type: formData.type,
-          webhookUrl,
           enableQuery: formData.enableQuery,
         };
         await createBot(createData);

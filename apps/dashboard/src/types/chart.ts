@@ -62,7 +62,7 @@ export interface Datasource {
   host: string;
   port: number;
   username: string;
-  password: string;
+  password?: string;
   database: string;
   isDefault: number;
   lastSyncAt: string;

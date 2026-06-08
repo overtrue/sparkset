@@ -110,7 +110,7 @@ export class BotService {
       name: data.name,
       description: data.description || null,
       type: data.type,
-      webhookUrl: data.webhookUrl,
+      webhookUrl: data.webhookUrl ?? this.getWebhookUrl(0, webhookToken),
       webhookToken,
       adapterConfig: (data.adapterConfig as Record<string, unknown>) || null,
       enabledActions: data.enabledActions || [],

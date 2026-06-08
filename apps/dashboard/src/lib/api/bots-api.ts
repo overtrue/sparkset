@@ -16,7 +16,7 @@ export async function fetchBots(
 ): Promise<ApiListResponse<Bot>> {
   const params = new URLSearchParams({
     page: page.toString(),
-    limit: limit.toString(),
+    per_page: limit.toString(),
   });
 
   if (search) {
@@ -42,7 +42,9 @@ export async function deleteBot(id: number): Promise<void> {
   return apiDelete(`/api/bots/${id}`);
 }
 
-export async function regenerateToken(id: number): Promise<{ token: string }> {
+export async function regenerateToken(
+  id: number,
+): Promise<{ webhookToken: string; webhookUrl: string }> {
   return apiPost(`/api/bots/${id}/regenerate-token`, {});
 }
 

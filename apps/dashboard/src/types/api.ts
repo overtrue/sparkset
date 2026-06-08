@@ -41,7 +41,7 @@ export interface Datasource {
   host: string;
   port: number;
   username: string;
-  password: string;
+  password?: string;
   database: string;
   isDefault: boolean;
   lastSyncAt: string;
@@ -382,7 +382,7 @@ export interface AIProviderDTO {
   id: number;
   name: string;
   type: string;
-  apiKey?: string;
+  hasApiKey: boolean;
   baseURL?: string;
   defaultModel?: string;
   isDefault: boolean;
@@ -390,9 +390,14 @@ export interface AIProviderDTO {
   updatedAt: string;
 }
 
-export type CreateAIProviderInput = Omit<AIProviderDTO, 'id' | 'createdAt' | 'updatedAt'> & {
+export interface CreateAIProviderInput {
+  name: string;
+  type: string;
   apiKey?: string;
-};
+  baseURL?: string;
+  defaultModel?: string;
+  isDefault: boolean;
+}
 
 // ============================================================================
 // Conversation Types
@@ -509,7 +514,7 @@ export interface CreateBotDto {
   name: string;
   description?: string;
   type: BotPlatform;
-  webhookUrl: string;
+  webhookUrl?: string;
   enabledActions?: number[];
   enableQuery?: boolean;
   aiProviderId?: number;

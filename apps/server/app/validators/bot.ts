@@ -7,7 +7,7 @@ export const createBotValidator = z.object({
   name: z.string().min(1).max(191),
   description: z.string().optional(),
   type: z.enum(['wecom', 'discord', 'telegram', 'slack', 'custom']),
-  webhookUrl: z.string().url(),
+  webhookUrl: z.string().url().optional(),
   adapterConfig: z.unknown().optional(),
   enabledActions: z.array(z.number()).optional(),
   enabledDataSources: z.array(z.number()).optional(),

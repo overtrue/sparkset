@@ -16,8 +16,8 @@ import {
 export function useBots(page = 1, limit = 10, search?: string) {
   return useSWR(
     search
-      ? `/api/bots?page=${page}&limit=${limit}&search=${search}`
-      : `/api/bots?page=${page}&limit=${limit}`,
+      ? `/api/bots?page=${page}&per_page=${limit}&search=${search}`
+      : `/api/bots?page=${page}&per_page=${limit}`,
     () => fetchBots(page, limit, search),
   );
 }

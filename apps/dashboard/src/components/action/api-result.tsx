@@ -2,6 +2,7 @@
 
 import { CodeViewer } from '../code-viewer';
 import { Badge } from '../ui/badge';
+import { useTranslations } from '@/i18n/use-translations';
 import type { ApiActionResult } from './types';
 
 interface ApiResultProps {
@@ -18,6 +19,7 @@ function getStatusBadgeVariant(
 }
 
 export function ApiResult({ result }: ApiResultProps) {
+  const t = useTranslations();
   const badgeVariant = getStatusBadgeVariant(result.statusCode);
   const bodyString =
     typeof result.body === 'string' ? result.body : JSON.stringify(result.body, null, 2);
@@ -25,20 +27,25 @@ export function ApiResult({ result }: ApiResultProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold mb-2">HTTP 响应</h3>
+        <h3 className="text-lg font-semibold mb-2">{t('HTTP Response')}</h3>
         <p className="text-sm text-muted-foreground">
-          状态码: <Badge variant={badgeVariant}>{result.statusCode}</Badge>
-          {result.duration && ` · 耗时: ${result.duration}ms`}
+          {t('Status Code')}: <Badge variant={badgeVariant}>{result.statusCode}</Badge>
+          {result.duration ? (
+            <>
+              {' · '}
+              {t('Duration')}: {result.duration}ms
+            </>
+          ) : null}
         </p>
       </div>
       {result.headers && (
         <div>
-          <h4 className="text-sm font-semibold mb-2">响应头</h4>
+          <h4 className="text-sm font-semibold mb-2">{t('Response Headers')}</h4>
           <CodeViewer code={JSON.stringify(result.headers, null, 2)} language="json" />
         </div>
       )}
       <div>
-        <h4 className="text-sm font-semibold mb-2">响应体</h4>
+        <h4 className="text-sm font-semibold mb-2">{t('Response Body')}</h4>
         <CodeViewer code={bodyString} language="json" />
       </div>
     </div>

@@ -1,5 +1,178 @@
 # Sparkset 认证系统实施计划
 
+## 当前重构批次（2026-06-08，Dashboard 全局组织与状态收敛）
+
+## Stage 1: 列表页组件边界收敛
+
+**Goal**: 将厚重 route page 中的列表 UI、列定义和批量操作迁移到模块组件，page 保持路由组合职责
+**Success Criteria**:
+
+- `dashboards/datasets/bots/charts` 列表页不再内联完整 DataTable 列定义和删除流程
+- 模块组件放在 `src/components/{module}/list.tsx`
+- 现有用户交互、文案、批量删除确认保持不变
+
+**Tests**:
+
+- 变更文件 targeted eslint
+- `pnpm --filter @sparkset/dashboard build`
+
+**Status**: Complete
+
+## Stage 2: Query 模块边界与状态流整理
+
+**Goal**: 将 Query runner/form 从 route 目录迁移到 `components/query`，减少父子重复状态同步
+**Success Criteria**:
+
+- `app/dashboard/query/page.tsx` 只组合数据加载与 Query 组件
+- Query runner/form 位于模块组件目录
+- 表单输入、执行、历史、错误状态行为保持一致
+
+**Tests**:
+
+- 变更文件 targeted eslint
+- `pnpm --filter @sparkset/dashboard build`
+- Browser 验证 query 入口无框架错误
+
+**Status**: Complete
+
+## Stage 3: 大型 Manager 组件拆分
+
+**Goal**: 拆分 `action/manager.tsx` 和 `ai-provider/manager.tsx` 的低风险子区域，降低单文件职责密度
+**Success Criteria**:
+
+- 表格列、弹窗、结果展示或表单片段至少拆出清晰子组件
+- 不改变 API 调用顺序和业务语义
+- 保持 shadcn 原子组件不被修改
+
+**Tests**:
+
+- 变更文件 targeted eslint
+- `pnpm --filter @sparkset/dashboard build`
+
+**Status**: Complete
+
+## Stage 4: 剩余状态/i18n 低风险收敛
+
+**Goal**: 补齐 profile/protected-route/api-result 等明确硬编码和状态表达不一致问题
+**Success Criteria**:
+
+- 新增 key 保持 `en.json` / `zh-CN.json` 扁平且数量一致
+- 不在 `components/ui` 原子组件中引入业务 i18n hook
+- 错误/权限提示不再中英文混排
+
+**Tests**:
+
+- messages JSON 解析和 key 数一致检查
+- 变更文件 targeted eslint
+
+**Status**: Complete
+
+## Stage 5: API 契约漂移低风险修正
+
+**Goal**: 修正 dashboard/server 已确认的低风险契约不一致，并用 focused tests 固化
+**Success Criteria**:
+
+- 修正 bot 参数/返回类型、敏感字段类型、AI Provider `hasApiKey` 等明显漂移
+- 优先新增 dashboard API client 测试或 server contract 测试覆盖改动
+- 不引入新的 contracts 包，除非现有低风险修正无法稳定表达
+
+**Tests**:
+
+- 相关 package test/typecheck
+- `pnpm --filter @sparkset/dashboard build`
+
+**Status**: Complete
+
+## Stage 6: 全量验证与收尾
+
+**Goal**: 完成自动化验证、Browser 功能验证和剩余风险记录
+**Success Criteria**:
+
+- build 通过
+- 变更文件 lint 通过，full lint 若仍受既有问题阻塞则记录根因
+- Browser 验证关键入口无框架错误、无相关 console error
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard build`
+- targeted eslint
+- Browser MCP 验证
+
+**Status**: Complete
+
+## 当前重构批次（2026-06-08，Dashboard React 与交互提升）
+
+## Stage 1: 上游同步与审阅分工
+
+**Goal**: 基于最新 `origin/main` 建立重构基线，并拆分架构、交互、性能、组件规范和全栈契约审阅
+**Success Criteria**:
+
+- 本地分支已合并最新上游
+- 5 个并行审阅方向已启动并产出具体建议
+- 本地已有改动边界明确，避免覆盖用户修改
+
+**Tests**:
+
+- `git status --short --branch`
+- 专家审阅结果汇总
+
+**Status**: Complete
+
+## Stage 2: 共享状态组件重构
+
+**Goal**: 优化 DataTable、EmptyState、ErrorState、LoadingState 的交互语义、可访问性与 i18n 一致性
+**Success Criteria**:
+
+- 表格搜索空状态不再依赖 message 文本解析
+- 搜索清除、结果计数、空状态文案更准确
+- 全局状态组件使用统一 class 合并和翻译默认值
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+**Status**: Complete
+
+## Stage 3: 登录页 i18n 与表单体验整理
+
+**Goal**: 移除登录页硬编码中文，统一校验、标签、按钮和提示文案
+**Success Criteria**:
+
+- 登录页文案接入现有翻译体系
+- 表单校验错误支持英文 key 和中文翻译
+- 开发/内网认证提示在不同语言下可读
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+**Status**: Complete
+
+## Stage 4: 验证与收尾
+
+**Goal**: 完成自动化验证和 Chrome DevTools MCP 功能验证，汇总专家建议与实际变更
+**Success Criteria**:
+
+- Lint/build 通过或明确记录阻塞原因
+- 浏览器验证无框架错误覆盖层和关键控制台错误
+- 本轮计划状态更新为 Complete
+
+**Tests**:
+
+- `pnpm --filter @sparkset/dashboard lint`
+- 变更文件 targeted eslint
+- `pnpm --filter @sparkset/dashboard build`
+- Chrome DevTools MCP 页面加载与交互验证
+
+**Validation Notes**:
+
+- Full dashboard lint passes; duplicate `src/hooks/use-mobile.tsx` is excluded from ESLint because TypeScript only includes the canonical `src/hooks/use-mobile.ts` module.
+- Targeted eslint for changed files passed.
+
+**Status**: Complete
+
 ## 📋 项目概述
 
 **目标**：为 Sparkset 运营后台框架添加完整的用户认证系统，解决现有数据结构问题，支持内网部署场景。

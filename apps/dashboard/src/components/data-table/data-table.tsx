@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { useId, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 
 import {
   AlertDialog,
@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/table';
 
 import { cn } from '@/lib/utils';
-import { DataTableEmptyState } from './data-table-empty-state';
+import { DataTableEmptyState, type DataTableEmptyStateVariant } from './data-table-empty-state';
 import { DataTablePagination } from './data-table-pagination';
 
 interface DataTableProps<TData, TValue> {
@@ -55,6 +55,7 @@ interface DataTableProps<TData, TValue> {
   deleteConfirmDescription?: string | ((count: number) => string);
   toolbar?: React.ReactNode;
   emptyMessage?: string;
+  emptyVariant?: DataTableEmptyStateVariant;
   pageSize?: number;
 }
 
@@ -71,6 +72,7 @@ export function DataTable<TData, TValue>({
   deleteConfirmDescription,
   toolbar,
   emptyMessage,
+  emptyVariant,
   pageSize = 10,
 }: DataTableProps<TData, TValue>) {
   const t = useTranslations();
@@ -83,35 +85,37 @@ export function DataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Add selection column if enabled
-  const finalColumns: ColumnDef<TData, TValue>[] = enableRowSelection
-    ? [
-        {
-          id: 'select',
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && 'indeterminate')
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label={t('Select All')}
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label={t('Select Row')}
-            />
-          ),
-          size: 40,
-          enableSorting: false,
-          enableHiding: false,
-        } as ColumnDef<TData, TValue>,
-        ...columns,
-      ]
-    : columns;
+  const finalColumns = useMemo<ColumnDef<TData, TValue>[]>(() => {
+    if (!enableRowSelection) {
+      return columns;
+    }
+
+    const selectionColumn: ColumnDef<TData, TValue> = {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label={t('Select All')}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label={t('Select Row')}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+    };
+
+    return [selectionColumn, ...columns];
+  }, [columns, enableRowSelection, t]);
 
   const table = useReactTable({
     data,
@@ -142,11 +146,33 @@ export function DataTable<TData, TValue>({
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
-  const searchValue = enableGlobalFilter
+  const rawSearchValue = enableGlobalFilter
     ? globalFilter
     : searchKey
       ? (table.getColumn(searchKey)?.getFilterValue() as string)
       : '';
+  const searchValue = typeof rawSearchValue === 'string' ? rawSearchValue : '';
+  const hasSearchValue = searchValue.trim().length > 0;
+  const filteredRowCount = table.getFilteredRowModel().rows.length;
+  const resolvedEmptyVariant: DataTableEmptyStateVariant = hasSearchValue
+    ? 'search'
+    : (emptyVariant ?? 'empty');
+
+  const updateSearchValue = useCallback(
+    (value: string) => {
+      if (enableGlobalFilter) {
+        setGlobalFilter(value);
+      } else if (searchKey) {
+        table.getColumn(searchKey)?.setFilterValue(value);
+      }
+    },
+    [enableGlobalFilter, searchKey, table],
+  );
+
+  const clearSearch = useCallback(() => {
+    updateSearchValue('');
+    inputRef.current?.focus();
+  }, [updateSearchValue]);
 
   const handleDeleteSelected = () => {
     if (onDeleteSelected && selectedRows.length > 0) {
@@ -159,23 +185,17 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Left side - Search */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {(searchKey || enableGlobalFilter) && (
-            <div className="relative">
+            <div className="relative w-full sm:w-72">
               <Input
                 id={`${id}-search`}
                 ref={inputRef}
-                className={cn('peer min-w-60 ps-9', Boolean(searchValue) && 'pe-9')}
-                value={searchValue ?? ''}
-                onChange={(e) => {
-                  if (enableGlobalFilter) {
-                    setGlobalFilter(e.target.value);
-                  } else if (searchKey) {
-                    table.getColumn(searchKey)?.setFilterValue(e.target.value);
-                  }
-                }}
+                className={cn('peer w-full ps-9', hasSearchValue && 'pe-9')}
+                value={searchValue}
+                onChange={(e) => updateSearchValue(e.target.value)}
                 placeholder={searchPlaceholder || t('Search…')}
                 type="text"
                 aria-label={searchPlaceholder || t('Search…')}
@@ -183,18 +203,12 @@ export function DataTable<TData, TValue>({
               <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/40 peer-disabled:opacity-50">
                 <RiSearch2Line className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               </div>
-              {Boolean(searchValue) && (
+              {hasSearchValue && (
                 <button
+                  type="button"
                   className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/60 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={t('Clear search')}
-                  onClick={() => {
-                    if (enableGlobalFilter) {
-                      setGlobalFilter('');
-                    } else if (searchKey) {
-                      table.getColumn(searchKey)?.setFilterValue('');
-                    }
-                    inputRef.current?.focus();
-                  }}
+                  onClick={clearSearch}
                 >
                   <RiCloseLine className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -202,14 +216,14 @@ export function DataTable<TData, TValue>({
             </div>
           )}
           {showRecordCount && (
-            <span className="text-sm text-muted-foreground">
-              {t('{count} records', { count: table.getFilteredRowModel().rows.length })}
+            <span className="whitespace-nowrap text-sm text-muted-foreground">
+              {t('{count} records', { count: filteredRowCount })}
             </span>
           )}
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
           {enableRowSelection && selectedRows.length > 0 && onDeleteSelected && (
             <Button variant="outline" onClick={() => setDeleteDialogOpen(true)}>
               <RiDeleteBin2Line className="-ms-1 opacity-60" size={16} aria-hidden="true" />
@@ -255,7 +269,12 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow className="hover:bg-transparent hover:shadow-none border-none">
               <TableCell colSpan={finalColumns.length} className="h-64 p-8 border-none">
-                <DataTableEmptyState message={emptyMessage || t('No data')} />
+                <DataTableEmptyState
+                  message={emptyMessage || t('No data')}
+                  variant={resolvedEmptyVariant}
+                  searchValue={searchValue}
+                  onClearSearch={hasSearchValue ? clearSearch : undefined}
+                />
               </TableCell>
             </TableRow>
           )}

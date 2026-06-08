@@ -2,6 +2,7 @@
 import { RiAddLine, RiDatabase2Line, RiFlashlightLine, RiSearch2Line } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyContent,
@@ -10,44 +11,67 @@ import {
   EmptyMedia,
 } from '@/components/ui/empty';
 
+export type DataTableEmptyStateVariant = 'empty' | 'search' | 'action' | 'datasource' | 'provider';
+
 interface DataTableEmptyStateProps {
   message?: string;
+  description?: string;
   icon?: React.ReactNode;
+  variant?: DataTableEmptyStateVariant;
+  searchValue?: string;
+  onClearSearch?: () => void;
 }
 
-export function DataTableEmptyState({ message, icon }: DataTableEmptyStateProps) {
-  const t = useTranslations();
-  const displayMessage = message || t('No data');
-  let primaryText = displayMessage;
-  let instructionText = '';
-  let selectedIcon = icon;
+const variantIconClassName: Record<DataTableEmptyStateVariant, string> = {
+  empty: 'h-6 w-6',
+  search: 'h-6 w-6 text-muted-foreground',
+  action: 'h-6 w-6 text-primary',
+  datasource: 'h-6 w-6 text-primary',
+  provider: 'h-6 w-6 text-primary',
+};
 
-  // Pattern: Check if it's a search result empty state
-  if (displayMessage.includes(t('No matching results'))) {
-    primaryText = t('No matching results');
-    instructionText = t('Try different keywords or clear filters');
-    selectedIcon = selectedIcon || <RiSearch2Line className="h-6 w-6 text-purple-500" />;
+function getVariantIcon(variant: DataTableEmptyStateVariant) {
+  const className = variantIconClassName[variant];
+
+  if (variant === 'search') {
+    return <RiSearch2Line className={className} />;
   }
-  // Pattern: Check for click instruction patterns
-  else if (displayMessage.includes(t('Click "{action}" above'))) {
-    selectedIcon = selectedIcon || <RiAddLine className="h-6 w-6 text-primary" />;
+
+  if (variant === 'action' || variant === 'provider') {
+    return <RiFlashlightLine className={className} />;
   }
-  // Pattern: Generic empty - No data
-  else if (displayMessage === t('No data')) {
-    primaryText = t('No data');
-    instructionText = t('Click the button above to get started');
-    selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6" />;
+
+  if (variant === 'datasource') {
+    return <RiDatabase2Line className={className} />;
   }
-  // Check for specific item types
-  else if (displayMessage.includes('Action') || displayMessage.includes('Provider')) {
-    selectedIcon = selectedIcon || <RiFlashlightLine className="h-6 w-6 text-yellow-500" />;
-  } else if (displayMessage.includes(t('Datasource')) || displayMessage.includes('datasource')) {
-    selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6 text-blue-500" />;
-  }
-  // Fallback
-  else {
-    selectedIcon = selectedIcon || <RiDatabase2Line className="h-6 w-6" />;
-  }
+
+  return <RiAddLine className={className} />;
+}
+
+export function DataTableEmptyState({
+  message,
+  description,
+  icon,
+  variant,
+  searchValue,
+  onClearSearch,
+}: DataTableEmptyStateProps) {
+  const t = useTranslations();
+  const normalizedSearchValue = searchValue?.trim();
+  const resolvedVariant = variant ?? (normalizedSearchValue ? 'search' : 'empty');
+  const isSearchEmpty = resolvedVariant === 'search';
+
+  const primaryText = isSearchEmpty ? t('No matching results') : message || t('No data');
+  const instructionText =
+    description ??
+    (isSearchEmpty
+      ? normalizedSearchValue
+        ? t(`No results found for '{query}'`, { query: normalizedSearchValue })
+        : t('Try different keywords or clear filters')
+      : message
+        ? ''
+        : t('Click the button above to get started'));
+  const selectedIcon = icon || getVariantIcon(resolvedVariant);
 
   return (
     <Empty>
@@ -58,8 +82,14 @@ export function DataTableEmptyState({ message, icon }: DataTableEmptyStateProps)
         </EmptyDescription>
         {instructionText && <p className="text-muted-foreground text-sm mt-1">{instructionText}</p>}
       </EmptyHeader>
-      <EmptyContent className="opacity-40">
-        <span className="text-xs tracking-widest">•••</span>
+      <EmptyContent className={isSearchEmpty && onClearSearch ? undefined : 'opacity-40'}>
+        {isSearchEmpty && onClearSearch ? (
+          <Button type="button" variant="outline" size="sm" onClick={onClearSearch}>
+            {t('Clear search')}
+          </Button>
+        ) : (
+          <span className="text-xs tracking-widest">•••</span>
+        )}
       </EmptyContent>
     </Empty>
   );

@@ -77,12 +77,12 @@ export function PageHeader({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         {renderBackButton()}
         {backButton && <Separator orientation="vertical" className="!h-6" />}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-end gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-end gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{displayTitle}</h1>
             {displayDescription && (
               <div className="text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export function PageHeader({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         {children}
         {action}
       </div>

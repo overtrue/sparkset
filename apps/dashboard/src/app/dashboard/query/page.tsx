@@ -7,7 +7,7 @@ import { LoadingState } from '@/components/loading-state';
 import { useAIProviders } from '@/lib/api/ai-providers-hooks';
 import { useDatasources } from '@/lib/api/datasources-hooks';
 import { useTranslations } from '@/i18n/use-translations';
-import QueryRunner from './query-runner';
+import QueryRunner from '@/components/query/runner';
 
 const QueryPage = () => {
   const t = useTranslations();

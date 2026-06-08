@@ -13,6 +13,7 @@ module.exports = [
       'apps/server/build/**',
       'apps/dashboard/.next/**',
       'apps/dashboard/src/components/ui/**',
+      'apps/dashboard/src/hooks/use-mobile.tsx',
     ],
   },
   js.configs.recommended,

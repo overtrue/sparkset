@@ -5,12 +5,8 @@ import {
   RiCheckLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
-  RiDeleteBin2Line,
-  RiEdit2Line,
   RiLoader4Line,
-  RiStarLine,
 } from '@remixicon/react';
-import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
 import { type ChangeEvent, useState } from 'react';
 import { toast } from 'sonner';
@@ -24,11 +20,9 @@ import {
   updateAIProvider,
 } from '../../lib/api/ai-providers-api';
 import type { AIProviderDTO, CreateAIProviderInput, TestConnectionResult } from '@/types/api';
+import { createAIProviderColumns } from './columns';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
-import { DataTableColumnHeader } from '../data-table/data-table-column-header';
-import { DataTableRowActions, type RowAction } from '../data-table/data-table-row-actions';
-import { Badge } from '../ui/badge';
 import { Button, buttonVariants } from '../ui/button';
 import {
   Command,
@@ -61,23 +55,6 @@ const API_KEY_REQUIRED_TYPES = new Set([
   'zhipu',
   'qwen',
 ]);
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-});
-
-function formatDate(value?: string) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return dateFormatter.format(date);
-}
 
 interface AIProviderManagerProps {
   initial: AIProviderDTO[];
@@ -276,95 +253,15 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     }
   };
 
-  const columns: ColumnDef<AIProviderDTO>[] = [
-    {
-      accessorKey: 'name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
-      cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
-      size: 180,
+  const columns = createAIProviderColumns({
+    t,
+    pendingActionId,
+    onSetDefault: (id) => {
+      void handleSetDefault(id);
     },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Type')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{getProviderLabel(row.getValue('type'))}</span>
-      ),
-      size: 140,
-    },
-    {
-      accessorKey: 'defaultModel',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Default Model')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.getValue('defaultModel') || '-'}</span>
-      ),
-      size: 140,
-    },
-    {
-      accessorKey: 'isDefault',
-      header: t('Status'),
-      cell: ({ row }) =>
-        row.getValue('isDefault') ? (
-          <Badge variant="default" className="gap-1">
-            <RiStarLine className="h-3 w-3 fill-current" aria-hidden="true" />
-            {t('Default')}
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="gap-1">
-            <RiCheckLine className="h-3 w-3" aria-hidden="true" />
-            {t('Configured')}
-          </Badge>
-        ),
-      size: 100,
-    },
-    {
-      accessorKey: 'updatedAt',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Updated At')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.getValue('updatedAt'))}</span>
-      ),
-      size: 180,
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">{t('Actions')}</span>,
-      cell: ({ row }) => {
-        const provider = row.original;
-        const isLoading = pendingActionId === provider.id;
-
-        const actions: RowAction[] = [];
-
-        if (!provider.isDefault) {
-          actions.push({
-            label: t('Set as Default'),
-            icon: <RiStarLine className="h-4 w-4" aria-hidden="true" />,
-            onClick: () => {
-              void handleSetDefault(provider.id);
-            },
-            disabled: isLoading,
-          });
-        }
-
-        actions.push(
-          {
-            label: t('Edit'),
-            icon: <RiEdit2Line className="h-4 w-4" aria-hidden="true" />,
-            onClick: () => handleOpenDialog(provider),
-            disabled: isLoading,
-          },
-          {
-            label: t('Delete'),
-            icon: <RiDeleteBin2Line className="h-4 w-4" aria-hidden="true" />,
-            onClick: () => handleRemoveClick(provider.id),
-            variant: 'destructive',
-            disabled: isLoading,
-          },
-        );
-
-        return <DataTableRowActions actions={actions} />;
-      },
-      size: 60,
-    },
-  ];
+    onEdit: handleOpenDialog,
+    onDelete: handleRemoveClick,
+  });
 
   return (
     <>

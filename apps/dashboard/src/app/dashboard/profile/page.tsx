@@ -1,19 +1,17 @@
 'use client';
 
-/**
- * User Profile Page
- * Displays current user information and settings
- */
-
 import { RiShieldKeyholeLine, RiUser3Line, RiVerifiedBadgeLine } from '@remixicon/react';
 
-import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@/contexts/AuthContext';
+import { useTranslations } from '@/i18n/use-translations';
+import { formatDateTime } from '@/lib/utils/date';
+import { PageHeader } from '@/components/page-header';
 
 export default function ProfilePage() {
+  const t = useTranslations();
   const user = useUser();
 
   if (!user) {
@@ -36,7 +34,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <RiUser3Line className="h-5 w-5" />
-              基本信息
+              {t('Basic Information')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -47,26 +45,26 @@ export default function ProfilePage() {
               </Avatar>
               <div>
                 <div className="text-lg font-semibold">{user.displayName || user.username}</div>
-                <div className="text-sm text-muted-foreground">{user.email || 'No email'}</div>
+                <div className="text-sm text-muted-foreground">{user.email || t('No email')}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">用户 ID:</span>
+                <span className="text-muted-foreground">{t('User ID')}:</span>
                 <div className="font-mono">{user.id}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">UID:</span>
+                <span className="text-muted-foreground">{t('UID')}:</span>
                 <div className="font-mono text-xs break-all">{user.uid}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">提供者:</span>
+                <span className="text-muted-foreground">{t('Provider')}:</span>
                 <div className="font-mono">{user.provider}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">状态:</span>
+                <span className="text-muted-foreground">{t('Status')}:</span>
                 <Badge variant={user.isActive ? 'default' : 'destructive'}>
-                  {user.isActive ? '活跃' : '禁用'}
+                  {user.isActive ? t('Active') : t('Disabled')}
                 </Badge>
               </div>
             </div>
@@ -78,12 +76,12 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <RiShieldKeyholeLine className="h-5 w-5" />
-              权限与角色
+              {t('Permissions and Roles')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="mb-2 text-sm font-medium text-muted-foreground">角色</div>
+              <div className="mb-2 text-sm font-medium text-muted-foreground">{t('Roles')}</div>
               <div className="flex flex-wrap gap-2">
                 {user.roles.length > 0 ? (
                   user.roles.map((role) => (
@@ -92,12 +90,14 @@ export default function ProfilePage() {
                     </Badge>
                   ))
                 ) : (
-                  <span className="text-sm text-muted-foreground">无角色</span>
+                  <span className="text-sm text-muted-foreground">{t('No roles')}</span>
                 )}
               </div>
             </div>
             <div>
-              <div className="mb-2 text-sm font-medium text-muted-foreground">权限</div>
+              <div className="mb-2 text-sm font-medium text-muted-foreground">
+                {t('Permissions')}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {user.permissions.length > 0 ? (
                   user.permissions.map((perm) => (
@@ -106,7 +106,7 @@ export default function ProfilePage() {
                     </Badge>
                   ))
                 ) : (
-                  <span className="text-sm text-muted-foreground">无权限</span>
+                  <span className="text-sm text-muted-foreground">{t('No permissions')}</span>
                 )}
               </div>
             </div>
@@ -118,17 +118,17 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <RiVerifiedBadgeLine className="h-5 w-5" />
-              账户时间
+              {t('Account Timeline')}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">创建时间:</span>
-              <div>{new Date(user.createdAt).toLocaleString()}</div>
+              <span className="text-muted-foreground">{t('Created At')}:</span>
+              <div>{formatDateTime(user.createdAt)}</div>
             </div>
             <div>
-              <span className="text-muted-foreground">更新时间:</span>
-              <div>{new Date(user.updatedAt).toLocaleString()}</div>
+              <span className="text-muted-foreground">{t('Updated At')}:</span>
+              <div>{formatDateTime(user.updatedAt)}</div>
             </div>
           </CardContent>
         </Card>

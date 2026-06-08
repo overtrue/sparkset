@@ -1,10 +1,9 @@
-/**
- * Unified empty state component
- */
+'use client';
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from '@/i18n/client-routing';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
   /**
@@ -36,7 +35,11 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center py-20 text-center ${className}`}>
+    <div
+      className={cn('flex flex-col items-center justify-center py-20 text-center', className)}
+      role="status"
+      aria-live="polite"
+    >
       {icon && (
         <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
           {icon}
@@ -46,6 +49,7 @@ export function EmptyState({ icon, title, description, action, className = '' }:
       {description && <p className="text-muted-foreground mb-6 max-w-md">{description}</p>}
       {action && (
         <Button
+          type="button"
           onClick={action.onClick}
           variant={action.variant || 'default'}
           asChild={Boolean(action.href)}

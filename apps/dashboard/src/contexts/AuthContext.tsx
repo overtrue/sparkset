@@ -21,6 +21,7 @@ import {
   AuthUser,
   AuthResponse,
 } from '@/lib/auth';
+import { useTranslations } from '@/i18n/use-translations';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -46,6 +47,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const t = useTranslations();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -77,33 +79,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Login with credentials
    */
-  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
-    setLoading(true);
-    try {
-      const response: AuthResponse = await loginWithCredentials(username, password);
+  const login = useCallback(
+    async (username: string, password: string): Promise<boolean> => {
+      setLoading(true);
+      try {
+        const response: AuthResponse = await loginWithCredentials(username, password);
 
-      if (response.authenticated && response.user) {
-        setUser(response.user);
-        setAuthenticated(true);
-        toast.success('登录成功', {
-          description: `欢迎回来, ${response.user.username}`,
-        });
-        return true;
-      } else {
-        toast.error('登录失败', {
-          description: response.error || response.message || '未知错误',
+        if (response.authenticated && response.user) {
+          setUser(response.user);
+          setAuthenticated(true);
+          toast.success(t('Login successful'), {
+            description: t('Welcome back, {username}', { username: response.user.username }),
+          });
+          return true;
+        } else {
+          toast.error(t('Login failed'), {
+            description: response.error || response.message || t('Unknown error'),
+          });
+          return false;
+        }
+      } catch (error) {
+        toast.error(t('Login failed'), {
+          description: String(error),
         });
         return false;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      toast.error('登录失败', {
-        description: String(error),
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [t],
+  );
 
   /**
    * Register new user
@@ -127,18 +132,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (response.authenticated && response.user) {
           setUser(response.user);
           setAuthenticated(true);
-          toast.success('注册成功', {
-            description: `欢迎, ${response.user.username}`,
+          toast.success(t('Registration successful'), {
+            description: t('Welcome, {username}', { username: response.user.username }),
           });
           return true;
         } else {
-          toast.error('注册失败', {
-            description: response.error || response.message || '未知错误',
+          toast.error(t('Registration failed'), {
+            description: response.error || response.message || t('Unknown error'),
           });
           return false;
         }
       } catch (error) {
-        toast.error('注册失败', {
+        toast.error(t('Registration failed'), {
           description: String(error),
         });
         return false;
@@ -146,7 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setLoading(false);
       }
     },
-    [],
+    [t],
   );
 
   /**
@@ -157,14 +162,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await apiLogout();
       setUser(null);
       setAuthenticated(false);
-      toast.success('已退出登录');
+      toast.success(t('Logged out'));
     } catch (error) {
       console.error('Logout failed:', error);
       // Still clear local state even if API call fails
       setUser(null);
       setAuthenticated(false);
     }
-  }, []);
+  }, [t]);
 
   /**
    * Refresh user data

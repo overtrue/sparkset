@@ -9,11 +9,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RiLoginCircleLine, RiShieldKeyholeLine, RiUserAddLine } from '@remixicon/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslations } from '@/i18n/use-translations';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,31 +22,46 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const loginSchema = z.object({
-  username: z.string().min(1, '用户名不能为空'),
-  password: z.string().min(1, '密码不能为空'),
-});
+type Translate = ReturnType<typeof useTranslations>;
 
-const registerSchema = z
-  .object({
-    username: z.string().min(3, '用户名至少需要3个字符').max(50, '用户名不能超过50个字符'),
-    password: z.string().min(6, '密码至少需要6个字符').max(100, '密码不能超过100个字符'),
-    confirmPassword: z.string().min(6, '请确认密码'),
-    email: z.string().email('邮箱格式不正确').optional().or(z.literal('')),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: '两次输入的密码不一致',
-    path: ['confirmPassword'],
+function createLoginSchema(t: Translate) {
+  return z.object({
+    username: z.string().min(1, t('Username is required')),
+    password: z.string().min(1, t('Password is required')),
   });
+}
 
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+function createRegisterSchema(t: Translate) {
+  return z
+    .object({
+      username: z
+        .string()
+        .min(3, t('Username must be at least 3 characters'))
+        .max(50, t('Username cannot exceed 50 characters')),
+      password: z
+        .string()
+        .min(6, t('Password must be at least 6 characters'))
+        .max(100, t('Password cannot exceed 100 characters')),
+      confirmPassword: z.string().min(6, t('Please confirm password')),
+      email: z.string().email(t('Invalid email address')).optional().or(z.literal('')),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('Passwords do not match'),
+      path: ['confirmPassword'],
+    });
+}
+
+type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>;
+type RegisterFormData = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export default function LoginPage() {
   const { login, register: registerUser, authenticated, loading } = useAuth();
   const router = useRouter();
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [error, setError] = useState<string | null>(null);
+  const loginSchema = useMemo(() => createLoginSchema(t), [t]);
+  const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -109,9 +125,11 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">欢迎回来</CardTitle>
+            <CardTitle className="text-xl">{t('Welcome back')}</CardTitle>
             <CardDescription>
-              {isDev ? '登录或注册以访问仪表板（开发环境）' : '请使用内网访问（Header 认证）'}
+              {isDev
+                ? t('Login or register to access the dashboard (development)')
+                : t('Use intranet access with header authentication')}
             </CardDescription>
           </CardHeader>
 
@@ -123,8 +141,8 @@ export default function LoginPage() {
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">登录</TabsTrigger>
-                  <TabsTrigger value="register">注册</TabsTrigger>
+                  <TabsTrigger value="login">{t('Login')}</TabsTrigger>
+                  <TabsTrigger value="register">{t('Register')}</TabsTrigger>
                 </TabsList>
 
                 {/* Error Alert */}
@@ -146,9 +164,9 @@ export default function LoginPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>用户名</FormLabel>
+                            <FormLabel>{t('Username')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="请输入用户名" {...field} />
+                              <Input placeholder={t('Enter username')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -159,16 +177,16 @@ export default function LoginPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>密码</FormLabel>
+                            <FormLabel>{t('Password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="请输入密码" {...field} />
+                              <Input type="password" placeholder={t('Enter password')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? '登录中...' : '登录'}
+                        {loading ? t('Logging in…') : t('Login')}
                       </Button>
                     </form>
                   </Form>
@@ -186,9 +204,9 @@ export default function LoginPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>用户名</FormLabel>
+                            <FormLabel>{t('Username')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="设置用户名" {...field} />
+                              <Input placeholder={t('Set username')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -199,9 +217,9 @@ export default function LoginPage() {
                         name="password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>密码</FormLabel>
+                            <FormLabel>{t('Password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="设置密码" {...field} />
+                              <Input type="password" placeholder={t('Set password')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -212,9 +230,13 @@ export default function LoginPage() {
                         name="confirmPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>确认密码</FormLabel>
+                            <FormLabel>{t('Confirm Password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="再次输入密码" {...field} />
+                              <Input
+                                type="password"
+                                placeholder={t('Enter password again')}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -225,7 +247,7 @@ export default function LoginPage() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>邮箱（可选）</FormLabel>
+                            <FormLabel>{t('Email (optional)')}</FormLabel>
                             <FormControl>
                               <Input type="email" placeholder="example@email.com" {...field} />
                             </FormControl>
@@ -234,7 +256,7 @@ export default function LoginPage() {
                         )}
                       />
                       <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? '注册中...' : '注册'}
+                        {loading ? t('Registering…') : t('Register')}
                       </Button>
                     </form>
                   </Form>
@@ -242,13 +264,17 @@ export default function LoginPage() {
               </Tabs>
             ) : (
               <div className="space-y-4 text-center text-sm text-muted-foreground">
-                <p>此页面仅在内网环境中可用。</p>
-                <p>请确保您通过受信任的代理访问，并携带正确的认证头信息。</p>
+                <p>{t('This page is only available in the intranet environment.')}</p>
+                <p>
+                  {t(
+                    'Make sure you access through a trusted proxy with the required authentication headers.',
+                  )}
+                </p>
                 <div className="mt-4 rounded-md bg-muted p-3 text-left font-mono text-xs">
-                  <div>X-User-Id: [您的用户ID]</div>
-                  <div>X-User-Name: [您的姓名]</div>
-                  <div>X-User-Email: [您的邮箱]</div>
-                  <div>X-User-Roles: [角色列表]</div>
+                  <div>{t('X-User-Id: [User ID]')}</div>
+                  <div>{t('X-User-Name: [Name]')}</div>
+                  <div>{t('X-User-Email: [Email]')}</div>
+                  <div>{t('X-User-Roles: [Roles]')}</div>
                 </div>
               </div>
             )}
@@ -259,14 +285,16 @@ export default function LoginPage() {
         {isDev && (
           <div className="px-6 text-center text-xs text-muted-foreground">
             <div className="flex items-center gap-2 justify-center mb-2">
-              <RiLoginCircleLine className="h-4 w-4" />
-              <span>开发模式：使用本地账号密码登录或注册</span>
+              <RiLoginCircleLine className="h-4 w-4" aria-hidden="true" />
+              <span>{t('Development mode: use local credentials to login or register')}</span>
             </div>
             <div className="flex items-center gap-2 justify-center mb-2">
-              <RiUserAddLine className="h-4 w-4" />
-              <span>首次使用？点击上方"注册"标签创建账号</span>
+              <RiUserAddLine className="h-4 w-4" aria-hidden="true" />
+              <span>
+                {t(`First time here? Click the 'Register' tab above to create an account`)}
+              </span>
             </div>
-            <div>默认测试账号：admin / admin123</div>
+            <div>{t('Default test account: admin / admin123')}</div>
           </div>
         )}
       </div>

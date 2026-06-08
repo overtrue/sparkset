@@ -1,27 +1,12 @@
 'use client';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import {
-  DataTableRowActions,
-  type RowAction,
-} from '@/components/data-table/data-table-row-actions';
-import { EmptyState } from '@/components/empty-state';
-import { ErrorState } from '@/components/error-state';
-import { LoadingState } from '@/components/loading-state';
-import { PageHeader } from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Link } from '@/i18n/client-routing';
+import { DatasetList } from '@/components/dataset/list';
 import { useDatasets, useDeleteDataset } from '@/lib/api/datasets-hooks';
 import { useResourceList } from '@/hooks/use-resource-list';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import type { Dataset } from '@/types/api';
-import { RiAddLine, RiDatabaseLine } from '@remixicon/react';
-import { ColumnDef } from '@tanstack/react-table';
 import { useTranslations } from '@/i18n/use-translations';
-import { formatDateTime } from '@/lib/utils/date';
 
 export default function DatasetsPage() {
   const t = useTranslations();
@@ -56,212 +41,18 @@ export default function DatasetsPage() {
     });
   };
 
-  const formatDate = (value: string) => formatDateTime(value);
-
-  const columns: ColumnDef<Dataset>[] = [
-    {
-      accessorKey: 'name',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Name')} />,
-      cell: ({ row }) => {
-        const dataset = row.original;
-        return (
-          <div className="min-w-0">
-            <Button
-              variant="link"
-              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
-              asChild
-            >
-              <Link href={`/dashboard/datasets/${dataset.id}`}>{row.getValue('name')}</Link>
-            </Button>
-          </div>
-        );
-      },
-      size: 200,
-    },
-    {
-      accessorKey: 'description',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Description')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground break-words">
-          {row.getValue('description') || '-'}
-        </span>
-      ),
-      size: 250,
-    },
-    {
-      accessorKey: 'datasourceName',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Datasource')} />,
-      cell: ({ row }) => {
-        const dataset = row.original;
-        return (
-          <div className="min-w-0">
-            <Button
-              variant="link"
-              className="h-auto p-0 text-primary font-medium truncate max-w-full text-left"
-              asChild
-            >
-              <Link href={`/dashboard/datasources/${dataset.datasourceId}`}>
-                {row.getValue('datasourceName')}
-              </Link>
-            </Button>
-          </div>
-        );
-      },
-      size: 150,
-    },
-    {
-      accessorKey: 'schemaJson',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Field Count')} />,
-      cell: ({ row }) => {
-        const schema = row.getValue('schemaJson');
-        return (
-          <Badge variant="secondary">
-            {t('{count} fields', {
-              count: (schema as { name: string; type: string }[])?.length ?? 0,
-            })}
-          </Badge>
-        );
-      },
-      size: 100,
-    },
-    {
-      accessorKey: 'createdAt',
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t('Created At')} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.getValue('createdAt'))}</span>
-      ),
-      size: 180,
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">{t('Actions')}</span>,
-      cell: ({ row }) => {
-        const dataset = row.original;
-        const actions: RowAction[] = [
-          {
-            label: t('View Details'),
-            icon: <RiDatabaseLine className="h-4 w-4" aria-hidden="true" />,
-            href: `/dashboard/datasets/${dataset.id}`,
-          },
-          {
-            label: t('Create Chart'),
-            icon: <RiAddLine className="h-4 w-4" aria-hidden="true" />,
-            href: `/dashboard/charts/new?datasetId=${dataset.id}`,
-          },
-          {
-            label: t('Delete'),
-            icon: <RiDatabaseLine className="h-4 w-4" aria-hidden="true" />,
-            onClick: () => handleDeleteClick(dataset),
-            variant: 'destructive',
-          },
-        ];
-
-        return <DataTableRowActions actions={actions} />;
-      },
-      size: 60,
-    },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('Datasets')}
-          description={t('Manage your query result datasets')}
-          action={
-            <Button disabled>
-              <RiAddLine className="h-4 w-4" aria-hidden="true" />
-              {t('New Dataset')}
-            </Button>
-          }
-        />
-        <LoadingState message={t('Loading…')} />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('Datasets')}
-          description={t('Manage your query result datasets')}
-          action={
-            <Button asChild>
-              <Link href="/dashboard/query">
-                <RiAddLine className="h-4 w-4" aria-hidden="true" />
-                {t('New Dataset')}
-              </Link>
-            </Button>
-          }
-        />
-        <ErrorState error={error} onRetry={() => mutate()} />
-      </div>
-    );
-  }
-
-  if (datasets.length === 0) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title={t('Datasets')}
-          description={t('Manage your query result datasets')}
-          action={
-            <Button asChild>
-              <Link href="/dashboard/query">
-                <RiAddLine className="h-4 w-4" aria-hidden="true" />
-                {t('New Dataset')}
-              </Link>
-            </Button>
-          }
-        />
-        <EmptyState
-          icon={<RiDatabaseLine className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
-          title={t('No Datasets')}
-          description={t(
-            'From Query page, execute SQL query and save result as dataset to create charts',
-          )}
-          action={{
-            label: t('Create Your First Dataset'),
-            href: '/dashboard/query',
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('Datasets')}
-        description={t('Manage your query result datasets')}
-        action={
-          <Button size="sm" asChild>
-            <Link href="/dashboard/query">
-              <RiAddLine className="h-4 w-4" aria-hidden="true" />
-              {t('New Dataset')}
-            </Link>
-          </Button>
-        }
+    <>
+      <DatasetList
+        datasets={datasets}
+        isLoading={isLoading}
+        error={error as Error | string | null}
+        onRetry={() => mutate()}
+        onDelete={handleDeleteClick}
+        onDeleteSelected={(rows) => {
+          void handleBulkDelete(rows);
+        }}
       />
-
-      <DataTable
-        columns={columns}
-        data={datasets}
-        searchKey="name"
-        searchPlaceholder={t('Search datasets…')}
-        enableRowSelection
-        onDeleteSelected={handleBulkDelete}
-        deleteConfirmTitle={t('Delete Dataset')}
-        deleteConfirmDescription={(count) =>
-          t(
-            'Are you sure to delete the selected {count} dataset(s)? This action cannot be undone',
-            { count },
-          )
-        }
-        emptyMessage={t('No datasets yet, click the button above to add')}
-      />
-
       {dialogState && (
         <ConfirmDialog
           open={dialogState.open}
@@ -276,6 +67,6 @@ export default function DatasetsPage() {
           variant={dialogState.variant}
         />
       )}
-    </div>
+    </>
   );
 }
