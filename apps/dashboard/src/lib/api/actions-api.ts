@@ -1,5 +1,6 @@
 import type {
   ActionDTO,
+  ActionListResponse,
   CreateActionInput,
   UpdateActionInput,
   GenerateActionSQLInput,
@@ -8,7 +9,7 @@ import type {
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
 // API functions - can be used in both server and client components
-export async function fetchActions(): Promise<{ items: ActionDTO[] }> {
+export async function fetchActions(): Promise<ActionListResponse> {
   return apiGet('/actions');
 }
 

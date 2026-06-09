@@ -92,7 +92,10 @@ const createMockContext = ({
   headers?: Record<string, string>;
 }): HttpContext => {
   const normalizedHeaders = Object.fromEntries(
-    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+    Object.entries({
+      Origin: 'http://localhost:3001',
+      ...headers,
+    }).map(([key, value]) => [key.toLowerCase(), value]),
   );
 
   return {
@@ -114,6 +117,7 @@ describe('LocalAuthController session cookies', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubEnv('AUTH_LOCAL_ENABLED', 'true');
+    vi.stubEnv('AUTH_TRUSTED_ORIGINS', 'http://localhost:3001');
     bcryptMock.compare.mockReset();
     bcryptMock.hash.mockReset();
     vi.spyOn(AuditLogService.prototype, 'recordHttp').mockResolvedValue(undefined);
@@ -143,7 +147,7 @@ describe('LocalAuthController session cookies', () => {
     });
   });
 
-  it('reports OIDC availability in unauthenticated status responses', async () => {
+  it('does not report OIDC login availability before callback exchange is implemented', async () => {
     vi.stubEnv('AUTH_OIDC_ENABLED', 'true');
     vi.stubEnv(
       'AUTH_OIDC_AUTHORIZATION_URL',
@@ -162,7 +166,7 @@ describe('LocalAuthController session cookies', () => {
     expect(result).toEqual(
       expect.objectContaining({
         authenticated: false,
-        oidcEnabled: true,
+        oidcEnabled: false,
       }),
     );
   });

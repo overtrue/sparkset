@@ -32,6 +32,7 @@ interface AIProviderServiceMock {
 
 interface AuthorizationServiceMock {
   can: ReturnType<typeof vi.fn>;
+  canPerformGlobalAction: ReturnType<typeof vi.fn>;
 }
 
 interface MockResponse {
@@ -155,6 +156,18 @@ const sqlAction = (input: Partial<Action> = {}): Action => ({
   updatedAt: input.updatedAt ?? new Date(),
 });
 
+const apiAction = (input: Partial<Action> = {}): Action =>
+  sqlAction({
+    id: input.id ?? 22,
+    name: input.name ?? 'Notify API action',
+    type: input.type ?? 'api',
+    payload: input.payload ?? {
+      url: 'https://example.com/hooks/notify',
+      method: 'POST',
+    },
+    ...input,
+  });
+
 describe('ActionsController authorization', () => {
   let actionService: ActionServiceMock;
   let actionExecutor: ActionExecutorMock;
@@ -183,6 +196,7 @@ describe('ActionsController authorization', () => {
     };
     authorizationService = {
       can: vi.fn().mockResolvedValue(true),
+      canPerformGlobalAction: vi.fn().mockReturnValue(true),
     };
     createController = () =>
       new ActionsController(
@@ -258,6 +272,90 @@ describe('ActionsController authorization', () => {
       { type: 'datasource', id: 3 },
     );
     expect(schemaService.list).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('filters non-SQL actions without action:view and returns per-action capabilities', async () => {
+    const readableSqlAction = sqlAction({ id: 11 });
+    const hiddenApiAction = apiAction({ id: 22 });
+    actionService.list.mockResolvedValue([readableSqlAction, hiddenApiAction]);
+    authorizationService.can.mockResolvedValue(true);
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'action:manage',
+    );
+    const response = createMockResponse();
+
+    await createController().index(
+      createMockContext({
+        user: { id: 7 },
+        response,
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.payload).toEqual({
+      items: [
+        expect.objectContaining({
+          id: 11,
+          capabilities: {
+            canView: true,
+            canExecute: true,
+            canManage: true,
+          },
+        }),
+      ],
+      capabilities: {
+        canView: false,
+        canExecute: false,
+        canManage: true,
+      },
+    });
+  });
+
+  it('requires action:manage before creating a non-SQL action', async () => {
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+    const response = createMockResponse();
+
+    await createController().store(
+      createMockContext({
+        body: {
+          name: 'Notify API action',
+          type: 'api',
+          payload: { url: 'https://example.com/hooks/notify', method: 'POST' },
+        },
+        user: { id: 7 },
+        response,
+      }),
+    );
+
+    expect(authorizationService.canPerformGlobalAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'action:manage',
+    );
+    expect(actionService.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires action:execute before executing a non-SQL action', async () => {
+    actionService.get.mockResolvedValue(apiAction());
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action !== 'action:execute',
+    );
+    const response = createMockResponse();
+
+    await createController().execute(
+      createMockContext({
+        params: { id: '22' },
+        user: { id: 7 },
+        response,
+      }),
+    );
+
+    expect(authorizationService.canPerformGlobalAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'action:execute',
+    );
+    expect(actionExecutor.run).not.toHaveBeenCalled();
     expect(response.statusCode).toBe(403);
   });
 });

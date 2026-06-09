@@ -664,3 +664,88 @@
 - [x] Return OIDC availability from auth status.
 - [x] Wire dashboard AuthContext and login page SSO entry.
 - [x] Run focused validation and browser verification.
+
+## Stage 29: Action Authorization Boundary
+
+**Goal:** Protect reusable non-SQL Actions with explicit global permissions while keeping SQL Actions scoped by datasource authorization.
+
+**Success Criteria:**
+
+- Non-SQL Action listing and detail visibility require `action:view`.
+- Non-SQL Action creation, update, and deletion require `action:manage`.
+- Non-SQL Action execution requires `action:execute`.
+- SQL Action behavior remains datasource-bound through `datasource:view` and `datasource:manage`.
+- Action list/detail responses include capability snapshots so the dashboard can gate row actions before a request fails.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts tests/unit/controllers/actions_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+- [x] Add failing tests for non-SQL Action global permissions and response capabilities.
+- [x] Implement global Action permissions and controller checks.
+- [x] Gate dashboard Action controls by returned capabilities.
+- [x] Run focused validation and browser verification.
+
+## Stage 30: Bot Runtime Action Authorization
+
+**Goal:** Re-check Action execution permissions at Bot runtime so saved Bot configurations cannot bypass revoked datasource or global Action permissions.
+
+**Success Criteria:**
+
+- Bot-invoked SQL Actions require the Bot creator to be active and still have `datasource:manage` on the Action datasource.
+- Bot-invoked non-SQL Actions require the Bot creator to be active and still have `action:execute`.
+- Disabled or unavailable Bot creators fail closed before the core Action executor runs.
+- Bot intent metadata only includes currently executable enabled Actions.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/action_executor.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing BotActionExecutor authorization tests.
+- [x] Implement Bot runtime Action authorization.
+- [x] Run focused validation.
+
+## Stage 31: Account Provider Wiring Hardening
+
+**Goal:** Keep authentication provider extension points honest and fail closed until each provider has a complete runtime path.
+
+**Success Criteria:**
+
+- API auth middleware accepts implemented Header Auth providers before token fallback.
+- Local provider no longer accepts unsigned legacy `auth_token` cookies.
+- Dashboard login status does not advertise OIDC login before callback/token exchange is implemented.
+- Existing cookie and bearer token sessions still work.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/middleware/api_auth_middleware.test.ts tests/auth_manager.test.ts tests/header_auth_provider.test.ts tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing provider wiring and legacy cookie tests.
+- [x] Wire Header Auth through API auth middleware.
+- [x] Remove legacy local auth cookie handling and hide incomplete OIDC login capability.
+- [x] Run focused validation.
+
+## Stage 32: Cookie Session Origin Fail-Closed
+
+**Goal:** Tighten cookie-session CSRF protection so unsafe browser requests require an explicit trusted Origin or Referer.
+
+**Success Criteria:**
+
+- Unsafe cookie-session API requests without Origin/Referer are rejected.
+- Unsafe cookie-session API requests from untrusted origins are rejected.
+- Trusted browser origins still work for local login, registration, refresh, logout, and API writes.
+- Bearer token and `x-access-token` API clients remain usable without browser origin headers.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/middleware/api_auth_middleware.test.ts tests/unit/controllers/local_auth_controller.test.ts tests/unit/security/browser_origins.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing missing-origin cookie-session test.
+- [x] Reject missing Origin/Referer for cookie-session unsafe requests.
+- [x] Run focused validation.

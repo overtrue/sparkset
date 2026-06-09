@@ -101,6 +101,9 @@ export class AuthorizationService {
       if (permission === 'ai_provider:*') {
         return action.startsWith('ai_provider:');
       }
+      if (permission === 'action:*') {
+        return action.startsWith('action:');
+      }
 
       return false;
     });

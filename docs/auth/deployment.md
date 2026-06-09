@@ -95,9 +95,12 @@ server {
 }
 ```
 
-### 2. 企业部署（OIDC）
+### 2. 企业部署（OIDC，规划中）
 
 **场景**：Keycloak/Authentik/Azure AD SSO
+
+> 当前版本只保留 OIDC Provider 配置边界和授权 URL 生成入口，尚未实现 callback、code exchange、JWKS 签名校验、issuer/audience/nonce 校验、用户同步和 session 签发闭环。
+> 因此不要把 OIDC 作为生产登录方式启用；生产部署请优先使用 Header Auth，由网关或反向代理完成 SSO/OIDC 并注入可信用户头。
 
 **环境变量**：
 
@@ -116,12 +119,14 @@ AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
 AUTH_OIDC_SCOPES=openid,profile,email
 ```
 
-**部署步骤**：
+**后续实现清单**：
 
-1. 在 IdP 中创建客户端
-2. 配置回调 URL
-3. 设置 scopes: `openid profile email`
-4. 配置 claim mapping
+1. 在 IdP 中创建客户端并配置回调 URL
+2. 实现 `/auth/oidc/callback`
+3. 完成 code exchange、JWKS 拉取和 ID Token 校验
+4. 校验 issuer、audience、state、nonce 和 token expiry
+5. 同步用户、角色和权限 claim
+6. 签发 Sparkset httpOnly session cookie
 
 ### 3. 开发/演示环境
 
@@ -155,7 +160,7 @@ AUTH_LOCAL_ENABLED=true
 AUTH_HEADER_ENABLED=true
 AUTH_HEADER_TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 
-# 或者
+# 或者（规划中，当前不要作为生产登录方式启用）
 # AUTH_OIDC_ENABLED=true
 # AUTH_OIDC_ISSUER=...
 # AUTH_OIDC_CLIENT_ID=...
@@ -189,20 +194,20 @@ npm start
 
 ### 4. 验证认证
 
-测试认证状态端点：
+测试本地 cookie session 状态端点：
 
 ```bash
-curl http://localhost:3333/auth/status
+curl http://localhost:3333/auth/local/status
 ```
 
-如果配置了 Header Auth，使用 curl 模拟：
+如果配置了 Header Auth，使用 curl 访问受保护 API：
 
 ```bash
 curl -H "X-User-Id: 123" \
      -H "X-User-Name: zhangsan" \
      -H "X-User-Email: zhangsan@example.com" \
      -H "X-User-Roles: admin,analyst" \
-     http://localhost:3333/auth/status
+     http://localhost:3333/datasources
 ```
 
 ## 🔍 故障排查
@@ -223,8 +228,8 @@ curl -H "X-User-Id: 123" \
 echo $AUTH_HEADER_ENABLED
 echo $AUTH_HEADER_TRUSTED_PROXIES
 
-# 测试 Header 解析
-curl -v -H "X-User-Id: test" http://localhost:3333/auth/status
+# 测试 Header Auth 是否能进入受保护 API
+curl -v -H "X-User-Id: test" http://localhost:3333/datasources
 ```
 
 ### 问题 2：用户无法创建/更新数据
@@ -284,7 +289,7 @@ UPDATE datasources SET creator_id = NULL, updater_id = NULL;
 ## 🛡️ 安全建议
 
 1. **内网部署**：严格限制 trusted_proxies，仅允许内网网段
-2. **OIDC 部署**：使用 HTTPS，保护 client_secret
+2. **OIDC 部署**：当前仅规划中，完整 callback/token 校验实现前不要用于生产登录
 3. **Local Auth**：仅限开发环境，生产环境必须禁用
 4. **Header Auth**：确保上游网关已完成身份验证
 

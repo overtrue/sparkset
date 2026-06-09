@@ -254,4 +254,25 @@ describe('LocalAuthProvider configuration', () => {
     expect(provider.enabled()).toBe(true);
     expect(provider.getConfig()).toEqual(config);
   });
+
+  it('does not accept legacy local auth_token cookies as session authentication', () => {
+    const provider = new LocalAuthProvider({
+      enabled: true,
+      allowRegistration: true,
+      defaultRoles: ['viewer'],
+      defaultPermissions: [],
+    });
+    const ctx = {
+      request: {
+        url: () => '/datasources',
+        cookie: (name: string) =>
+          ({
+            auth_provider: 'local',
+            auth_token: '1_123456',
+          })[name] ?? null,
+      },
+    } as unknown as HttpContext;
+
+    expect(provider.canHandle(ctx)).toBe(false);
+  });
 });

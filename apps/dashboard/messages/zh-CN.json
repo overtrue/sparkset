@@ -664,6 +664,8 @@
   "Events": "事件",
   "Logs": "日志",
   "Manage Actions": "管理 Action",
+  "You need action:manage permission to change API or file Actions": "需要 action:manage 权限才能修改 API 或文件 Action",
+  "You need datasource:manage permission to change SQL Actions for this datasource": "需要该数据源的 datasource:manage 权限才能修改 SQL Action",
   "out of": "个",
   "actions selected": "已选择",
   "No actions found": "未找到 Action",

@@ -119,6 +119,26 @@ describe('AuthorizationService', () => {
     ).toBe(false);
   });
 
+  it('allows global Action permissions only for active users with matching permissions', () => {
+    const service = new AuthorizationService(new FakeGrantReader([]));
+
+    expect(
+      service.canPerformGlobalAction(user({ permissions: ['action:*'] }), 'action:execute'),
+    ).toBe(true);
+    expect(
+      service.canPerformGlobalAction(user({ permissions: ['action:manage'] }), 'action:manage'),
+    ).toBe(true);
+    expect(
+      service.canPerformGlobalAction(user({ permissions: ['action:manage'] }), 'action:view'),
+    ).toBe(false);
+    expect(
+      service.canPerformGlobalAction(
+        user({ isActive: false, permissions: ['action:*'] }),
+        'action:view',
+      ),
+    ).toBe(false);
+  });
+
   it('does not let legacy datasource read permissions bypass datasource grants', async () => {
     const service = new AuthorizationService(new FakeGrantReader([]));
     const currentUser = user({ permissions: ['read:datasource'] });

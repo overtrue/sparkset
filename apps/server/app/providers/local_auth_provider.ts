@@ -49,13 +49,6 @@ export class LocalAuthProvider implements AuthProvider {
       return true;
     }
 
-    // 检查是否有本地认证的 cookie
-    const authToken = ctx.request.cookie('auth_token');
-    const authProvider = ctx.request.cookie('auth_provider');
-    if (authToken && authProvider === 'local') {
-      return true;
-    }
-
     return false;
   }
 
@@ -75,8 +68,7 @@ export class LocalAuthProvider implements AuthProvider {
         return await this.handleRegister(ctx);
       }
 
-      // 处理 session 认证
-      return await this.handleSessionAuth(ctx);
+      return null;
     } catch (error) {
       console.error('Local Auth error:', error);
       return null;
@@ -172,29 +164,6 @@ export class LocalAuthProvider implements AuthProvider {
     // 设置 cookies (替代 session)
     // Note: In production, you'd want to set secure cookies properly
     console.log(`✅ Local registration success: ${user.username}`);
-    return user;
-  }
-
-  /**
-   * 处理基于 cookie 的认证
-   */
-  private async handleSessionAuth(ctx: HttpContext): Promise<User | null> {
-    const authToken = ctx.request.cookie('auth_token');
-    const authProvider = ctx.request.cookie('auth_provider');
-
-    if (authProvider !== 'local' || !authToken) {
-      return null;
-    }
-
-    // 解析 token (格式: userId_timestamp)
-    const [userId] = authToken.split('_');
-    if (!userId) return null;
-
-    const user = await User.find(parseInt(userId));
-    if (!user || !user.isActive) {
-      return null;
-    }
-
     return user;
   }
 

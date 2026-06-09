@@ -9,11 +9,13 @@ import {
   createAction,
   deleteAction,
   executeAction,
+  fetchActions,
   generateActionSQL,
   updateAction,
 } from '../../lib/api/actions-api';
 import { fetchDatasources } from '../../lib/api/datasources-api';
 import type {
+  ActionCapabilities,
   ActionDTO,
   CreateActionInput,
   GenerateActionSQLInput,
@@ -62,11 +64,13 @@ function getPayloadForEdit(payload: unknown, type: string): string {
 
 interface ActionManagerProps {
   initial: ActionDTO[];
+  capabilities: ActionCapabilities;
 }
 
-export default function ActionManager({ initial }: ActionManagerProps) {
+export default function ActionManager({ initial, capabilities }: ActionManagerProps) {
   const t = useTranslations();
   const [actions, setActions] = useState(initial);
+  const [currentCapabilities, setCurrentCapabilities] = useState(capabilities);
   const [form, setForm] = useState<CreateActionInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -86,6 +90,26 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   const [generatingSQL, setGeneratingSQL] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
+    void fetchActions()
+      .then((result) => {
+        if (!active) return;
+        setActions(result.items ?? []);
+        setCurrentCapabilities(result.capabilities ?? capabilities);
+      })
+      .catch(() => {
+        if (!active) return;
+        setActions(initial);
+        setCurrentCapabilities(capabilities);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [capabilities, initial]);
+
+  useEffect(() => {
     if (!dialogOpen) return;
     setPayloadText(getPayloadForEdit(form.payload, form.type));
   }, [dialogOpen, form.type]);
@@ -96,11 +120,23 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     void fetchDatasources().then((res) => setDatasources(res.items));
   }, [dialogOpen]);
 
-  const sqlPayload = form.type === 'sql' ? (form.payload as { sql?: string }) : null;
+  const sqlPayload =
+    form.type === 'sql' && typeof form.payload === 'object' && form.payload !== null
+      ? (form.payload as { sql?: string })
+      : null;
+  const selectedDatasource = datasources.find(
+    (datasource) => datasource.id === selectedDatasourceId,
+  );
+  const canManageSelectedDatasource = Boolean(selectedDatasource?.capabilities?.canManage);
+  const canQuerySelectedDatasource = Boolean(selectedDatasource?.capabilities?.canQuery);
+  const hasRequiredManagePermission =
+    form.type === 'sql' ? canManageSelectedDatasource : currentCapabilities.canManage;
   const canSubmit =
     form.name.trim().length > 0 &&
     Boolean(form.type) &&
-    (form.type !== 'sql' || Boolean(sqlPayload?.sql?.trim()));
+    hasRequiredManagePermission &&
+    (form.type !== 'sql' ||
+      (Boolean(sqlPayload?.sql?.trim()) && selectedDatasourceId !== undefined));
 
   const onChange =
     (key: keyof CreateActionInput) =>
@@ -126,6 +162,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
   };
 
   const handleOpenDialog = (action?: ActionDTO) => {
+    if (action && !action.capabilities?.canManage) return;
     if (action) {
       setEditingId(action.id);
       setForm({
@@ -166,8 +203,16 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     event.preventDefault();
     if (!canSubmit || submitting) return;
 
+    let payload: unknown;
     try {
-      JSON.parse(payloadText);
+      const parsedPayload = JSON.parse(payloadText);
+      payload =
+        form.type === 'sql'
+          ? {
+              ...(typeof parsedPayload === 'object' && parsedPayload !== null ? parsedPayload : {}),
+              datasourceId: selectedDatasourceId,
+            }
+          : parsedPayload;
     } catch {
       toast.error(t('Invalid Payload format, please enter valid JSON'));
       return;
@@ -181,7 +226,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
           name: form.name,
           description: form.description || undefined,
           type: form.type,
-          payload: form.payload,
+          payload,
           parameters: form.parameters,
           inputSchema: form.inputSchema,
         };
@@ -189,7 +234,10 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         setActions((prev) => prev.map((a) => (a.id === editingId ? updated : a)));
         toast.success(t('Action updated successfully'));
       } else {
-        const created = await createAction(form);
+        const created = await createAction({
+          ...form,
+          payload,
+        });
         setActions((prev) => [...prev, created]);
         toast.success(t('Action created successfully'));
       }
@@ -322,6 +370,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
     form.type === 'sql' &&
     form.name.trim().length > 0 &&
     selectedDatasourceId !== undefined &&
+    canQuerySelectedDatasource &&
     !generatingSQL;
 
   const columns = createActionColumns({
@@ -343,7 +392,7 @@ export default function ActionManager({ initial }: ActionManagerProps) {
         data={actions}
         searchKey="name"
         searchPlaceholder={t('Search actions…')}
-        enableRowSelection
+        enableRowSelection={actions.some((action) => action.capabilities?.canManage)}
         onDeleteSelected={(rows) => {
           void handleDeleteSelected(rows);
         }}
@@ -430,8 +479,25 @@ export default function ActionManager({ initial }: ActionManagerProps) {
                       onValueChange={setSelectedDatasourceId}
                       disabled={submitting || generatingSQL}
                     />
+                    {selectedDatasourceId !== undefined && !canManageSelectedDatasource ? (
+                      <Alert>
+                        <AlertDescription>
+                          {t(
+                            'You need datasource:manage permission to change SQL Actions for this datasource',
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
                   </div>
                 )}
+
+                {form.type !== 'sql' && !currentCapabilities.canManage ? (
+                  <Alert>
+                    <AlertDescription>
+                      {t('You need action:manage permission to change API or file Actions')}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
                 <div className="grid gap-2">
                   <div className="flex items-center justify-between">

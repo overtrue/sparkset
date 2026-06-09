@@ -32,7 +32,7 @@ export function isTrustedBrowserOrigin(ctx: HttpContext): boolean {
       : null;
 
   if (!browserOrigin) {
-    return true;
+    return false;
   }
 
   return isTrustedOrigin(browserOrigin);

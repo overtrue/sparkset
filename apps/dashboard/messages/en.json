@@ -664,6 +664,8 @@
   "Events": "Events",
   "Logs": "Logs",
   "Manage Actions": "Manage Actions",
+  "You need action:manage permission to change API or file Actions": "You need action:manage permission to change API or file Actions",
+  "You need datasource:manage permission to change SQL Actions for this datasource": "You need datasource:manage permission to change SQL Actions for this datasource",
   "out of": "out of",
   "actions selected": "actions selected",
   "No actions found": "No actions found",

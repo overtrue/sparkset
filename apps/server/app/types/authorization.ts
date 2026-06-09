@@ -12,6 +12,9 @@ export const GLOBAL_AUTHORIZATION_ACTIONS = [
   'ai_provider:view',
   'ai_provider:manage',
   'ai_provider:manage_credentials',
+  'action:view',
+  'action:execute',
+  'action:manage',
 ] as const;
 
 export type DatasourcePermission = (typeof DATASOURCE_PERMISSIONS)[number];

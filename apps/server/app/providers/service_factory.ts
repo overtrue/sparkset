@@ -164,7 +164,12 @@ export function createServices(options: ServiceFactoryOptions): Services {
 
   // Create bot processor (Phase 2.6: Full integration)
   const botQueryProcessor = new BotQueryProcessor(queryService);
-  const botActionExecutor = new BotActionExecutor(actionService, datasetService, actionExecutor);
+  const botActionExecutor = new BotActionExecutor(
+    actionService,
+    datasetService,
+    actionExecutor,
+    authorizationService,
+  );
   const parameterExtractor = createParameterExtractor(repositories.aiProvider);
   const conversationTracker = createConversationTracker(repositories.conversation);
 

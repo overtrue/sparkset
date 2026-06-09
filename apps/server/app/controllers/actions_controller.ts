@@ -7,9 +7,19 @@ import { AuthorizationService } from '../services/authorization_service.js';
 import { SchemaService } from '../services/schema_service';
 import { actionCreateSchema, actionUpdateSchema } from '../validators/action';
 import type { Action } from '../models/types.js';
-import type { AuthorizationAction, AuthorizationUser } from '../types/authorization.js';
+import type {
+  AuthorizationAction,
+  AuthorizationUser,
+  GlobalAuthorizationAction,
+} from '../types/authorization.js';
 import { getAuthenticatedUser } from '../utils/auth_context.js';
 import { toId } from '../utils/validation.js';
+
+interface ActionCapabilities {
+  canView: boolean;
+  canExecute: boolean;
+  canManage: boolean;
+}
 
 @inject()
 export default class ActionsController {
@@ -25,7 +35,10 @@ export default class ActionsController {
     return response.unauthorized({ message: 'Not authenticated' });
   }
 
-  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+  private forbidden(
+    response: HttpContext['response'],
+    action: AuthorizationAction | GlobalAuthorizationAction,
+  ) {
     return response.forbidden({
       error: 'Forbidden',
       message: `Missing permission: ${action}`,
@@ -71,6 +84,72 @@ export default class ActionsController {
     return this.canAccessDatasource(user, datasourceId, permission);
   }
 
+  private canPerformGlobalAction(
+    user: AuthorizationUser,
+    action: GlobalAuthorizationAction,
+  ): boolean {
+    return Boolean(this.authorization?.canPerformGlobalAction(user, action));
+  }
+
+  private actionGlobalCapabilities(user: AuthorizationUser): ActionCapabilities {
+    return {
+      canView: this.canPerformGlobalAction(user, 'action:view'),
+      canExecute: this.canPerformGlobalAction(user, 'action:execute'),
+      canManage: this.canPerformGlobalAction(user, 'action:manage'),
+    };
+  }
+
+  private async actionCapabilities(
+    user: AuthorizationUser,
+    action: Pick<Action, 'type' | 'payload'>,
+  ): Promise<ActionCapabilities> {
+    if (!this.isSqlAction(action.type)) {
+      return this.actionGlobalCapabilities(user);
+    }
+
+    const canView = await this.canAccessAction(user, action, 'datasource:view');
+    const canManage = await this.canAccessAction(user, action, 'datasource:manage');
+    return {
+      canView,
+      canExecute: canManage,
+      canManage,
+    };
+  }
+
+  private async serializeAction(user: AuthorizationUser, action: Action) {
+    return {
+      ...action,
+      capabilities: await this.actionCapabilities(user, action),
+    };
+  }
+
+  private async canViewAction(user: AuthorizationUser, action: Pick<Action, 'type' | 'payload'>) {
+    return (await this.actionCapabilities(user, action)).canView;
+  }
+
+  private async canManageAction(user: AuthorizationUser, action: Pick<Action, 'type' | 'payload'>) {
+    return (await this.actionCapabilities(user, action)).canManage;
+  }
+
+  private async canExecuteAction(
+    user: AuthorizationUser,
+    action: Pick<Action, 'type' | 'payload'>,
+  ) {
+    return (await this.actionCapabilities(user, action)).canExecute;
+  }
+
+  private viewPermissionForAction(action: Pick<Action, 'type'>) {
+    return this.isSqlAction(action.type) ? 'datasource:view' : 'action:view';
+  }
+
+  private managePermissionForAction(action: Pick<Action, 'type'>) {
+    return this.isSqlAction(action.type) ? 'datasource:manage' : 'action:manage';
+  }
+
+  private executePermissionForAction(action: Pick<Action, 'type'>) {
+    return this.isSqlAction(action.type) ? 'datasource:manage' : 'action:execute';
+  }
+
   async index(ctx: HttpContext) {
     const { response } = ctx;
     const user = getAuthenticatedUser(ctx);
@@ -79,11 +158,15 @@ export default class ActionsController {
     const items = await this.service.list();
     const authorizedItems = [];
     for (const item of items) {
-      if (await this.canAccessAction(user, item, 'datasource:view')) {
-        authorizedItems.push(item);
+      const serialized = await this.serializeAction(user, item);
+      if (serialized.capabilities.canView) {
+        authorizedItems.push(serialized);
       }
     }
-    return response.ok({ items: authorizedItems });
+    return response.ok({
+      items: authorizedItems,
+      capabilities: this.actionGlobalCapabilities(user),
+    });
   }
 
   async show(ctx: HttpContext) {
@@ -95,10 +178,10 @@ export default class ActionsController {
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
-    if (!(await this.canAccessAction(user, item, 'datasource:view'))) {
-      return this.forbidden(response, 'datasource:view');
+    if (!(await this.canViewAction(user, item))) {
+      return this.forbidden(response, this.viewPermissionForAction(item));
     }
-    return response.ok(item);
+    return response.ok(await this.serializeAction(user, item));
   }
 
   async store(ctx: HttpContext) {
@@ -113,13 +196,15 @@ export default class ActionsController {
       if (!(await this.canAccessDatasource(user, datasourceId, 'datasource:manage'))) {
         return this.forbidden(response, 'datasource:manage');
       }
+    } else if (!this.canPerformGlobalAction(user, 'action:manage')) {
+      return this.forbidden(response, 'action:manage');
     }
 
     const item = await this.service.create({
       ...parsed,
       description: parsed.description ?? undefined,
     });
-    return response.created(item);
+    return response.created(await this.serializeAction(user, item));
   }
 
   async update(ctx: HttpContext) {
@@ -130,8 +215,8 @@ export default class ActionsController {
     const parsed = actionUpdateSchema.parse({ ...request.body(), ...params });
     const existing = await this.service.get(parsed.id);
     if (!existing) return response.notFound({ message: 'Action not found' });
-    if (!(await this.canAccessAction(user, existing, 'datasource:manage'))) {
-      return this.forbidden(response, 'datasource:manage');
+    if (!(await this.canManageAction(user, existing))) {
+      return this.forbidden(response, this.managePermissionForAction(existing));
     }
 
     const nextType = parsed.type ?? existing.type;
@@ -142,13 +227,15 @@ export default class ActionsController {
       if (!(await this.canAccessDatasource(user, nextDatasourceId, 'datasource:manage'))) {
         return this.forbidden(response, 'datasource:manage');
       }
+    } else if (!this.canPerformGlobalAction(user, 'action:manage')) {
+      return this.forbidden(response, 'action:manage');
     }
 
     const item = await this.service.update({
       ...parsed,
       description: parsed.description ?? undefined,
     });
-    return response.ok(item);
+    return response.ok(await this.serializeAction(user, item));
   }
 
   async destroy(ctx: HttpContext) {
@@ -160,8 +247,8 @@ export default class ActionsController {
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
-    if (!(await this.canAccessAction(user, item, 'datasource:manage'))) {
-      return this.forbidden(response, 'datasource:manage');
+    if (!(await this.canManageAction(user, item))) {
+      return this.forbidden(response, this.managePermissionForAction(item));
     }
     await this.service.remove(id);
     return response.noContent();
@@ -176,12 +263,11 @@ export default class ActionsController {
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
-    const datasourceId = this.datasourceIdForAction(item);
-    if (this.isSqlAction(item.type)) {
-      if (!datasourceId) return this.badSqlActionBinding(response);
-      if (!(await this.canAccessDatasource(user, datasourceId, 'datasource:manage'))) {
-        return this.forbidden(response, 'datasource:manage');
-      }
+    if (this.isSqlAction(item.type) && !this.datasourceIdForAction(item)) {
+      return this.badSqlActionBinding(response);
+    }
+    if (!(await this.canExecuteAction(user, item))) {
+      return this.forbidden(response, this.executePermissionForAction(item));
     }
     if (!this.actionExecutor) {
       return response.serviceUnavailable({

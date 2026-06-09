@@ -405,6 +405,12 @@ export interface ActionInputSchema {
   parameters: ParameterDefinition[];
 }
 
+export interface ActionCapabilities {
+  canView: boolean;
+  canExecute: boolean;
+  canManage: boolean;
+}
+
 export interface ActionDTO {
   id: number;
   name: string;
@@ -415,6 +421,11 @@ export interface ActionDTO {
   inputSchema?: ActionInputSchema | null;
   updatedAt?: string;
   createdAt?: string;
+  capabilities?: ActionCapabilities;
+}
+
+export interface ActionListResponse extends ApiListResponse<ActionDTO> {
+  capabilities?: ActionCapabilities;
 }
 
 export interface CreateActionInput {
