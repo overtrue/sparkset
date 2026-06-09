@@ -468,3 +468,27 @@
 - [x] Implement server-side datasource capability serialization.
 - [x] Wire dashboard datasource list/detail/schema controls to capabilities.
 - [x] Run focused validation and browser verification.
+
+## Stage 20: AI Provider Authorization Boundary
+
+**Goal:** Protect global AI provider configuration and API-key-bearing operations with explicit permissions.
+
+**Success Criteria:**
+
+- Listing AI provider summaries requires `ai_provider:view`.
+- Creating providers and testing provider configs require `ai_provider:manage_credentials`.
+- Updating API key, provider type, base URL, or default model requires `ai_provider:manage_credentials`.
+- Setting defaults and deleting providers require `ai_provider:manage`.
+- Dashboard AI provider actions are gated by returned global capabilities.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/ai_providers_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+- [x] Add failing controller tests for AI provider authorization.
+- [x] Implement global AI provider permissions and controller checks.
+- [x] Gate dashboard AI provider actions by capabilities.
+- [x] Run focused validation and browser verification.

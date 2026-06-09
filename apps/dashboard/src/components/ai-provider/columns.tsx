@@ -33,6 +33,8 @@ function formatDate(value?: string) {
 
 interface AIProviderColumnsOptions {
   t: Translate;
+  canManage: boolean;
+  canManageCredentials: boolean;
   pendingActionId: number | null;
   onSetDefault: (id: number) => void;
   onEdit: (provider: AIProviderDTO) => void;
@@ -41,6 +43,8 @@ interface AIProviderColumnsOptions {
 
 export function createAIProviderColumns({
   t,
+  canManage,
+  canManageCredentials,
   pendingActionId,
   onSetDefault,
   onEdit,
@@ -110,7 +114,7 @@ export function createAIProviderColumns({
             onClick: () => {
               onSetDefault(provider.id);
             },
-            disabled: isLoading,
+            disabled: !canManage || isLoading,
           });
         }
 
@@ -119,14 +123,14 @@ export function createAIProviderColumns({
             label: t('Edit'),
             icon: <RiEdit2Line className="h-4 w-4" aria-hidden="true" />,
             onClick: () => onEdit(provider),
-            disabled: isLoading,
+            disabled: !canManageCredentials || isLoading,
           },
           {
             label: t('Delete'),
             icon: <RiDeleteBin2Line className="h-4 w-4" aria-hidden="true" />,
             onClick: () => onDelete(provider.id),
             variant: 'destructive',
-            disabled: isLoading,
+            disabled: !canManage || isLoading,
           },
         );
 

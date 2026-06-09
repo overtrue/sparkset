@@ -8,18 +8,24 @@ import {
   RiLoader4Line,
 } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
-import { type ChangeEvent, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AI_PROVIDER_TYPES, getProviderLabel } from '../../lib/aiProviderTypes';
 import {
   createAIProvider,
   deleteAIProvider,
+  fetchAIProviders,
   setDefaultAIProvider,
   testAIProviderConnectionByConfig,
   updateAIProvider,
 } from '../../lib/api/ai-providers-api';
-import type { AIProviderDTO, CreateAIProviderInput, TestConnectionResult } from '@/types/api';
+import type {
+  AIProviderCapabilities,
+  AIProviderDTO,
+  CreateAIProviderInput,
+  TestConnectionResult,
+} from '@/types/api';
 import { createAIProviderColumns } from './columns';
 import { ConfirmDialog } from '../confirm-dialog';
 import { DataTable } from '../data-table/data-table';
@@ -58,11 +64,13 @@ const API_KEY_REQUIRED_TYPES = new Set([
 
 interface AIProviderManagerProps {
   initial: AIProviderDTO[];
+  capabilities: AIProviderCapabilities;
 }
 
-export default function AIProviderManager({ initial }: AIProviderManagerProps) {
+export default function AIProviderManager({ initial, capabilities }: AIProviderManagerProps) {
   const t = useTranslations();
   const [providers, setProviders] = useState(initial);
+  const [currentCapabilities, setCurrentCapabilities] = useState(capabilities);
   const [form, setForm] = useState<CreateAIProviderInput>(defaultForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -72,6 +80,8 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const canManage = currentCapabilities.canManage;
+  const canManageCredentials = currentCapabilities.canManageCredentials;
 
   // 连通性验证相关的状态
   const [testing, setTesting] = useState(false);
@@ -80,17 +90,38 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   // 验证通过状态（单独管理，不依赖表单变化自动清除）
   const [isVerified, setIsVerified] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+
+    void fetchAIProviders()
+      .then((result) => {
+        if (!active) return;
+        setProviders(result.items ?? []);
+        setCurrentCapabilities(result.capabilities ?? capabilities);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCurrentCapabilities(capabilities);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [capabilities]);
+
   const trimmedName = form.name.trim();
   const apiKeyValue = form.apiKey ?? '';
   const baseURLValue = form.baseURL ?? '';
   const requiresApiKey = API_KEY_REQUIRED_TYPES.has(form.type);
   const requiresBaseURL = form.type === 'openai-compatible';
   const canTest =
+    canManageCredentials &&
     Boolean(form.type) &&
     ((requiresApiKey && apiKeyValue.trim().length > 0) ||
       (requiresBaseURL && baseURLValue.trim().length > 0) ||
       (!requiresApiKey && !requiresBaseURL));
-  const canSubmit = isVerified && trimmedName.length > 0 && Boolean(form.type);
+  const canSubmit =
+    canManageCredentials && isVerified && trimmedName.length > 0 && Boolean(form.type);
 
   const onChange =
     (key: keyof CreateAIProviderInput) => (e: ChangeEvent<HTMLInputElement> | string) => {
@@ -106,6 +137,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
     };
 
   const handleOpenDialog = (provider?: AIProviderDTO) => {
+    if (!canManageCredentials) return;
     if (provider) {
       setEditingId(provider.id);
       setForm({
@@ -140,7 +172,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
   const handleTestConnection = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    if (!canTest || testing) return;
+    if (!canManageCredentials || !canTest || testing) return;
     setTesting(true);
     try {
       const testConfig = {
@@ -169,7 +201,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || submitting) return;
+    if (!canManageCredentials || !canSubmit || submitting) return;
     setSubmitting(true);
     try {
       if (editingId) {
@@ -194,6 +226,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   };
 
   const handleSetDefault = async (id: number) => {
+    if (!canManage) return;
     setPendingActionId(id);
     try {
       await setDefaultAIProvider(id);
@@ -212,12 +245,13 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   };
 
   const handleRemoveClick = (id: number) => {
+    if (!canManage) return;
     setDeletingId(id);
     setConfirmOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!deletingId) return;
+    if (!canManage || !deletingId) return;
     setDeleting(true);
     try {
       await deleteAIProvider(deletingId);
@@ -233,6 +267,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
   };
 
   const handleDeleteSelected = async (rows: AIProviderDTO[]) => {
+    if (!canManage) return;
     if (rows.length === 0) return;
     const results = await Promise.allSettled(rows.map((row) => deleteAIProvider(row.id)));
     const failedIds = new Set<number>();
@@ -255,6 +290,8 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
 
   const columns = createAIProviderColumns({
     t,
+    canManage,
+    canManageCredentials,
     pendingActionId,
     onSetDefault: (id) => {
       void handleSetDefault(id);
@@ -270,7 +307,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         data={providers}
         searchKey="name"
         searchPlaceholder={t('Search providers…')}
-        enableRowSelection
+        enableRowSelection={canManage}
         onDeleteSelected={(rows) => {
           void handleDeleteSelected(rows);
         }}
@@ -283,7 +320,7 @@ export default function AIProviderManager({ initial }: AIProviderManagerProps) {
         }
         emptyMessage={t('No providers yet, click the button above to add')}
         toolbar={
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={() => handleOpenDialog()} disabled={!canManageCredentials}>
             <RiAddLine className="h-4 w-4" aria-hidden="true" />
             {t('Add Provider')}
           </Button>

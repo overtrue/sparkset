@@ -96,6 +96,29 @@ describe('AuthorizationService', () => {
     ).toBe(false);
   });
 
+  it('allows global AI provider actions only for active users with matching global permissions', () => {
+    const service = new AuthorizationService(new FakeGrantReader([]));
+
+    expect(
+      service.canPerformGlobalAction(
+        user({ permissions: ['ai_provider:*'] }),
+        'ai_provider:manage_credentials',
+      ),
+    ).toBe(true);
+    expect(
+      service.canPerformGlobalAction(
+        user({ permissions: ['ai_provider:manage'] }),
+        'ai_provider:view',
+      ),
+    ).toBe(false);
+    expect(
+      service.canPerformGlobalAction(
+        user({ isActive: false, permissions: ['ai_provider:*'] }),
+        'ai_provider:view',
+      ),
+    ).toBe(false);
+  });
+
   it('does not let legacy datasource read permissions bypass datasource grants', async () => {
     const service = new AuthorizationService(new FakeGrantReader([]));
     const currentUser = user({ permissions: ['read:datasource'] });

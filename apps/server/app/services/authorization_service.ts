@@ -98,6 +98,9 @@ export class AuthorizationService {
       if (permission === 'datasource:*') {
         return action.startsWith('datasource:');
       }
+      if (permission === 'ai_provider:*') {
+        return action.startsWith('ai_provider:');
+      }
 
       return false;
     });

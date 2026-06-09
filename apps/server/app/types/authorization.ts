@@ -7,7 +7,12 @@ export const DATASOURCE_PERMISSIONS = [
   'datasource:grant',
 ] as const;
 
-export const GLOBAL_AUTHORIZATION_ACTIONS = ['datasource:create'] as const;
+export const GLOBAL_AUTHORIZATION_ACTIONS = [
+  'datasource:create',
+  'ai_provider:view',
+  'ai_provider:manage',
+  'ai_provider:manage_credentials',
+] as const;
 
 export type DatasourcePermission = (typeof DATASOURCE_PERMISSIONS)[number];
 export type GlobalAuthorizationAction = (typeof GLOBAL_AUTHORIZATION_ACTIONS)[number];

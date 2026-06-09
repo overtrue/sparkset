@@ -458,6 +458,16 @@ export interface AIProviderDTO {
   updatedAt: string;
 }
 
+export interface AIProviderCapabilities {
+  canView: boolean;
+  canManage: boolean;
+  canManageCredentials: boolean;
+}
+
+export interface AIProviderListResponse extends ApiListResponse<AIProviderDTO> {
+  capabilities?: AIProviderCapabilities;
+}
+
 export interface CreateAIProviderInput {
   name: string;
   type: string;
