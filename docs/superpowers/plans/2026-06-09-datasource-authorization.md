@@ -179,7 +179,8 @@
 - `pnpm test`
 - `pnpm --filter @sparkset/server typecheck`
 
-- [ ] Run full automated validation.
-- [ ] Run browser verification for core flows.
-- [ ] Commit any validation fixes.
-- [ ] Push final branch.
+- [x] Run full automated validation.
+- [x] Run browser verification for core flows.
+- [x] Fix datasource list missing translation keys found during browser verification.
+- [x] Commit any validation fixes.
+- [x] Push final branch.

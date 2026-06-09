@@ -110,8 +110,10 @@
 - `pnpm build`
 - `pnpm test`
 - `pnpm --filter @sparkset/server typecheck`
+- messages JSON key parity check
+- Browser MCP 验证 login、query、datasource list/detail/access panel、datasets、charts、dashboards、bots
 
-**Status**: Not Started
+**Status**: Complete
 
 ## 当前重构批次（2026-06-08，Dashboard 全局组织与状态收敛）
 
