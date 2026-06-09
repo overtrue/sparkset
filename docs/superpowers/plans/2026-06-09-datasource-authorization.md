@@ -524,7 +524,7 @@
 - `GET /auth/oidc/url` exists and fails closed when OIDC is disabled or missing required configuration.
 - Enabled OIDC requires explicit authorization URL, client ID, and redirect URI configuration.
 - The endpoint returns a standards-shaped authorization URL with response type, client ID, redirect URI, scope, state, and nonce.
-- State and nonce are stored in short-lived httpOnly cookies for the future callback verification step.
+- State and nonce are stored in a short-lived encrypted httpOnly pending-state cookie for callback verification.
 - Callback/token exchange is implemented later in Stage 33 with JWKS, issuer, audience, expiry, and nonce validation.
 
 **Tests:**
@@ -757,11 +757,11 @@
 **Success Criteria:**
 
 - OIDC login is advertised only when authorization URL, token URL, JWKS URL, issuer, client ID, client secret, and redirect URI are configured.
-- `GET /auth/oidc/callback` validates `state` against the short-lived httpOnly state cookie before exchanging a code.
+- `GET /auth/oidc/callback` validates `state` against the short-lived encrypted httpOnly pending-state cookie before exchanging a code.
 - The callback exchanges the authorization code with the configured token endpoint using client credentials and redirect URI.
 - The callback verifies the ID token signature through JWKS and validates issuer, audience, expiry, and nonce.
-- Successful callbacks upsert an active `provider: 'oidc'` user from configured claims, issue the normal httpOnly session cookie, clear OIDC temporary cookies, and redirect to the configured success URL.
-- Failed callbacks clear OIDC temporary cookies and redirect to the configured failure URL without issuing a session.
+- Successful callbacks upsert an active `provider: 'oidc'` user from configured claims, issue the normal httpOnly session cookie, consume the matched pending state, and redirect to the configured success URL.
+- Failed callbacks do not issue a session; if the state matched, the matched pending state is consumed before redirecting to the configured failure URL.
 
 **Tests:**
 
@@ -772,4 +772,27 @@
 - [x] Implement OIDC token endpoint exchange, JWKS ID token verification, user upsert, session cookie issuance, and callback redirects.
 - [x] Advertise OIDC login only when callback prerequisites are fully configured.
 - [x] Update auth deployment docs and env examples from planned-only to supported minimal callback flow.
+- [x] Run focused validation.
+
+## Stage 34: OIDC Pending State and JWKS Rotation Hardening
+
+**Goal:** Make the OIDC callback flow safer and more operationally resilient for real SSO usage.
+
+**Success Criteria:**
+
+- Authorization URL generation stores pending login states in one encrypted httpOnly cookie instead of separate plaintext state and nonce cookies.
+- Multiple concurrent browser login attempts can coexist; a callback consumes only the matching state and preserves other pending states.
+- Expired pending states are pruned before new states are stored or callbacks are validated.
+- JWKS responses are cached briefly to avoid fetching the key set on every callback.
+- If a cached JWKS does not include the ID token `kid`, the controller refreshes JWKS once to support key rotation before failing closed.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/oidc_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for multi-tab pending-state storage and callback consumption.
+- [x] Add failing tests for JWKS cache reuse and kid-miss refresh.
+- [x] Implement encrypted pending-state cookie storage with pruning and state consumption.
+- [x] Implement JWKS cache with key rotation refresh.
 - [x] Run focused validation.

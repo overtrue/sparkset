@@ -99,7 +99,7 @@ server {
 
 **场景**：Keycloak/Authentik/Azure AD SSO
 
-当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、校验 state/nonce、调用 token endpoint、通过 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。
+当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、用加密 httpOnly pending-state cookie 校验 state/nonce、调用 token endpoint、通过短期缓存的 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。缓存的 JWKS 如果缺少当前 ID Token 的 `kid`，会重新拉取一次以兼容 key rotation。
 
 生产环境仍建议优先使用 Header Auth 加可信网关；如果直接启用 OIDC，请确保 IdP 只下发最小角色/权限 claim，并配置 HTTPS 回调地址。
 
@@ -134,10 +134,10 @@ AUTH_OIDC_SCOPES=openid,profile,email
 
 **仍需企业化增强**：
 
-1. JWKS 缓存和 key rotation 容错
-2. state/nonce 服务端存储或签名化，支持多标签页登录
-3. OIDC 用户首次登录默认角色模板
-4. 登录审计和失败原因检索
+1. OIDC 用户首次登录默认角色模板
+2. 登录审计和失败原因检索
+3. IdP 组/角色到 Sparkset 权限的可视化映射
+4. 管理员侧的 SSO 诊断页面
 
 ### 3. 开发/演示环境
 

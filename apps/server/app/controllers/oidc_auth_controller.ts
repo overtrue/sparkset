@@ -8,7 +8,11 @@ import { getOIDCAuthConfig, isOIDCAuthConfigured } from '../../config/auth.js';
 
 const OIDC_STATE_COOKIE = 'sparkset_oidc_state';
 const OIDC_NONCE_COOKIE = 'sparkset_oidc_nonce';
+const OIDC_PENDING_COOKIE = 'sparkset_oidc_pending';
 const OIDC_COOKIE_MAX_AGE_SECONDS = 10 * 60;
+const OIDC_COOKIE_MAX_AGE_MS = OIDC_COOKIE_MAX_AGE_SECONDS * 1000;
+const OIDC_PENDING_STATE_LIMIT = 8;
+const OIDC_JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
 const OIDC_CALLBACK_PATH = '/auth/oidc/callback';
 const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
@@ -52,7 +56,19 @@ interface OIDCJwksResponse {
   keys?: (JsonWebKey & { kid?: string; alg?: string; use?: string })[];
 }
 
+interface OIDCPendingState {
+  nonce: string;
+  createdAt: number;
+}
+
+type OIDCPendingStates = Record<string, OIDCPendingState>;
+
 export default class OIDCAuthController {
+  private static jwksCache = new Map<
+    string,
+    { expiresAt: number; keys: NonNullable<OIDCJwksResponse['keys']> }
+  >();
+
   constructor(private readonly config: OIDCAuthConfig = getOIDCAuthConfig()) {}
 
   private token(): string {
@@ -103,6 +119,12 @@ export default class OIDCAuthController {
   }
 
   private clearOIDCCookies(response: HttpContext['response']): void {
+    response.clearCookie(OIDC_PENDING_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+    response.clearCookie(OIDC_STATE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+    response.clearCookie(OIDC_NONCE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+  }
+
+  private clearLegacyOIDCCookies(response: HttpContext['response']): void {
     response.clearCookie(OIDC_STATE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
     response.clearCookie(OIDC_NONCE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
   }
@@ -112,8 +134,69 @@ export default class OIDCAuthController {
   }
 
   private redirectFailure(response: HttpContext['response']) {
-    this.clearOIDCCookies(response);
     return response.redirect(this.config.failureRedirectUrl || '/login?error=oidc');
+  }
+
+  private readPendingStates(request: HttpContext['request']): OIDCPendingStates {
+    const value = request.encryptedCookie(OIDC_PENDING_COOKIE);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).flatMap(([state, entry]) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+        const pending = entry as Partial<OIDCPendingState>;
+        if (typeof pending.nonce !== 'string' || typeof pending.createdAt !== 'number') return [];
+        return [[state, { nonce: pending.nonce, createdAt: pending.createdAt }]];
+      }),
+    );
+  }
+
+  private prunePendingStates(pendingStates: OIDCPendingStates): OIDCPendingStates {
+    const now = Date.now();
+    return Object.fromEntries(
+      Object.entries(pendingStates)
+        .filter(([, state]) => now - state.createdAt <= OIDC_COOKIE_MAX_AGE_MS)
+        .sort(([, left], [, right]) => right.createdAt - left.createdAt)
+        .slice(0, OIDC_PENDING_STATE_LIMIT),
+    );
+  }
+
+  private writePendingStates(
+    response: HttpContext['response'],
+    pendingStates: OIDCPendingStates,
+  ): void {
+    const pruned = this.prunePendingStates(pendingStates);
+    if (Object.keys(pruned).length === 0) {
+      response.clearCookie(OIDC_PENDING_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+      return;
+    }
+
+    response.encryptedCookie(OIDC_PENDING_COOKIE, pruned, OIDC_COOKIE_OPTIONS);
+  }
+
+  private addPendingState(ctx: HttpContext, state: string, nonce: string): void {
+    const pendingStates = this.prunePendingStates(this.readPendingStates(ctx.request));
+    this.writePendingStates(ctx.response, {
+      ...pendingStates,
+      [state]: {
+        nonce,
+        createdAt: Date.now(),
+      },
+    });
+    this.clearLegacyOIDCCookies(ctx.response);
+  }
+
+  private consumePendingState(ctx: HttpContext, state: string): string | null {
+    const pendingStates = this.prunePendingStates(this.readPendingStates(ctx.request));
+    const matched = pendingStates[state];
+    if (!matched) return null;
+
+    const remaining = { ...pendingStates };
+    delete remaining[state];
+    this.writePendingStates(ctx.response, remaining);
+    this.clearLegacyOIDCCookies(ctx.response);
+
+    return matched.nonce;
   }
 
   private getStringClaim(claims: OIDCClaims, claimName: string): string | null {
@@ -170,6 +253,34 @@ export default class OIDCAuthController {
     return tokenSet.id_token;
   }
 
+  private async fetchJWKS(
+    configuration: RequiredOIDCConfiguration,
+    forceRefresh = false,
+  ): Promise<NonNullable<OIDCJwksResponse['keys']>> {
+    const cached = OIDCAuthController.jwksCache.get(configuration.jwksUrl);
+    if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+      return cached.keys;
+    }
+
+    const jwksResponse = await fetch(configuration.jwksUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+    });
+    if (!jwksResponse.ok) {
+      throw new Error('OIDC JWKS endpoint is unavailable');
+    }
+
+    const jwks = (await jwksResponse.json()) as OIDCJwksResponse;
+    const keys = jwks.keys ?? [];
+    OIDCAuthController.jwksCache.set(configuration.jwksUrl, {
+      keys,
+      expiresAt: Date.now() + OIDC_JWKS_CACHE_TTL_MS,
+    });
+
+    return keys;
+  }
+
   private async fetchSigningKey(
     idToken: string,
     configuration: RequiredOIDCConfiguration,
@@ -184,17 +295,13 @@ export default class OIDCAuthController {
       throw new Error('OIDC ID token must use a keyed RS256 signature');
     }
 
-    const jwksResponse = await fetch(configuration.jwksUrl, {
-      headers: {
-        accept: 'application/json',
-      },
-    });
-    if (!jwksResponse.ok) {
-      throw new Error('OIDC JWKS endpoint is unavailable');
+    let keys = await this.fetchJWKS(configuration);
+    let jwk = keys.find((key) => key.kid === kid);
+    if (!jwk) {
+      keys = await this.fetchJWKS(configuration, true);
+      jwk = keys.find((key) => key.kid === kid);
     }
 
-    const jwks = (await jwksResponse.json()) as OIDCJwksResponse;
-    const jwk = jwks.keys?.find((key) => key.kid === kid);
     if (!jwk) {
       throw new Error('OIDC signing key was not found in JWKS');
     }
@@ -293,8 +400,7 @@ export default class OIDCAuthController {
     url.searchParams.set('state', state);
     url.searchParams.set('nonce', nonce);
 
-    response.cookie(OIDC_STATE_COOKIE, state, OIDC_COOKIE_OPTIONS);
-    response.cookie(OIDC_NONCE_COOKIE, nonce, OIDC_COOKIE_OPTIONS);
+    this.addPendingState(ctx, state, nonce);
 
     return response.ok({
       url: url.toString(),
@@ -317,20 +423,13 @@ export default class OIDCAuthController {
 
       const code = request.input('code');
       const state = request.input('state');
-      const expectedState = request.cookie(OIDC_STATE_COOKIE);
-      const expectedNonce = request.cookie(OIDC_NONCE_COOKIE);
 
-      if (
-        typeof code !== 'string' ||
-        !code ||
-        typeof state !== 'string' ||
-        !state ||
-        typeof expectedState !== 'string' ||
-        !expectedState ||
-        typeof expectedNonce !== 'string' ||
-        !expectedNonce ||
-        state !== expectedState
-      ) {
+      if (typeof code !== 'string' || !code || typeof state !== 'string' || !state) {
+        return this.redirectFailure(response);
+      }
+
+      const expectedNonce = this.consumePendingState(ctx, state);
+      if (!expectedNonce) {
         return this.redirectFailure(response);
       }
 
