@@ -4,6 +4,7 @@ import type { HttpContext } from '@adonisjs/core/http';
 import LocalAuthController from '../../../app/controllers/local_auth_controller.js';
 import User from '#models/user';
 import { AccessTokenGuard } from '#guards/access_token_guard';
+import { AuditLogService } from '../../../app/services/audit_log_service.js';
 
 const bcryptMock = vi.hoisted(() => ({
   compare: vi.fn(),
@@ -72,15 +73,21 @@ const createMockContext = ({
   body,
   sessionCookie,
   response,
+  headers = {},
 }: {
   body?: Record<string, unknown>;
   sessionCookie?: string;
   response: MockResponse;
+  headers?: Record<string, string>;
 }): HttpContext => {
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+
   return {
     request: {
       body: () => body ?? {},
-      header: vi.fn(() => null),
+      header: vi.fn((name: string) => normalizedHeaders[name.toLowerCase()] ?? null),
       cookie: vi.fn((name: string) => (name === 'sparkset_session' ? sessionCookie : null)),
     },
     response,
@@ -97,9 +104,11 @@ describe('LocalAuthController session cookies', () => {
     vi.restoreAllMocks();
     bcryptMock.compare.mockReset();
     bcryptMock.hash.mockReset();
+    vi.spyOn(AuditLogService.prototype, 'recordHttp').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -121,9 +130,12 @@ describe('LocalAuthController session cookies', () => {
       token: 'sat_login_token',
       accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
     });
+    const audit = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
     const response = createMockResponse();
 
-    const result = await new LocalAuthController().login(
+    const result = await new LocalAuthController(audit as unknown as AuditLogService).login(
       createMockContext({
         response,
         body: { username: 'analyst', password: 'secret123' },
@@ -145,6 +157,37 @@ describe('LocalAuthController session cookies', () => {
         path: '/',
       }),
     );
+    expect(audit.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 1,
+        action: 'auth.login',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: '1',
+      }),
+    );
+  });
+
+  it('rejects local login from an untrusted browser origin', async () => {
+    vi.stubEnv('AUTH_TRUSTED_ORIGINS', 'http://localhost:3001');
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'secret123' },
+        headers: { Origin: 'https://evil.example' },
+      }),
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: 'CSRF_ORIGIN_FORBIDDEN',
+      }),
+    );
+    expect(response.statusCode).toBe(403);
+    expect(response.cookie).not.toHaveBeenCalled();
   });
 
   it('sets an httpOnly session cookie without returning token after local registration', async () => {

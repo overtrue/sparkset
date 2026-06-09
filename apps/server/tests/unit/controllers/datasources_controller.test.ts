@@ -5,6 +5,7 @@ import DatasourcesController from '../../../app/controllers/datasources_controll
 import type { DatasourceService } from '../../../app/services/datasource_service.js';
 import type { SchemaService } from '../../../app/services/schema_service.js';
 import type { AuthorizationService } from '../../../app/services/authorization_service.js';
+import type { AuditLogService } from '../../../app/services/audit_log_service.js';
 import type { DataSource } from '../../../app/models/types.js';
 
 interface DatasourceServiceMock {
@@ -15,6 +16,8 @@ interface DatasourceServiceMock {
   remove: ReturnType<typeof vi.fn>;
   setDefault: ReturnType<typeof vi.fn>;
   listGrants: ReturnType<typeof vi.fn>;
+  grantDatasource: ReturnType<typeof vi.fn>;
+  revokeDatasourceGrant: ReturnType<typeof vi.fn>;
 }
 
 interface SchemaServiceMock {
@@ -26,6 +29,10 @@ interface SchemaServiceMock {
 
 interface AuthorizationServiceMock {
   can: ReturnType<typeof vi.fn>;
+}
+
+interface AuditLogServiceMock {
+  recordHttp: ReturnType<typeof vi.fn>;
 }
 
 interface MockResponse {
@@ -133,6 +140,7 @@ describe('DatasourcesController authorization', () => {
   let datasourceService: DatasourceServiceMock;
   let schemaService: SchemaServiceMock;
   let authorizationService: AuthorizationServiceMock;
+  let auditLogService: AuditLogServiceMock;
   let createController: () => DatasourcesController;
 
   beforeEach(() => {
@@ -144,6 +152,8 @@ describe('DatasourcesController authorization', () => {
       remove: vi.fn(),
       setDefault: vi.fn(),
       listGrants: vi.fn(),
+      grantDatasource: vi.fn(),
+      revokeDatasourceGrant: vi.fn(),
     };
     schemaService = {
       sync: vi.fn(),
@@ -154,12 +164,16 @@ describe('DatasourcesController authorization', () => {
     authorizationService = {
       can: vi.fn(),
     };
+    auditLogService = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
     createController = () =>
       new DatasourcesController(
         datasourceService as unknown as DatasourceService,
         schemaService as unknown as SchemaService,
         {} as never,
         authorizationService as unknown as AuthorizationService,
+        auditLogService as unknown as AuditLogService,
       );
   });
 
@@ -399,5 +413,79 @@ describe('DatasourcesController authorization', () => {
       ],
       canManage: false,
     });
+  });
+
+  it('records an audit event when granting datasource access', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    datasourceService.grantDatasource = vi.fn().mockResolvedValue({
+      id: 12,
+      datasourceId: 5,
+      subjectType: 'role',
+      subjectId: 'analyst',
+      permissions: ['datasource:view', 'datasource:query'],
+    });
+    authorizationService.can.mockResolvedValue(true);
+    const controller = createController();
+
+    await controller.grant(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        body: {
+          subjectType: 'role',
+          subjectId: 'analyst',
+          permissions: ['datasource:view', 'datasource:query'],
+        },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'datasource.grant.upsert',
+        outcome: 'success',
+        resourceType: 'datasource',
+        resourceId: '5',
+        metadata: expect.objectContaining({
+          subjectType: 'role',
+          subjectId: 'analyst',
+          permissions: ['datasource:view', 'datasource:query'],
+        }),
+      }),
+    );
+  });
+
+  it('records an audit event when revoking datasource access', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    datasourceService.revokeDatasourceGrant = vi.fn().mockResolvedValue(undefined);
+    authorizationService.can.mockResolvedValue(true);
+    const controller = createController();
+
+    await controller.revokeGrant(
+      createMockContext({
+        response,
+        params: { id: '5', subjectType: 'role', subjectId: 'analyst' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'datasource.grant.revoke',
+        outcome: 'success',
+        resourceType: 'datasource',
+        resourceId: '5',
+        metadata: expect.objectContaining({
+          subjectType: 'role',
+          subjectId: 'analyst',
+        }),
+      }),
+    );
   });
 });

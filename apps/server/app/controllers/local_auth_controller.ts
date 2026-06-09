@@ -2,6 +2,8 @@ import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
 import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
+import { rejectUntrustedBrowserOrigin } from '../security/trusted_origins.js';
+import { AuditLogService } from '../services/audit_log_service.js';
 
 const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_COOKIE_OPTIONS = {
@@ -24,7 +26,7 @@ const CLEAR_SESSION_COOKIE_OPTIONS = {
 export default class LocalAuthController {
   private authProvider: LocalAuthProvider;
 
-  constructor() {
+  constructor(private readonly auditLog = new AuditLogService()) {
     this.authProvider = new LocalAuthProvider();
   }
 
@@ -87,6 +89,9 @@ export default class LocalAuthController {
   async login(ctx: HttpContext) {
     const { request, response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
       const { username, password } = request.body();
 
       if (!username || !password) {
@@ -133,6 +138,13 @@ export default class LocalAuthController {
       this.setSessionCookie(response, token);
 
       ctx.logger.info({ username: user.username }, 'Local login success');
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.login',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
       return {
         authenticated: true,
@@ -161,6 +173,9 @@ export default class LocalAuthController {
   async register(ctx: HttpContext) {
     const { request, response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
       const { username, password, email, displayName } = request.body();
 
       // 验证输入
@@ -224,6 +239,13 @@ export default class LocalAuthController {
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `register_${Date.now()}`);
       this.setSessionCookie(response, token);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.register',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
       return {
         authenticated: true,
@@ -252,8 +274,12 @@ export default class LocalAuthController {
   async logout(ctx: HttpContext) {
     const { response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
       const guard = new AccessTokenGuard(ctx);
       const token = guard.getRequestToken();
+      const user = token ? await guard.authenticate().catch(() => null) : null;
 
       if (token) {
         // 撤销令牌
@@ -261,6 +287,13 @@ export default class LocalAuthController {
       }
 
       this.clearSessionCookie(response);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user?.id ?? null,
+        action: 'auth.logout',
+        outcome: 'success',
+        resourceType: user ? 'user' : null,
+        resourceId: user ? String(user.id) : null,
+      });
 
       return {
         success: true,
@@ -281,6 +314,9 @@ export default class LocalAuthController {
   async refresh(ctx: HttpContext) {
     const { response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
       const guard = new AccessTokenGuard(ctx);
       const oldToken = guard.getRequestToken();
 
@@ -301,6 +337,13 @@ export default class LocalAuthController {
       // 生成新令牌
       const { token } = await guard.generateToken(user, `refresh_${Date.now()}`);
       this.setSessionCookie(response, token);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.refresh',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
       return {
         success: true,

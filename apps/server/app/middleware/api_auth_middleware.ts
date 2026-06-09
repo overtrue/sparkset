@@ -1,6 +1,11 @@
 import { HttpContext } from '@adonisjs/core/http';
 import { NextFn } from '@adonisjs/core/types/http';
 import { AccessTokenGuard } from '#guards/access_token_guard';
+import {
+  isSafeHttpMethod,
+  rejectUntrustedBrowserOrigin,
+  requestUsesSessionCookie,
+} from '../security/trusted_origins.js';
 
 /**
  * API 认证中间件
@@ -11,6 +16,11 @@ import { AccessTokenGuard } from '#guards/access_token_guard';
 export default class ApiAuthMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
     try {
+      if (!isSafeHttpMethod(ctx) && requestUsesSessionCookie(ctx)) {
+        const rejection = rejectUntrustedBrowserOrigin(ctx);
+        if (rejection) return rejection;
+      }
+
       // 创建 Access Token Guard
       const guard = new AccessTokenGuard(ctx);
 

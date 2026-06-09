@@ -301,3 +301,62 @@
 - [x] Wire `AuthProvider` to clear state and navigate to login.
 - [x] Add session-expiry translations.
 - [x] Run lint, runtime assertion, and message parity check.
+
+## Stage 12: Browser Session CSRF Boundary
+
+**Goal:** Protect httpOnly cookie sessions from cross-site state-changing requests.
+
+**Success Criteria:**
+
+- Local auth POST endpoints reject untrusted browser origins before setting or clearing session cookies.
+- Authenticated API write requests using the session cookie reject untrusted browser origins.
+- Bearer token and `x-access-token` API clients remain usable without browser origin headers.
+- Trusted origins are explicit through `AUTH_TRUSTED_ORIGINS`, with safe development localhost defaults.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/middleware/api_auth_middleware.test.ts tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for untrusted cookie-session POST requests.
+- [x] Add trusted-origin utility and wire it into local auth and API auth middleware.
+- [x] Run focused validation.
+
+## Stage 13: Authentication And Authorization Audit Trail
+
+**Goal:** Persist security-relevant account and datasource authorization events.
+
+**Success Criteria:**
+
+- Auth login, registration, logout, and refresh emit audit events with actor, action, outcome, IP, and user agent.
+- Datasource grant upsert and revoke emit audit events with actor, datasource, subject, and permissions metadata.
+- Audit writes are best-effort and do not break the primary business flow.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts tests/unit/controllers/datasources_controller.test.ts tests/unit/services/audit_log_service.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for auth and datasource grant audit events.
+- [x] Add audit log model, migration, and service.
+- [x] Wire auth and datasource authorization controllers to the audit service.
+- [x] Run focused validation.
+
+## Stage 14: Dashboard Authorization Feedback
+
+**Goal:** Make datasource authorization failures clear and actionable in the dashboard.
+
+**Success Criteria:**
+
+- Shared dashboard error states translate API 403 failures into user-facing permission copy.
+- Session-expired API errors remain distinguishable from authorization failures.
+- Datasource detail pages preserve the error state instead of redirecting away from the failed resource.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/dashboard lint`
+- Browser verification for datasource authorization error feedback.
+
+- [x] Update shared dashboard error state copy for 401 and 403 API errors.
+- [x] Keep datasource detail authorization failures visible on the current page.
+- [x] Run dashboard lint and browser verification.

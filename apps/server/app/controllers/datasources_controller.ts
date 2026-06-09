@@ -18,6 +18,7 @@ import {
   type AuthorizationAction,
   type DatasourcePermission,
 } from '../types/authorization.js';
+import { AuditLogService } from '../services/audit_log_service.js';
 import { z } from 'zod';
 
 const grantSchema = z.object({
@@ -33,6 +34,7 @@ export default class DatasourcesController {
     private schemaService: SchemaService,
     private database: Database,
     private authorization: AuthorizationService,
+    private auditLog: AuditLogService = new AuditLogService(),
   ) {}
 
   private getUser(ctx: HttpContext) {
@@ -417,6 +419,18 @@ export default class DatasourcesController {
       ...parsed,
       createdBy: user.id,
     });
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: user.id,
+      action: 'datasource.grant.upsert',
+      outcome: 'success',
+      resourceType: 'datasource',
+      resourceId: String(id),
+      metadata: {
+        subjectType: parsed.subjectType,
+        subjectId: parsed.subjectId,
+        permissions: parsed.permissions,
+      },
+    });
     return response.ok(grant);
   }
 
@@ -436,7 +450,19 @@ export default class DatasourcesController {
     if (subjectType !== 'user' && subjectType !== 'role') {
       return response.badRequest({ message: 'Invalid grant subject type' });
     }
+    const user = this.getUser(ctx);
     await this.service.revokeDatasourceGrant(id, subjectType, String(params.subjectId));
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: user?.id ?? null,
+      action: 'datasource.grant.revoke',
+      outcome: 'success',
+      resourceType: 'datasource',
+      resourceId: String(id),
+      metadata: {
+        subjectType,
+        subjectId: String(params.subjectId),
+      },
+    });
     return response.noContent();
   }
 }
