@@ -59,9 +59,11 @@ export function getOIDCAuthConfig(): OIDCAuthConfig {
   return {
     enabled: process.env.AUTH_OIDC_ENABLED === 'true',
     issuer: process.env.AUTH_OIDC_ISSUER,
+    authorizationUrl: process.env.AUTH_OIDC_AUTHORIZATION_URL,
     clientId: process.env.AUTH_OIDC_CLIENT_ID,
     clientSecret: process.env.AUTH_OIDC_CLIENT_SECRET,
-    scopes: ['openid', 'profile', 'email'],
+    redirectUri: process.env.AUTH_OIDC_REDIRECT_URI,
+    scopes: splitEnvList(process.env.AUTH_OIDC_SCOPES, ['openid', 'profile', 'email']),
     claimMapping: {
       uid: 'sub',
       username: 'preferred_username',

@@ -61,8 +61,10 @@ export interface LocalAuthConfig {
 export interface OIDCAuthConfig {
   enabled: boolean;
   issuer?: string;
+  authorizationUrl?: string;
   clientId?: string;
   clientSecret?: string;
+  redirectUri?: string;
   scopes: string[];
   claimMapping: {
     uid: string;

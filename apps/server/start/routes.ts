@@ -12,6 +12,7 @@ import { apiAuthMiddleware } from '#middleware/api_auth_middleware';
 
 const HealthController = () => import('#controllers/health_controller');
 const LocalAuthController = () => import('#controllers/local_auth_controller');
+const OIDCAuthController = () => import('#controllers/oidc_auth_controller');
 const ConversationsController = () => import('#controllers/conversations_controller');
 const DatasourcesController = () => import('#controllers/datasources_controller');
 const ActionsController = () => import('#controllers/actions_controller');
@@ -34,6 +35,7 @@ router.post('/auth/local/register', [LocalAuthController, 'register']);
 router.post('/auth/local/logout', [LocalAuthController, 'logout']);
 router.post('/auth/local/refresh', [LocalAuthController, 'refresh']);
 router.get('/auth/local/status', [LocalAuthController, 'status']);
+router.get('/auth/oidc/url', [OIDCAuthController, 'authorizationUrl']);
 
 // Datasource routes (requires authentication)
 router

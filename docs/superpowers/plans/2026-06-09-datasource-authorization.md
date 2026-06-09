@@ -514,3 +514,26 @@
 - [x] Inject the audit service into the AI provider controller.
 - [x] Record redacted audit metadata for create/update/default/delete/test paths.
 - [x] Run focused validation.
+
+## Stage 22: OIDC Authorization URL Entry Point
+
+**Goal:** Replace the documented but missing OIDC login URL endpoint with a safe, testable Authorization Code Flow starting point.
+
+**Success Criteria:**
+
+- `GET /auth/oidc/url` exists and fails closed when OIDC is disabled or missing required configuration.
+- Enabled OIDC requires explicit authorization URL, client ID, and redirect URI configuration.
+- The endpoint returns a standards-shaped authorization URL with response type, client ID, redirect URI, scope, state, and nonce.
+- State and nonce are stored in short-lived httpOnly cookies for the future callback verification step.
+- No callback/token exchange is implemented until JWKS, issuer, and claim validation can be tested end to end.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/oidc_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/auth_manager.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing controller tests for OIDC disabled, missing config, and URL generation.
+- [x] Extend OIDC auth config with authorization URL and redirect URI.
+- [x] Implement OIDC auth URL controller and route.
+- [x] Run focused validation.
