@@ -12,6 +12,7 @@ import { apiAuthMiddleware } from '#middleware/api_auth_middleware';
 
 const HealthController = () => import('#controllers/health_controller');
 const LocalAuthController = () => import('#controllers/local_auth_controller');
+const OIDCAuthController = () => import('#controllers/oidc_auth_controller');
 const ConversationsController = () => import('#controllers/conversations_controller');
 const DatasourcesController = () => import('#controllers/datasources_controller');
 const ActionsController = () => import('#controllers/actions_controller');
@@ -23,6 +24,8 @@ const DashboardsController = () => import('#controllers/dashboards_controller');
 const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
 const BotsController = () => import('#controllers/bots_controller');
 const WebhooksController = () => import('#controllers/webhooks_controller');
+const AuthSubjectsController = () => import('#controllers/auth_subjects_controller');
+const AuditLogsController = () => import('#controllers/audit_logs_controller');
 
 // Public routes
 router.get('/health', [HealthController, 'handle']);
@@ -33,6 +36,10 @@ router.post('/auth/local/register', [LocalAuthController, 'register']);
 router.post('/auth/local/logout', [LocalAuthController, 'logout']);
 router.post('/auth/local/refresh', [LocalAuthController, 'refresh']);
 router.get('/auth/local/status', [LocalAuthController, 'status']);
+router.get('/auth/oidc/url', [OIDCAuthController, 'authorizationUrl']);
+router.get('/auth/oidc/callback', [OIDCAuthController, 'callback']);
+
+router.get('/audit-logs', [AuditLogsController, 'index']).middleware([apiAuthMiddleware]);
 
 // Datasource routes (requires authentication)
 router
@@ -46,6 +53,10 @@ router
       DatasourcesController,
       'generateSemanticDescriptions',
     ]);
+    router.get('/:datasourceId/grant-subjects', [AuthSubjectsController, 'index']);
+    router.get('/:id/grants', [DatasourcesController, 'grants']);
+    router.put('/:id/grants', [DatasourcesController, 'grant']);
+    router.delete('/:id/grants/:subjectType/:subjectId', [DatasourcesController, 'revokeGrant']);
     router.get('/:id/schema', [DatasourcesController, 'schema']);
     router.put('/:id/tables/:tableId', [DatasourcesController, 'updateTableMetadata']);
     router.put('/:id/columns/:columnId', [DatasourcesController, 'updateColumnMetadata']);

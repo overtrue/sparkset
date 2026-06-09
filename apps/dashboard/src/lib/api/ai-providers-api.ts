@@ -1,13 +1,13 @@
 import type {
   AIProviderDTO,
+  AIProviderListResponse,
   CreateAIProviderInput,
   TestConnectionResult,
-  ApiListResponse,
 } from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
 
 // API functions - can be used in both server and client components
-export async function fetchAIProviders(): Promise<ApiListResponse<AIProviderDTO>> {
+export async function fetchAIProviders(): Promise<AIProviderListResponse> {
   return apiGet('/ai-providers');
 }
 

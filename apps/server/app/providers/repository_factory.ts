@@ -9,12 +9,14 @@ import type {
   ActionRepository,
   AIProviderRepository,
   ConversationRepository,
+  DatasourceGrantRepository,
   DatasourceRepository,
   SchemaCacheRepository,
 } from '../db/interfaces.js';
 import { LucidActionRepository } from '../repositories/lucid_action_repository.js';
 import { LucidAIProviderRepository } from '../repositories/lucid_ai_provider_repository.js';
 import { LucidConversationRepository } from '../repositories/lucid_conversation_repository.js';
+import { LucidDatasourceGrantRepository } from '../repositories/datasource_grant_repository.js';
 import { LucidDatasourceRepository } from '../repositories/lucid_datasource_repository.js';
 import { LucidSchemaCacheRepository } from '../repositories/lucid_schema_cache_repository.js';
 
@@ -23,6 +25,7 @@ import { LucidSchemaCacheRepository } from '../repositories/lucid_schema_cache_r
  */
 export interface Repositories {
   datasource: DatasourceRepository;
+  datasourceGrant: DatasourceGrantRepository;
   action: ActionRepository;
   conversation: ConversationRepository;
   aiProvider: AIProviderRepository;
@@ -35,6 +38,7 @@ export interface Repositories {
 export function createLucidRepositories(): Repositories {
   return {
     datasource: new LucidDatasourceRepository(),
+    datasourceGrant: new LucidDatasourceGrantRepository(),
     action: new LucidActionRepository(),
     conversation: new LucidConversationRepository(),
     aiProvider: new LucidAIProviderRepository(),

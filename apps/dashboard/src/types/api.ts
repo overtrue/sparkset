@@ -48,6 +48,22 @@ export interface Datasource {
   createdAt?: string;
   updatedAt?: string;
   description?: string;
+  capabilities?: DatasourceCapabilities;
+}
+
+export interface DatasourceCapabilities {
+  canView: boolean;
+  canQuery: boolean;
+  canSyncSchema: boolean;
+  canManage: boolean;
+  canManageCredentials: boolean;
+  canGrant: boolean;
+}
+
+export interface DatasourceListResponse extends ApiListResponse<Datasource> {
+  capabilities?: {
+    canCreate: boolean;
+  };
 }
 
 export interface CreateDatasourceDto {
@@ -88,6 +104,58 @@ export interface TableSchemaDTO {
 
 export interface DatasourceDetailDTO extends Datasource {
   tables: TableSchemaDTO[];
+}
+
+export type DatasourcePermission =
+  | 'datasource:view'
+  | 'datasource:query'
+  | 'datasource:sync_schema'
+  | 'datasource:manage'
+  | 'datasource:manage_credentials'
+  | 'datasource:grant';
+
+export type GrantSubjectType = 'user' | 'role';
+
+export interface DatasourceGrantDTO {
+  id?: number;
+  datasourceId: number;
+  subjectType: GrantSubjectType;
+  subjectId: string;
+  permissions: DatasourcePermission[];
+  createdBy?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DatasourceGrantsResponse {
+  items: DatasourceGrantDTO[];
+  canManage: boolean;
+}
+
+export interface GrantSubjectUserDTO {
+  id: number;
+  username: string;
+  email: string | null;
+  displayName: string | null;
+  provider: string;
+  roles: string[];
+}
+
+export interface GrantSubjectRoleDTO {
+  id: string;
+  name: string;
+  userCount: number;
+}
+
+export interface DatasourceGrantSubjectsResponse {
+  users: GrantSubjectUserDTO[];
+  roles: GrantSubjectRoleDTO[];
+}
+
+export interface UpsertDatasourceGrantDto {
+  subjectType: GrantSubjectType;
+  subjectId: string;
+  permissions: DatasourcePermission[];
 }
 
 // ============================================================================
@@ -337,6 +405,12 @@ export interface ActionInputSchema {
   parameters: ParameterDefinition[];
 }
 
+export interface ActionCapabilities {
+  canView: boolean;
+  canExecute: boolean;
+  canManage: boolean;
+}
+
 export interface ActionDTO {
   id: number;
   name: string;
@@ -347,6 +421,11 @@ export interface ActionDTO {
   inputSchema?: ActionInputSchema | null;
   updatedAt?: string;
   createdAt?: string;
+  capabilities?: ActionCapabilities;
+}
+
+export interface ActionListResponse extends ApiListResponse<ActionDTO> {
+  capabilities?: ActionCapabilities;
 }
 
 export interface CreateActionInput {
@@ -388,6 +467,16 @@ export interface AIProviderDTO {
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AIProviderCapabilities {
+  canView: boolean;
+  canManage: boolean;
+  canManageCredentials: boolean;
+}
+
+export interface AIProviderListResponse extends ApiListResponse<AIProviderDTO> {
+  capabilities?: AIProviderCapabilities;
 }
 
 export interface CreateAIProviderInput {
@@ -470,7 +559,9 @@ export interface AuthUser {
 export interface AuthResponse {
   authenticated: boolean;
   user?: AuthUser;
-  token?: string;
+  enabled?: boolean;
+  allowRegistration?: boolean;
+  oidcEnabled?: boolean;
   error?: string;
   message?: string;
 }

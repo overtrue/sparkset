@@ -6,14 +6,25 @@ import { PageHeader } from '@/components/page-header';
 import { fetchAIProviders } from '@/lib/api/ai-providers-api';
 import { getLocaleFromRequest } from '@/i18n/server-utils';
 import { getDictionary } from '@/i18n/dictionaries';
+import type { AIProviderCapabilities } from '@/types/api';
+
+const emptyCapabilities: AIProviderCapabilities = {
+  canView: false,
+  canManage: false,
+  canManageCredentials: false,
+};
 
 const Page = async () => {
   const locale = await getLocaleFromRequest();
   const dict = await getDictionary(locale);
   const t = (key: string) => dict[key] || key;
 
-  const providersResult = await fetchAIProviders().catch(() => ({ items: [] }));
+  const providersResult = await fetchAIProviders().catch(() => ({
+    items: [],
+    capabilities: emptyCapabilities,
+  }));
   const providers = providersResult.items || [];
+  const capabilities = providersResult.capabilities ?? emptyCapabilities;
 
   return (
     <div className="space-y-6">
@@ -35,7 +46,7 @@ const Page = async () => {
         }
       />
 
-      <AIProviderManager initial={providers} />
+      <AIProviderManager initial={providers} capabilities={capabilities} />
     </div>
   );
 };

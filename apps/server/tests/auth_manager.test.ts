@@ -1,8 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthManager } from '../app/services/auth_manager';
-import { AuthProvider } from '../app/types/auth';
+import { LocalAuthProvider } from '../app/providers/local_auth_provider';
+import type { AuthConfig, AuthProvider } from '../app/types/auth';
 import { HttpContext } from '@adonisjs/core/http';
 import User from '../app/models/user';
+import { getLocalAuthConfig } from '../config/auth';
 
 // Mock HeaderAuthProvider
 class MockHeaderProvider implements AuthProvider {
@@ -11,6 +13,43 @@ class MockHeaderProvider implements AuthProvider {
   canHandle = vi.fn();
   authenticate = vi.fn();
 }
+
+interface AuthConfigOverrides {
+  header?: Partial<AuthConfig['header']>;
+  local?: Partial<AuthConfig['local']>;
+  oidc?: Partial<AuthConfig['oidc']>;
+}
+
+const createAuthConfig = (overrides: AuthConfigOverrides = {}): AuthConfig => ({
+  header: {
+    enabled: false,
+    trustedProxies: ['127.0.0.1'],
+    headerPrefix: 'X-User-',
+    requiredHeaders: ['Id'],
+    ...overrides.header,
+  },
+  local: {
+    enabled: false,
+    allowRegistration: true,
+    defaultRoles: ['viewer'],
+    defaultPermissions: ['read:datasource'],
+    ...overrides.local,
+  },
+  oidc: {
+    enabled: false,
+    scopes: ['openid', 'profile', 'email'],
+    defaultRoles: [],
+    defaultPermissions: [],
+    claimMapping: {
+      uid: 'sub',
+      username: 'preferred_username',
+      email: 'email',
+      roles: 'roles',
+      permissions: 'permissions',
+    },
+    ...overrides.oidc,
+  },
+});
 
 describe('AuthManager', () => {
   let authManager: AuthManager;
@@ -21,10 +60,56 @@ describe('AuthManager', () => {
     mockProvider = new MockHeaderProvider();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('should register providers on initialization', () => {
     const providers = authManager.getProviders();
     expect(providers.length).toBeGreaterThan(0);
     expect(providers.some((p) => p.name === 'header')).toBe(true);
+  });
+
+  it('should expose OIDC as implemented when callback prerequisites are configured', () => {
+    const manager = new AuthManager({
+      config: createAuthConfig({
+        local: { enabled: true },
+        oidc: {
+          enabled: true,
+          issuer: 'https://identity.example.test/realms/main',
+          authorizationUrl:
+            'https://identity.example.test/realms/main/protocol/openid-connect/auth',
+          tokenUrl: 'https://identity.example.test/realms/main/protocol/openid-connect/token',
+          jwksUrl: 'https://identity.example.test/realms/main/protocol/openid-connect/certs',
+          clientId: 'sparkset',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://sparkset.example.test/auth/oidc/callback',
+        },
+      }),
+    });
+
+    expect(manager.getProviders().map((provider) => provider.name)).toEqual(['header', 'local']);
+    expect(manager.getProviders().map((provider) => provider.enabled())).toEqual([false, true]);
+    expect(manager.getProviderRegistry()).toEqual([
+      expect.objectContaining({
+        name: 'header',
+        enabled: false,
+        implemented: true,
+        priority: 10,
+      }),
+      expect.objectContaining({
+        name: 'local',
+        enabled: true,
+        implemented: true,
+        priority: 20,
+      }),
+      expect.objectContaining({
+        name: 'oidc',
+        enabled: true,
+        implemented: true,
+        priority: 30,
+      }),
+    ]);
   });
 
   it('should add custom provider', () => {
@@ -151,5 +236,51 @@ describe('AuthManager', () => {
     expect(provider1.authenticate).toHaveBeenCalled();
     expect(provider2.authenticate).toHaveBeenCalled();
     expect(result).toEqual({ id: 1 });
+  });
+});
+
+describe('LocalAuthProvider configuration', () => {
+  it('does not grant datasource access to registered local users by default', () => {
+    vi.stubEnv('AUTH_LOCAL_DEFAULT_PERMISSIONS', undefined);
+
+    const config = getLocalAuthConfig();
+
+    expect(config.defaultPermissions).not.toContain('read:datasource');
+    expect(config.defaultPermissions).not.toContain('datasource:read');
+    expect(config.defaultPermissions).not.toContain('datasource:*');
+  });
+
+  it('should use injected local auth config', () => {
+    const config = {
+      enabled: true,
+      allowRegistration: false,
+      defaultRoles: ['analyst'],
+      defaultPermissions: ['datasource:view'],
+    };
+    const provider = new LocalAuthProvider(config);
+
+    expect(provider.enabled()).toBe(true);
+    expect(provider.getConfig()).toEqual(config);
+  });
+
+  it('does not accept legacy local auth_token cookies as session authentication', () => {
+    const provider = new LocalAuthProvider({
+      enabled: true,
+      allowRegistration: true,
+      defaultRoles: ['viewer'],
+      defaultPermissions: [],
+    });
+    const ctx = {
+      request: {
+        url: () => '/datasources',
+        cookie: (name: string) =>
+          ({
+            auth_provider: 'local',
+            auth_token: '1_123456',
+          })[name] ?? null,
+      },
+    } as unknown as HttpContext;
+
+    expect(provider.canHandle(ctx)).toBe(false);
   });
 });

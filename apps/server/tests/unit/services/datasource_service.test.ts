@@ -1,11 +1,16 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { DatasourceService } from '../../../app/services/datasource_service.js';
-import { InMemoryDatasourceRepository } from '../../../app/db/in-memory-repositories.js';
+import {
+  InMemoryDatasourceGrantRepository,
+  InMemoryDatasourceRepository,
+} from '../../../app/db/in-memory-repositories.js';
 import type { DataSource } from '../../../app/models/types.js';
+import { AuthorizationService } from '../../../app/services/authorization_service.js';
 
 describe('DatasourceService', () => {
   let service: DatasourceService;
   let repository: InMemoryDatasourceRepository;
+  let grantRepository: InMemoryDatasourceGrantRepository;
 
   const sampleDatasource: Omit<DataSource, 'id' | 'lastSyncAt'> = {
     name: 'Test Datasource',
@@ -20,7 +25,9 @@ describe('DatasourceService', () => {
 
   beforeEach(() => {
     repository = new InMemoryDatasourceRepository();
-    service = new DatasourceService(repository);
+    grantRepository = new InMemoryDatasourceGrantRepository();
+    const authorizationService = new AuthorizationService(grantRepository);
+    service = new DatasourceService(repository, grantRepository, authorizationService);
   });
 
   describe('create', () => {
@@ -73,6 +80,49 @@ describe('DatasourceService', () => {
       const result = await service.list();
 
       expect(result).toHaveLength(2);
+    });
+
+    it('should return only datasources visible to the current user', async () => {
+      await service.create(sampleDatasource);
+      const granted = await service.create({ ...sampleDatasource, name: 'Granted' });
+      await grantRepository.upsert({
+        datasourceId: granted.id,
+        subjectType: 'role',
+        subjectId: 'analyst',
+        permissions: ['datasource:view'],
+      });
+
+      const result = await service.listAuthorized({
+        id: 9,
+        roles: ['analyst'],
+        permissions: [],
+        isActive: true,
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe(granted.id);
+    });
+  });
+
+  describe('grant bootstrap', () => {
+    it('should grant creator full datasource permissions', async () => {
+      const created = await service.create(sampleDatasource, {
+        id: 42,
+        roles: [],
+        permissions: [],
+        isActive: true,
+      });
+
+      const grants = await grantRepository.listForDatasource(created.id);
+
+      expect(grants).toHaveLength(1);
+      expect(grants[0]).toMatchObject({
+        datasourceId: created.id,
+        subjectType: 'user',
+        subjectId: '42',
+      });
+      expect(grants[0]?.permissions).toContain('datasource:manage_credentials');
+      expect(grants[0]?.permissions).toContain('datasource:grant');
     });
   });
 

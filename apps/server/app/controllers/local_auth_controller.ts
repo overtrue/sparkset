@@ -1,7 +1,23 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
-import { AccessTokenGuard } from '#guards/access_token_guard';
+import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
+import { getOIDCAuthConfig, isOIDCAuthConfigured } from '../../config/auth.js';
+import { rejectUntrustedBrowserOrigin } from '../security/trusted_origins.js';
+import { AuditLogService } from '../services/audit_log_service.js';
+import { LocalLoginAttemptLimiter } from '../services/local_login_attempt_limiter.js';
+
+const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+  maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+};
+const CLEAR_SESSION_COOKIE_OPTIONS = {
+  path: '/',
+};
 
 /**
  * Local Auth Controller
@@ -12,37 +28,84 @@ import { AccessTokenGuard } from '#guards/access_token_guard';
 export default class LocalAuthController {
   private authProvider: LocalAuthProvider;
 
-  constructor() {
+  constructor(
+    private readonly auditLog = new AuditLogService(),
+    private readonly loginAttemptLimiter = new LocalLoginAttemptLimiter(),
+  ) {
     this.authProvider = new LocalAuthProvider();
+  }
+
+  private setSessionCookie(response: HttpContext['response'], token: string): void {
+    response.cookie(ACCESS_TOKEN_SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+  }
+
+  private clearSessionCookie(response: HttpContext['response']): void {
+    response.clearCookie(ACCESS_TOKEN_SESSION_COOKIE, CLEAR_SESSION_COOKIE_OPTIONS);
+  }
+
+  private localAuthDisabled(response: HttpContext['response']) {
+    return response.forbidden({
+      error: 'LOCAL_AUTH_DISABLED',
+      message: '本地账号密码认证已禁用',
+    });
+  }
+
+  private localAuthCapabilities() {
+    const config = this.authProvider.getConfig();
+    return {
+      enabled: this.authProvider.enabled(),
+      allowRegistration: config.allowRegistration,
+      oidcEnabled: isOIDCAuthConfigured(getOIDCAuthConfig()),
+    };
+  }
+
+  private async recordLoginFailure(
+    ctx: HttpContext,
+    input: {
+      username: string;
+      reason: 'unknown_user' | 'invalid_password' | 'account_disabled' | 'rate_limited';
+      userId?: number | null;
+      retryAfterSeconds?: number;
+    },
+  ): Promise<void> {
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: input.userId ?? null,
+      action: 'auth.login',
+      outcome: 'failure',
+      resourceType: 'user',
+      resourceId: input.userId ? String(input.userId) : null,
+      metadata: {
+        username: input.username,
+        reason: input.reason,
+        ...(input.retryAfterSeconds === undefined
+          ? {}
+          : { retryAfterSeconds: input.retryAfterSeconds }),
+      },
+    });
+  }
+
+  private getRequestIp(ctx: HttpContext): string | null {
+    const requestWithIp = ctx.request as unknown as { ip?: () => string | null };
+    return requestWithIp.ip?.() ?? null;
   }
 
   /**
    * 检查认证状态
-   * 支持从 Authorization header 或 localStorage token 验证
+   * 支持从 Authorization header、x-access-token 或 httpOnly session cookie 验证
    */
   async status(ctx: HttpContext) {
-    const { request } = ctx;
-    // 尝试从 Authorization header 获取 token
-    const authHeader = request.header('authorization');
-    let token: string | null = null;
-
-    if (authHeader && typeof authHeader === 'string') {
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      if (match) {
-        token = match[1];
-      }
-    }
+    const guard = new AccessTokenGuard(ctx);
+    const token = guard.getRequestToken();
 
     if (!token) {
       return {
         authenticated: false,
-        enabled: this.authProvider.enabled(),
+        ...this.localAuthCapabilities(),
         message: '未认证',
       };
     }
 
     // 使用 Access Token Guard 验证 token
-    const guard = new AccessTokenGuard(ctx);
     try {
       const user = await guard.authenticate();
 
@@ -58,6 +121,7 @@ export default class LocalAuthController {
             permissions: user.permissions,
             provider: user.provider,
           },
+          ...this.localAuthCapabilities(),
         };
       }
     } catch (error) {
@@ -66,7 +130,7 @@ export default class LocalAuthController {
 
     return {
       authenticated: false,
-      enabled: this.authProvider.enabled(),
+      ...this.localAuthCapabilities(),
       message: '令牌无效',
     };
   }
@@ -77,12 +141,34 @@ export default class LocalAuthController {
   async login(ctx: HttpContext) {
     const { request, response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
+      if (!this.authProvider.enabled()) {
+        return this.localAuthDisabled(response);
+      }
+
       const { username, password } = request.body();
 
       if (!username || !password) {
         return response.badRequest({
           error: 'VALIDATION_ERROR',
           message: '用户名和密码不能为空',
+        });
+      }
+
+      const ipAddress = this.getRequestIp(ctx);
+      const limit = this.loginAttemptLimiter.check(username, ipAddress);
+      if (!limit.allowed) {
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'rate_limited',
+          retryAfterSeconds: limit.retryAfterSeconds,
+        });
+        return response.status(429).send({
+          error: 'AUTH_RATE_LIMITED',
+          message: '登录尝试过于频繁，请稍后再试',
+          retryAfterSeconds: limit.retryAfterSeconds,
         });
       }
 
@@ -93,6 +179,11 @@ export default class LocalAuthController {
         .first();
 
       if (!user || !user.passwordHash) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'unknown_user',
+        });
         return response.unauthorized({
           error: 'AUTH_FAILED',
           message: '用户名或密码错误',
@@ -103,6 +194,12 @@ export default class LocalAuthController {
       const bcrypt = await import('bcrypt');
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'invalid_password',
+          userId: user.id,
+        });
         return response.unauthorized({
           error: 'AUTH_FAILED',
           message: '用户名或密码错误',
@@ -111,6 +208,12 @@ export default class LocalAuthController {
 
       // 检查用户状态
       if (!user.isActive) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'account_disabled',
+          userId: user.id,
+        });
         return response.forbidden({
           error: 'ACCOUNT_DISABLED',
           message: '账户已被禁用',
@@ -120,13 +223,20 @@ export default class LocalAuthController {
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `login_${Date.now()}`);
+      this.loginAttemptLimiter.recordSuccess(username, ipAddress);
+      this.setSessionCookie(response, token);
 
       ctx.logger.info({ username: user.username }, 'Local login success');
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.login',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
-      // 返回令牌给客户端（客户端存储在 localStorage）
       return {
         authenticated: true,
-        token, // 重要：返回给客户端存储在 localStorage
         user: {
           id: user.id,
           username: user.username,
@@ -152,6 +262,21 @@ export default class LocalAuthController {
   async register(ctx: HttpContext) {
     const { request, response } = ctx;
     try {
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
+
+      if (!this.authProvider.enabled()) {
+        return this.localAuthDisabled(response);
+      }
+
+      const config = this.authProvider.getConfig();
+      if (!config.allowRegistration) {
+        return response.forbidden({
+          error: 'REGISTRATION_DISABLED',
+          message: '注册功能已禁用',
+        });
+      }
+
       const { username, password, email, displayName } = request.body();
 
       // 验证输入
@@ -193,9 +318,6 @@ export default class LocalAuthController {
       const bcrypt = await import('bcrypt');
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // 获取配置
-      const config = this.authProvider['getConfig']();
-
       // 创建用户
       const user = await User.create({
         uid: `local:${username}`,
@@ -214,10 +336,17 @@ export default class LocalAuthController {
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `register_${Date.now()}`);
+      this.setSessionCookie(response, token);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.register',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
       return {
         authenticated: true,
-        token, // 重要：返回给客户端存储在 localStorage
         user: {
           id: user.id,
           username: user.username,
@@ -241,24 +370,28 @@ export default class LocalAuthController {
    * 登出 - 撤销 Access Token
    */
   async logout(ctx: HttpContext) {
-    const { request, response } = ctx;
+    const { response } = ctx;
     try {
-      // 从 Authorization header 获取 token
-      const authHeader = request.header('authorization');
-      let token: string | null = null;
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
 
-      if (authHeader && typeof authHeader === 'string') {
-        const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        if (match) {
-          token = match[1];
-        }
-      }
+      const guard = new AccessTokenGuard(ctx);
+      const token = guard.getRequestToken();
+      const user = token ? await guard.authenticate().catch(() => null) : null;
 
       if (token) {
         // 撤销令牌
-        const guard = new AccessTokenGuard(ctx);
         await guard.revokeToken(token);
       }
+
+      this.clearSessionCookie(response);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user?.id ?? null,
+        action: 'auth.logout',
+        outcome: 'success',
+        resourceType: user ? 'user' : null,
+        resourceId: user ? String(user.id) : null,
+      });
 
       return {
         success: true,
@@ -277,20 +410,16 @@ export default class LocalAuthController {
    * 刷新令牌 - 生成新的 Access Token
    */
   async refresh(ctx: HttpContext) {
-    const { request, response } = ctx;
+    const { response } = ctx;
     try {
-      // 从 Authorization header 获取旧 token
-      const authHeader = request.header('authorization');
-      let oldToken: string | null = null;
+      const originRejection = rejectUntrustedBrowserOrigin(ctx);
+      if (originRejection) return originRejection;
 
-      if (authHeader && typeof authHeader === 'string') {
-        const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        if (match) {
-          oldToken = match[1];
-        }
-      }
+      const guard = new AccessTokenGuard(ctx);
+      const oldToken = guard.getRequestToken();
 
       if (!oldToken) {
+        this.clearSessionCookie(response);
         return response.unauthorized({
           error: 'NO_TOKEN',
           message: '缺少访问令牌',
@@ -298,7 +427,6 @@ export default class LocalAuthController {
       }
 
       // 验证旧令牌并获取用户
-      const guard = new AccessTokenGuard(ctx);
       const user = await guard.authenticate();
 
       // 撤销旧令牌
@@ -306,10 +434,17 @@ export default class LocalAuthController {
 
       // 生成新令牌
       const { token } = await guard.generateToken(user, `refresh_${Date.now()}`);
+      this.setSessionCookie(response, token);
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'auth.refresh',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: String(user.id),
+      });
 
       return {
         success: true,
-        token, // 新令牌
         user: {
           id: user.id,
           username: user.username,
@@ -322,6 +457,7 @@ export default class LocalAuthController {
       };
     } catch (error) {
       ctx.logger.error({ error }, 'Refresh token error');
+      this.clearSessionCookie(response);
       return response.unauthorized({
         error: 'INVALID_TOKEN',
         message: '令牌无效，需要重新登录',

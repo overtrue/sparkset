@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/datasources-api';
 import type { DatasourceDetailDTO, TableColumnDTO, TableSchemaDTO } from '@/types/api';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -33,6 +34,7 @@ interface EditingColumnState {
 
 interface SchemaEditorProps {
   datasource: DatasourceDetailDTO;
+  canManage: boolean;
   onDatasourceChange: React.Dispatch<React.SetStateAction<DatasourceDetailDTO>>;
   onBusyChange?: (busy: boolean) => void;
 }
@@ -42,7 +44,12 @@ type MessageTone = 'success' | 'error';
 const TABLE_PAGE_SIZE = 20;
 const COLUMN_PAGE_SIZE = 20;
 
-export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: SchemaEditorProps) {
+export function SchemaEditor({
+  datasource,
+  canManage,
+  onDatasourceChange,
+  onBusyChange,
+}: SchemaEditorProps) {
   const t = useTranslations();
   const [editingTable, setEditingTable] = React.useState<EditingTableState | null>(null);
   const [editingColumn, setEditingColumn] = React.useState<EditingColumnState | null>(null);
@@ -119,17 +126,21 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
     [onDatasourceChange],
   );
 
-  const handleEditTable = React.useCallback((table: TableSchemaDTO) => {
-    setEditingColumn(null);
-    setEditingTable({
-      tableId: table.id,
-      tableComment: table.tableComment ?? '',
-      semanticDescription: table.semanticDescription ?? '',
-    });
-  }, []);
+  const handleEditTable = React.useCallback(
+    (table: TableSchemaDTO) => {
+      if (!canManage) return;
+      setEditingColumn(null);
+      setEditingTable({
+        tableId: table.id,
+        tableComment: table.tableComment ?? '',
+        semanticDescription: table.semanticDescription ?? '',
+      });
+    },
+    [canManage],
+  );
 
   const handleSaveTable = async () => {
-    if (!editingTable) return;
+    if (!canManage || !editingTable) return;
     setSaving(true);
     setFeedback(null);
     try {
@@ -155,18 +166,21 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
     setEditingTable(null);
   };
 
-  const handleEditColumn = React.useCallback((_tableId: number, column: TableColumnDTO) => {
-    if (!column.id) return;
-    setEditingTable(null);
-    setEditingColumn({
-      columnId: column.id,
-      columnComment: column.comment ?? '',
-      semanticDescription: column.semanticDescription ?? '',
-    });
-  }, []);
+  const handleEditColumn = React.useCallback(
+    (_tableId: number, column: TableColumnDTO) => {
+      if (!canManage || !column.id) return;
+      setEditingTable(null);
+      setEditingColumn({
+        columnId: column.id,
+        columnComment: column.comment ?? '',
+        semanticDescription: column.semanticDescription ?? '',
+      });
+    },
+    [canManage],
+  );
 
   const handleSaveColumn = async () => {
-    if (!editingColumn) return;
+    if (!canManage || !editingColumn) return;
     setSaving(true);
     setFeedback(null);
     try {
@@ -193,6 +207,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
   };
 
   const handleGenerateSemantic = async () => {
+    if (!canManage) return;
     setGenerating(true);
     setFeedback(null);
     try {
@@ -226,20 +241,23 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
               )}
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              void handleGenerateSemantic();
-            }}
-            disabled={isBusy || isEditing}
-          >
-            <RiSparkling2Line
-              className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`}
-              aria-hidden="true"
-            />
-            {generating ? t('Generating…') : t('Add Semantic Description')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {!canManage ? <Badge variant="outline">{t('Read only')}</Badge> : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void handleGenerateSemantic();
+              }}
+              disabled={!canManage || isBusy || isEditing}
+            >
+              <RiSparkling2Line
+                className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
+              {generating ? t('Generating…') : t('Add Semantic Description')}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -298,7 +316,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                       }}
                       aria-label={t('Edit')}
                       title={t('Edit')}
-                      disabled={isBusy}
+                      disabled={!canManage || isBusy}
                       className="mt-2"
                     >
                       <RiEdit2Line className="h-4 w-4" aria-hidden="true" />
@@ -324,7 +342,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                 })
                               }
                               placeholder={t('eg: Orders table…')}
-                              disabled={isBusy}
+                              disabled={!canManage || isBusy}
                             />
                           </div>
                           <div>
@@ -346,7 +364,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                 "Used for AI to understand the table's business meaning and purpose",
                               )}
                               rows={3}
-                              disabled={isBusy}
+                              disabled={!canManage || isBusy}
                             />
                           </div>
                           <div className="flex gap-2">
@@ -355,7 +373,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                               onClick={() => {
                                 void handleSaveTable();
                               }}
-                              disabled={isBusy}
+                              disabled={!canManage || isBusy}
                             >
                               <RiSave3Line className="h-4 w-4" aria-hidden="true" />
                               {t('Save')}
@@ -426,7 +444,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                       }
                                       placeholder={t('eg: Primary key…')}
                                       className="h-8"
-                                      disabled={isBusy}
+                                      disabled={!canManage || isBusy}
                                     />
                                   ) : (
                                     <span className="block break-words text-muted-foreground">
@@ -451,7 +469,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                       placeholder={t('eg: Business meaning of this field…')}
                                       rows={2}
                                       className="min-w-[200px]"
-                                      disabled={isBusy}
+                                      disabled={!canManage || isBusy}
                                     />
                                   ) : (
                                     <span className="block break-words text-muted-foreground">
@@ -468,7 +486,7 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                         onClick={() => {
                                           void handleSaveColumn();
                                         }}
-                                        disabled={isBusy}
+                                        disabled={!canManage || isBusy}
                                         aria-label={t('Save')}
                                         title={t('Save')}
                                       >
@@ -490,7 +508,9 @@ export function SchemaEditor({ datasource, onDatasourceChange, onBusyChange }: S
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleEditColumn(table.id, column)}
-                                      disabled={!column.id || editingColumn !== null || isBusy}
+                                      disabled={
+                                        !canManage || !column.id || editingColumn !== null || isBusy
+                                      }
                                       aria-label={t('Edit')}
                                       title={t('Edit')}
                                     >

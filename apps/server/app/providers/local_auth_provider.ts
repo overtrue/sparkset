@@ -1,8 +1,10 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
-import { AuthProvider } from '#types/auth';
-import { LocalAuthConfig } from '#types/auth';
+import type { AuthProvider, LocalAuthConfig } from '#types/auth';
+import { getLocalAuthConfig } from '../../config/auth.js';
 import bcrypt from 'bcrypt';
+
+type LocalAuthConfigResolver = () => LocalAuthConfig;
 
 /**
  * Local Authentication Provider
@@ -16,7 +18,7 @@ import bcrypt from 'bcrypt';
  *     enabled: true
  *     allowRegistration: true
  *     defaultRoles: ['viewer']
- *     defaultPermissions: ['read:datasource']
+ *     defaultPermissions: ['read:action', 'read:conversation']
  *
  * 登录请求：
  * POST /auth/local/login
@@ -28,9 +30,14 @@ import bcrypt from 'bcrypt';
  */
 export class LocalAuthProvider implements AuthProvider {
   name = 'local';
+  private resolveConfig: LocalAuthConfigResolver;
+
+  constructor(config: LocalAuthConfig | LocalAuthConfigResolver = getLocalAuthConfig) {
+    this.resolveConfig = typeof config === 'function' ? config : () => config;
+  }
 
   enabled(): boolean {
-    return process.env.AUTH_LOCAL_ENABLED === 'true';
+    return this.getConfig().enabled;
   }
 
   canHandle(ctx: HttpContext): boolean {
@@ -39,13 +46,6 @@ export class LocalAuthProvider implements AuthProvider {
     // 检查是否是本地认证相关的请求
     const path = ctx.request.url();
     if (path.startsWith('/auth/local/')) {
-      return true;
-    }
-
-    // 检查是否有本地认证的 cookie
-    const authToken = ctx.request.cookie('auth_token');
-    const authProvider = ctx.request.cookie('auth_provider');
-    if (authToken && authProvider === 'local') {
       return true;
     }
 
@@ -68,8 +68,7 @@ export class LocalAuthProvider implements AuthProvider {
         return await this.handleRegister(ctx);
       }
 
-      // 处理 session 认证
-      return await this.handleSessionAuth(ctx);
+      return null;
     } catch (error) {
       console.error('Local Auth error:', error);
       return null;
@@ -169,46 +168,9 @@ export class LocalAuthProvider implements AuthProvider {
   }
 
   /**
-   * 处理基于 cookie 的认证
-   */
-  private async handleSessionAuth(ctx: HttpContext): Promise<User | null> {
-    const authToken = ctx.request.cookie('auth_token');
-    const authProvider = ctx.request.cookie('auth_provider');
-
-    if (authProvider !== 'local' || !authToken) {
-      return null;
-    }
-
-    // 解析 token (格式: userId_timestamp)
-    const [userId] = authToken.split('_');
-    if (!userId) return null;
-
-    const user = await User.find(parseInt(userId));
-    if (!user || !user.isActive) {
-      return null;
-    }
-
-    return user;
-  }
-
-  /**
    * 获取配置
    */
-  private getConfig(): LocalAuthConfig {
-    const enabled = process.env.AUTH_LOCAL_ENABLED === 'true';
-    const allowRegistration = process.env.AUTH_LOCAL_ALLOW_REGISTRATION !== 'false';
-    const defaultRoles = process.env.AUTH_LOCAL_DEFAULT_ROLES
-      ? process.env.AUTH_LOCAL_DEFAULT_ROLES.split(',')
-      : ['viewer'];
-    const defaultPermissions = process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS
-      ? process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS.split(',')
-      : ['read:datasource', 'read:action', 'read:conversation'];
-
-    return {
-      enabled,
-      allowRegistration,
-      defaultRoles,
-      defaultPermissions,
-    };
+  getConfig(): LocalAuthConfig {
+    return this.resolveConfig();
   }
 }

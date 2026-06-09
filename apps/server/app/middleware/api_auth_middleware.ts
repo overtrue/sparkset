@@ -1,6 +1,12 @@
 import { HttpContext } from '@adonisjs/core/http';
 import { NextFn } from '@adonisjs/core/types/http';
 import { AccessTokenGuard } from '#guards/access_token_guard';
+import { AuthManager } from '#services/auth_manager';
+import {
+  isSafeHttpMethod,
+  rejectUntrustedBrowserOrigin,
+  requestUsesSessionCookie,
+} from '../security/trusted_origins.js';
 
 /**
  * API 认证中间件
@@ -9,8 +15,35 @@ import { AccessTokenGuard } from '#guards/access_token_guard';
  * 从请求头中读取 Bearer Token 并验证
  */
 export default class ApiAuthMiddleware {
+  constructor(private authManager: AuthManager = new AuthManager()) {}
+
+  private bindAuth(ctx: HttpContext, user: unknown, guard: AccessTokenGuard | null = null) {
+    (ctx as unknown as { auth: { user: typeof user; guard: typeof guard } }).auth = {
+      user,
+      guard,
+    };
+  }
+
   async handle(ctx: HttpContext, next: NextFn) {
     try {
+      if (!isSafeHttpMethod(ctx) && requestUsesSessionCookie(ctx)) {
+        const rejection = rejectUntrustedBrowserOrigin(ctx);
+        if (rejection) return rejection;
+      }
+
+      const providerUser = await this.authManager.authenticate(ctx);
+      if (providerUser) {
+        if (!providerUser.isActive) {
+          return ctx.response.forbidden({
+            error: 'User account disabled',
+            message: '您的账户已被禁用',
+          });
+        }
+
+        this.bindAuth(ctx, providerUser);
+        return next();
+      }
+
       // 创建 Access Token Guard
       const guard = new AccessTokenGuard(ctx);
 
@@ -32,10 +65,7 @@ export default class ApiAuthMiddleware {
       }
 
       // 将用户和 guard 绑定到上下文
-      (ctx as unknown as { auth: { user: typeof user; guard: typeof guard } }).auth = {
-        user,
-        guard,
-      };
+      this.bindAuth(ctx, user, guard);
 
       return next();
     } catch (error) {

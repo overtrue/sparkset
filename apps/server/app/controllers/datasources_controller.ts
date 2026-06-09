@@ -4,13 +4,35 @@ import { Database } from '@adonisjs/lucid/database';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 import { DatasourceService } from '../services/datasource_service.js';
 import { SchemaService } from '../services/schema_service.js';
+import { AuthorizationService } from '../services/authorization_service.js';
 import {
   datasourceCreateSchema,
   datasourceUpdateSchema,
   setDefaultSchema,
 } from '../validators/datasource.js';
 import { toId } from '../utils/validation.js';
-import { serializeDataSource, serializeDataSources } from '../utils/serializers.js';
+import {
+  datasourceCapabilitiesFromPermissions,
+  serializeDataSource,
+  type SafeDataSource,
+} from '../utils/serializers.js';
+import { getAuthenticatedUser } from '../utils/auth_context.js';
+import {
+  DATASOURCE_PERMISSIONS,
+  type AuthorizationUser,
+  type AuthorizationAction,
+  type DatasourcePermission,
+  type GlobalAuthorizationAction,
+} from '../types/authorization.js';
+import { AuditLogService } from '../services/audit_log_service.js';
+import type { DataSource } from '../models/types.js';
+import { z } from 'zod';
+
+const grantSchema = z.object({
+  subjectType: z.enum(['user', 'role']),
+  subjectId: z.string().min(1),
+  permissions: z.array(z.enum(DATASOURCE_PERMISSIONS)).min(1),
+});
 
 @inject()
 export default class DatasourcesController {
@@ -18,79 +40,227 @@ export default class DatasourcesController {
     private service: DatasourceService,
     private schemaService: SchemaService,
     private database: Database,
+    private authorization: AuthorizationService,
+    private auditLog: AuditLogService = new AuditLogService(),
   ) {}
 
-  async index({ response }: HttpContext) {
-    const items = await this.service.list();
-    return response.ok({ items: serializeDataSources(items) });
+  private getUser(ctx: HttpContext) {
+    return getAuthenticatedUser(ctx);
   }
 
-  async store({ request, response }: HttpContext) {
+  private unauthorized(response: HttpContext['response']) {
+    return response.unauthorized({
+      error: 'Authentication required',
+      message: '请提供有效的访问令牌',
+    });
+  }
+
+  private forbidden(
+    response: HttpContext['response'],
+    action: AuthorizationAction | GlobalAuthorizationAction,
+  ) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: `Missing permission: ${action}`,
+    });
+  }
+
+  private async canAccess(ctx: HttpContext, datasourceId: number, action: AuthorizationAction) {
+    const user = this.getUser(ctx);
+    if (!user) return false;
+    return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
+  }
+
+  private async datasourceCapabilities(user: AuthorizationUser, datasourceId: number) {
+    const checks = await Promise.all(
+      DATASOURCE_PERMISSIONS.map(async (permission) => [
+        permission,
+        await this.authorization.can(user, permission, { type: 'datasource', id: datasourceId }),
+      ]),
+    );
+    return datasourceCapabilitiesFromPermissions(
+      Object.fromEntries(checks) as Record<DatasourcePermission, boolean>,
+    );
+  }
+
+  private async serializeDatasourceForUser(
+    user: AuthorizationUser,
+    datasource: DataSource,
+  ): Promise<SafeDataSource> {
+    return serializeDataSource(datasource, {
+      capabilities: await this.datasourceCapabilities(user, datasource.id),
+    });
+  }
+
+  private async serializeDatasourcesForUser(
+    user: AuthorizationUser,
+    datasources: DataSource[],
+  ): Promise<SafeDataSource[]> {
+    return Promise.all(datasources.map((item) => this.serializeDatasourceForUser(user, item)));
+  }
+
+  private canCreateDatasource(ctx: HttpContext): boolean {
+    return this.authorization.canPerformGlobalAction(this.getUser(ctx), 'datasource:create');
+  }
+
+  private getConnectionTestAuditMetadata(input: Record<string, unknown>) {
+    return {
+      type: typeof input.type === 'string' ? input.type : null,
+      host: typeof input.host === 'string' ? input.host : null,
+      port:
+        typeof input.port === 'number' || typeof input.port === 'string'
+          ? Number(input.port)
+          : null,
+      database: typeof input.database === 'string' ? input.database : null,
+    };
+  }
+
+  private hasConnectionSettingChanges(input: Record<string, unknown>): boolean {
+    return ['type', 'host', 'port', 'username', 'password', 'database'].some((field) =>
+      Object.prototype.hasOwnProperty.call(input, field),
+    );
+  }
+
+  private async tableBelongsToDatasource(datasourceId: number, tableId: number): Promise<boolean> {
+    const tables = await this.schemaService.list(datasourceId);
+    return tables.some((table) => table.id === tableId);
+  }
+
+  private async columnBelongsToDatasource(
+    datasourceId: number,
+    columnId: number,
+  ): Promise<boolean> {
+    const tables = await this.schemaService.list(datasourceId);
+    return tables.some((table) => table.columns.some((column) => column.id === columnId));
+  }
+
+  async index(ctx: HttpContext) {
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(ctx.response);
+    const items = await this.service.listAuthorized(user);
+    const { response } = ctx;
+    return response.ok({
+      items: await this.serializeDatasourcesForUser(user, items),
+      capabilities: {
+        canCreate: this.canCreateDatasource(ctx),
+      },
+    });
+  }
+
+  async store(ctx: HttpContext) {
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(ctx.response);
+    if (!this.canCreateDatasource(ctx)) {
+      return this.forbidden(ctx.response, 'datasource:create');
+    }
+    const { request, response } = ctx;
     const parsed = datasourceCreateSchema.parse(request.body());
-    const record = await this.service.create(parsed);
+    const record = await this.service.create(parsed, user);
     return response.created(serializeDataSource(record));
   }
 
-  async update({ params, request, response }: HttpContext) {
-    const parsed = datasourceUpdateSchema.parse({ ...request.body(), ...params });
-    const record = await this.service.update(parsed);
+  async update(ctx: HttpContext) {
+    const { params, request, response } = ctx;
+    const body = request.body() as Record<string, unknown>;
+    const parsed = datasourceUpdateSchema.parse({ ...body, ...params });
+    const datasource = await this.service.get(parsed.id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, parsed.id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    if (
+      this.hasConnectionSettingChanges(body) &&
+      !(await this.canAccess(ctx, parsed.id, 'datasource:manage_credentials'))
+    ) {
+      return this.forbidden(response, 'datasource:manage_credentials');
+    }
+    const record = await this.service.update(parsed, this.getUser(ctx) ?? undefined);
     return response.ok(serializeDataSource(record));
   }
 
-  async destroy({ params, response }: HttpContext) {
-    const id = toId(params.id);
-    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    await this.service.remove(id);
-    return response.noContent();
-  }
-
-  async sync({ params, response }: HttpContext) {
+  async destroy(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    await this.service.remove(id);
+    return response.noContent();
+  }
+
+  async sync(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:sync_schema'))) {
+      return this.forbidden(response, 'datasource:sync_schema');
     }
     const lastSyncAt = await this.schemaService.sync(datasource);
     await this.service.update({ ...datasource, lastSyncAt });
     return response.ok({ id, lastSyncAt });
   }
 
-  async generateSemanticDescriptions({ params, response }: HttpContext) {
+  async generateSemanticDescriptions(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
     }
 
     await this.schemaService.generateSemanticDescriptions(id);
     return response.ok({ success: true });
   }
 
-  async schema({ params, response }: HttpContext) {
+  async schema(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
     }
     const tables = await this.schemaService.list(id);
     return response.ok({ id, tables });
   }
 
-  async show({ params, response }: HttpContext) {
+  async show(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
+    }
     const tables = await this.schemaService.list(id);
-    return response.ok({ ...serializeDataSource(datasource), tables });
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
+    return response.ok({ ...(await this.serializeDatasourceForUser(user, datasource)), tables });
   }
 
-  async updateTableMetadata({ params, request, response }: HttpContext) {
+  async updateTableMetadata(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const datasourceId = toId(params.id);
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const tableId = toId(params.tableId);
@@ -98,6 +268,12 @@ export default class DatasourcesController {
     const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    if (!(await this.tableBelongsToDatasource(datasourceId, tableId))) {
+      return response.notFound({ message: 'Table not found for datasource' });
     }
 
     const body = request.body() as {
@@ -111,7 +287,8 @@ export default class DatasourcesController {
     return response.ok({ success: true });
   }
 
-  async updateColumnMetadata({ params, request, response }: HttpContext) {
+  async updateColumnMetadata(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const datasourceId = toId(params.id);
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const columnId = toId(params.columnId);
@@ -119,6 +296,12 @@ export default class DatasourcesController {
     const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    if (!(await this.columnBelongsToDatasource(datasourceId, columnId))) {
+      return response.notFound({ message: 'Column not found for datasource' });
     }
 
     const body = request.body() as {
@@ -132,19 +315,31 @@ export default class DatasourcesController {
     return response.ok({ success: true });
   }
 
-  async setDefault({ params, response }: HttpContext) {
+  async setDefault(ctx: HttpContext) {
+    const { params, response } = ctx;
     const parsed = setDefaultSchema.parse(params);
+    const datasource = await this.service.get(parsed.id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, parsed.id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
     await this.service.setDefault(parsed.id);
     return response.ok({ success: true });
   }
 
-  async testConnection({ params, request, response }: HttpContext) {
+  async testConnection(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
 
     if (!datasource) {
       return response.notFound({ message: '数据源未找到' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:manage_credentials'))) {
+      return this.forbidden(response, 'datasource:manage_credentials');
     }
 
     // 允许通过请求体传入密码（用于编辑模式下的连接测试）
@@ -191,7 +386,8 @@ export default class DatasourcesController {
     }
   }
 
-  async testConnectionByConfig({ request, response }: HttpContext) {
+  async testConnectionByConfig(ctx: HttpContext) {
+    const { request, response } = ctx;
     const body = request.body() as {
       type: string;
       host: string;
@@ -200,9 +396,25 @@ export default class DatasourcesController {
       password: string | null;
       database: string;
     };
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
 
     if (!body.type || !body.host || !body.port || !body.username || !body.database) {
       return response.badRequest({ message: '缺少必要的配置参数' });
+    }
+
+    if (!this.canCreateDatasource(ctx)) {
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'datasource.connection_test',
+        outcome: 'failure',
+        resourceType: 'datasource_config',
+        metadata: {
+          ...this.getConnectionTestAuditMetadata(body),
+          reason: 'missing datasource:create',
+        },
+      });
+      return this.forbidden(response, 'datasource:create');
     }
 
     // 密码不是测试连通性的必要条件，可以为空
@@ -246,5 +458,92 @@ export default class DatasourcesController {
         message: `连接测试异常: ${error instanceof Error ? error.message : '未知错误'}`,
       });
     }
+  }
+
+  async grants(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
+    }
+
+    const canManage = await this.canAccess(ctx, id, 'datasource:grant');
+    return response.ok({ items: await this.service.listGrants(id), canManage });
+  }
+
+  async grant(ctx: HttpContext) {
+    const { params, request, response } = ctx;
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
+      return this.forbidden(response, 'datasource:grant');
+    }
+
+    const parsed = grantSchema.parse(request.body()) as {
+      subjectType: 'user' | 'role';
+      subjectId: string;
+      permissions: DatasourcePermission[];
+    };
+    const grant = await this.service.grantDatasource({
+      datasourceId: id,
+      ...parsed,
+      createdBy: user.id,
+    });
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: user.id,
+      action: 'datasource.grant.upsert',
+      outcome: 'success',
+      resourceType: 'datasource',
+      resourceId: String(id),
+      metadata: {
+        subjectType: parsed.subjectType,
+        subjectId: parsed.subjectId,
+        permissions: parsed.permissions,
+      },
+    });
+    return response.ok(grant);
+  }
+
+  async revokeGrant(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
+      return this.forbidden(response, 'datasource:grant');
+    }
+
+    const subjectType = String(params.subjectType);
+    if (subjectType !== 'user' && subjectType !== 'role') {
+      return response.badRequest({ message: 'Invalid grant subject type' });
+    }
+    const user = this.getUser(ctx);
+    await this.service.revokeDatasourceGrant(id, subjectType, String(params.subjectId));
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: user?.id ?? null,
+      action: 'datasource.grant.revoke',
+      outcome: 'success',
+      resourceType: 'datasource',
+      resourceId: String(id),
+      metadata: {
+        subjectType,
+        subjectId: String(params.subjectId),
+      },
+    });
+    return response.noContent();
   }
 }

@@ -1,10 +1,9 @@
 /**
- * Unified fetch wrapper with Bearer token authentication
+ * Unified fetch wrapper with cookie session authentication
  * All API calls should use this instead of native fetch
  */
 
 import { API_BASE_URL } from '@/lib/config';
-import { getAccessToken } from '@/lib/auth';
 
 export const API_BASE = '';
 
@@ -15,6 +14,17 @@ export interface ApiErrorPayload {
   details?: unknown[];
   retryAfter?: number;
 }
+
+export const AUTH_SESSION_EXPIRED_EVENT = 'sparkset:auth-session-expired';
+
+export interface AuthSessionExpiredDetail {
+  status: number;
+  message: string;
+  code?: string;
+  payload?: ApiErrorPayload;
+}
+
+export type AuthSessionExpiredEvent = CustomEvent<AuthSessionExpiredDetail>;
 
 export class ApiError extends Error {
   status: number;
@@ -28,6 +38,34 @@ export class ApiError extends Error {
     this.code = code;
     this.payload = payload;
   }
+}
+
+function dispatchAuthSessionExpired(error: ApiError): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new CustomEvent<AuthSessionExpiredDetail>(AUTH_SESSION_EXPIRED_EVENT, {
+      detail: {
+        status: error.status,
+        message: error.message,
+        code: error.code,
+        payload: error.payload,
+      },
+    }),
+  );
+}
+
+function throwApiError(
+  message: string,
+  status: number,
+  payload?: ApiErrorPayload,
+  code?: string,
+): never {
+  const error = new ApiError(message, status, payload, code);
+  if (status === 401) {
+    dispatchAuthSessionExpired(error);
+  }
+  throw error;
 }
 
 const normalizeErrorPayload = (json: unknown): ApiErrorPayload | undefined => {
@@ -89,56 +127,26 @@ const buildApiErrorMessage = (payload: ApiErrorPayload | undefined, fallback: st
   return fallback;
 };
 
-// Helper to check if we're in a server context
-function isServerContext(): boolean {
-  return typeof window === 'undefined';
-}
-
-// Helper to get token from cookies (server-side)
-async function getAccessTokenFromCookies(): Promise<string | null> {
-  try {
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get('sparkset_access_token');
-    return tokenCookie?.value || null;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Unified request function with Bearer token authentication
- * Works on both server (from cookies) and client (from localStorage)
+ * Unified request function with backend httpOnly cookie authentication.
+ * Explicit Authorization headers are preserved for API-client compatibility.
  */
 export async function apiRequest<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const url = API_BASE_URL ? `${API_BASE_URL}${path}` : `${API_BASE}${path}`;
   const hasBody = init.body !== undefined;
 
-  // Get token - localStorage on client, cookies on server
-  let token: string | null = null;
-  if (isServerContext()) {
-    token = await getAccessTokenFromCookies();
-  } else {
-    token = getAccessToken();
-  }
-
-  // Build headers with Authorization if token exists
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string>),
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   if (hasBody) {
     headers['Content-Type'] = 'application/json';
   }
 
   const res = await fetch(url, {
-    credentials: 'omit', // Don't use cookies, we use Bearer tokens
-    headers,
     ...init,
+    credentials: init.credentials ?? 'include',
+    headers,
   });
 
   const text = await res.text();
@@ -164,7 +172,7 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
             }
           : rawTextPayload;
         const message = buildApiErrorMessage(payload, text || `API error ${res.status}`);
-        throw new ApiError(message, res.status, payload, payload?.code);
+        throwApiError(message, res.status, payload, payload?.code);
       }
 
       // If response is OK but not JSON, return undefined
@@ -187,14 +195,14 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
         fallbackPayload,
         text || `API error ${res.status}`,
       );
-      throw new ApiError(fallbackMessage, res.status, fallbackPayload, fallbackPayload?.code);
+      throwApiError(fallbackMessage, res.status, fallbackPayload, fallbackPayload?.code);
     }
 
     const payload = mergedPayload ?? normalizeErrorPayload(json) ?? {};
     const payloadWithRetryAfter =
       payload.retryAfter === undefined && retryAfter ? { ...payload, retryAfter } : payload;
     const message = buildApiErrorMessage(payloadWithRetryAfter, text || `API error ${res.status}`);
-    throw new ApiError(message, res.status, payloadWithRetryAfter, payloadWithRetryAfter?.code);
+    throwApiError(message, res.status, payloadWithRetryAfter, payloadWithRetryAfter?.code);
   }
 
   return json as T;

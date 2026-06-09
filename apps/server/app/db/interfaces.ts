@@ -1,5 +1,6 @@
 import { ColumnDefinition, TableSchema } from '@sparkset/core';
 import type { Action, AIProvider, Conversation, DataSource, Message } from '../models/types';
+import type { DatasourceGrant } from '../types/authorization.js';
 
 /**
  * Repository interface for Datasource data access
@@ -10,6 +11,15 @@ export interface DatasourceRepository {
   update(input: Partial<DataSource> & { id: number }): Promise<DataSource>;
   remove(id: number): Promise<void>;
   setDefault(id: number): Promise<void>;
+}
+
+/**
+ * Repository interface for datasource grants
+ */
+export interface DatasourceGrantRepository {
+  listForDatasource(datasourceId: number): Promise<DatasourceGrant[]>;
+  upsert(input: Omit<DatasourceGrant, 'id' | 'createdAt' | 'updatedAt'>): Promise<DatasourceGrant>;
+  remove(datasourceId: number, subjectType: string, subjectId: string): Promise<void>;
 }
 
 /**

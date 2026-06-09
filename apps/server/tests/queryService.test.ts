@@ -1,13 +1,29 @@
 import { QueryExecutor, QueryPlanner } from '@sparkset/core';
 import { describe, expect, it, vi } from 'vitest';
 import { QueryService } from '../app/services/query_service';
-import { DatabaseException, ExternalServiceException } from '../app/exceptions/app_exceptions';
+import {
+  AuthorizationException,
+  DatabaseException,
+  ExternalServiceException,
+} from '../app/exceptions/app_exceptions';
 import type { AIProviderService } from '../app/services/ai_provider_service';
 import type { DatasourceService } from '../app/services/datasource_service';
 import type { SchemaService } from '../app/services/schema_service';
 
 const makeDatasourceService = () => ({
   list: vi.fn().mockResolvedValue([
+    {
+      id: 1,
+      name: 'ds',
+      type: 'mysql',
+      host: '',
+      port: 0,
+      username: '',
+      password: '',
+      database: '',
+    },
+  ]),
+  listAuthorized: vi.fn().mockResolvedValue([
     {
       id: 1,
       name: 'ds',
@@ -127,6 +143,35 @@ describe('QueryService', () => {
 
     await expect(svc.run({ question: 'hi', datasource: 999 })).rejects.toThrow(
       'Selected datasource (ID: 999) not found',
+    );
+  });
+
+  it('throws authorization error when selected datasource is not query-authorized', async () => {
+    const datasourceService = {
+      listAuthorized: vi.fn().mockResolvedValue([]),
+    };
+    const svc = new QueryService({
+      datasourceService: datasourceService as unknown as DatasourceService,
+      schemaService: makeSchemaService() as unknown as SchemaService,
+      aiProviderService: makeAIProviderService() as unknown as AIProviderService,
+      planner,
+      executor,
+    });
+
+    await expect(
+      svc.run(
+        { question: 'hi', datasource: 1 },
+        {
+          id: 7,
+          roles: ['analyst'],
+          permissions: [],
+          isActive: true,
+        },
+      ),
+    ).rejects.toBeInstanceOf(AuthorizationException);
+    expect(datasourceService.listAuthorized).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:query',
     );
   });
 

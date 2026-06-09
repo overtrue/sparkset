@@ -89,6 +89,7 @@ export default function DatasourcesPage() {
         datasources={datasources}
         isLoading={isLoading}
         error={error as Error | string | null}
+        canCreate={Boolean(data?.capabilities?.canCreate)}
         onCreate={handleCreateNew}
         onRetry={() => mutate()}
         onSync={handleSync}

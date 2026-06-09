@@ -30,6 +30,7 @@ interface DatasourceListProps {
   datasources: Datasource[];
   isLoading: boolean;
   error: Error | string | null;
+  canCreate: boolean;
   onCreate: () => void;
   onRetry: () => void;
   onSync: (datasource: Datasource) => void;
@@ -42,6 +43,7 @@ export function DatasourceList({
   datasources,
   isLoading,
   error,
+  canCreate,
   onCreate,
   onRetry,
   onSync,
@@ -115,6 +117,9 @@ export function DatasourceList({
         header: () => <span className="sr-only">{t('Actions')}</span>,
         cell: ({ row }) => {
           const datasource = row.original;
+          const capabilities = datasource.capabilities;
+          const canSyncSchema = Boolean(capabilities?.canSyncSchema);
+          const canManage = Boolean(capabilities?.canManage);
           const actions: RowAction[] = [
             {
               label: t('View Details'),
@@ -125,17 +130,20 @@ export function DatasourceList({
               label: t('Sync Tables'),
               icon: <RiRefreshLine className="h-4 w-4" aria-hidden="true" />,
               onClick: () => onSync(datasource),
+              disabled: !canSyncSchema,
             },
             {
               label: t('Set as Default'),
               icon: <RiSettings4Line className="h-4 w-4" aria-hidden="true" />,
               onClick: () => onSetDefault(datasource),
+              disabled: !canManage,
             },
             {
               label: t('Delete'),
               icon: <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />,
               onClick: () => onDelete(datasource),
               variant: 'destructive',
+              disabled: !canManage,
             },
           ];
 
@@ -146,8 +154,11 @@ export function DatasourceList({
     ];
   }, [onDelete, onSetDefault, onSync, t]);
 
+  const canBulkDelete =
+    datasources.length > 0 && datasources.every((item) => item.capabilities?.canManage);
+
   const headerAction = (
-    <Button onClick={onCreate}>
+    <Button onClick={onCreate} disabled={!canCreate}>
       <RiAddLine className="h-4 w-4" aria-hidden="true" />
       {t('New Datasource')}
     </Button>
@@ -187,10 +198,14 @@ export function DatasourceList({
           icon={<RiDatabase2Line className="h-8 w-8 text-muted-foreground" aria-hidden="true" />}
           title={t('No Datasources')}
           description={t('Connect to your databases to start querying data')}
-          action={{
-            label: t('Add your first datasource'),
-            onClick: onCreate,
-          }}
+          action={
+            canCreate
+              ? {
+                  label: t('Add your first datasource'),
+                  onClick: onCreate,
+                }
+              : undefined
+          }
         />
       </div>
     );
@@ -204,7 +219,7 @@ export function DatasourceList({
         data={datasources}
         searchKey="name"
         searchPlaceholder={t('Search datasource…')}
-        enableRowSelection
+        enableRowSelection={canBulkDelete}
         onDeleteSelected={onDeleteSelected}
         deleteConfirmTitle={t('Delete Datasource')}
         deleteConfirmDescription={(count) =>

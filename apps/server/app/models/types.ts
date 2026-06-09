@@ -16,6 +16,8 @@ export interface DataSource {
   database: string;
   isDefault?: boolean;
   lastSyncAt?: Date;
+  creatorId?: number | null;
+  updaterId?: number | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

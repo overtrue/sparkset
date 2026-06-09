@@ -95,14 +95,10 @@ export const createSqlActionHandler = (deps: {
     type: 'sql',
     async execute(ctx: ActionContext) {
       const payload = ctx.payload as SqlActionPayload;
-      let dsId = payload.datasourceId;
-      if (!dsId) {
-        if (typeof deps.defaultDatasourceId === 'function') {
-          dsId = await deps.defaultDatasourceId();
-        } else {
-          dsId = deps.defaultDatasourceId;
-        }
-      }
+      const dsId =
+        typeof payload.datasourceId === 'number' && Number.isFinite(payload.datasourceId)
+          ? payload.datasourceId
+          : undefined;
       if (!dsId)
         return { success: false, error: new Error('Datasource is required for SQL action') };
 

@@ -15,6 +15,7 @@ import { createRepositories } from './repository_factory.js';
 import { createServices, type Services } from './service_factory.js';
 import { ActionService } from '../services/action_service.js';
 import { AIProviderService } from '../services/ai_provider_service.js';
+import { AuthorizationService } from '../services/authorization_service.js';
 import { ConversationService } from '../services/conversation_service.js';
 import { DatasourceService } from '../services/datasource_service.js';
 import { QueryService } from '../services/query_service.js';
@@ -61,6 +62,10 @@ export default class ServicesProvider {
     // Datasource Service
     this.app.container.singleton(DatasourceService, () => services.datasource);
     this.app.container.singleton('DatasourceService', () => services.datasource);
+
+    // Authorization Service
+    this.app.container.singleton(AuthorizationService, () => services.authorization);
+    this.app.container.singleton('AuthorizationService', () => services.authorization);
 
     // Action Service
     this.app.container.singleton(ActionService, () => services.action);

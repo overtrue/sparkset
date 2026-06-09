@@ -1,5 +1,120 @@
 # Sparkset 认证系统实施计划
 
+## 当前实现批次（2026-06-09，数据源级授权与账号扩展）
+
+## Stage 1: 授权核心
+
+**Goal**: 添加可测试的 datasource 授权核心，保留后续替换 OpenFGA/Casbin 的接口边界
+**Success Criteria**:
+
+- 支持 admin / wildcard / legacy permissions / datasource grants
+- 支持 user 与 role 两类授权主体
+- 新增授权类型、服务、grant 持久化模型与迁移
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+**Status**: Complete
+
+## Stage 2: 数据源 API 授权
+
+**Goal**: 数据源列表、详情、schema、sync、测试连接、更新删除全部收口到 datasource 权限
+**Success Criteria**:
+
+- 只能列出当前用户有权查看的数据源
+- 创建者自动获得 datasource 全权限
+- 不同操作分别检查 view/query/sync_schema/manage/grant
+- 增加 grant 管理接口
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/services/datasource_service.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+**Status**: Complete
+
+## Stage 3: 查询与派生资源授权
+
+**Goal**: Query、Dataset、Chart、Dashboard、Bot 都继承 datasource 权限边界
+**Success Criteria**:
+
+- Query 执行前检查 datasource:query
+- Dataset 创建/预览/更新/删除按 datasource 权限校验
+- Chart/Dashboard/Bot 不暴露无权数据源派生资源
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/queries_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasets_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/charts_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/dashboards_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/dashboard_widgets_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/bots_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+**Status**: Complete
+
+## Stage 4: 数据源授权管理 UI
+
+**Goal**: 在数据源详情页提供类似 Superset 的访问管理入口
+**Success Criteria**:
+
+- 展示 user/role grants
+- 有 datasource:grant 权限时可增删授权
+- 无授权管理权限时只读展示
+- i18n key 扁平且 en/zh-CN 对齐
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+- messages JSON key parity check
+- Browser 验证数据源详情访问管理
+
+**Status**: Complete
+
+## Stage 5: 账号 Provider 稳定化
+
+**Goal**: 稳定 local/header/OIDC provider 边界，避免自定义登录插件生态
+**Success Criteria**:
+
+- provider 注册与配置解析单一来源
+- local 为默认开发实现，header 面向内网代理，OIDC 作为标准企业接入边界
+- auth manager 行为有测试覆盖
+
+**Tests**:
+
+- `pnpm --filter @sparkset/server test -- tests/auth_manager.test.ts tests/header_auth_provider.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+**Status**: Complete
+
+## Stage 6: 全量验证与推送收尾
+
+**Goal**: 完成自动化验证、浏览器验证和最终推送
+**Success Criteria**:
+
+- root lint/build/test 通过
+- server typecheck 通过
+- dashboard build 通过
+- 核心页面浏览器验证无权限回归
+
+**Tests**:
+
+- `pnpm lint`
+- `pnpm build`
+- `pnpm test`
+- `pnpm --filter @sparkset/server typecheck`
+- messages JSON key parity check
+- Browser MCP 验证 login、query、datasource list/detail/access panel、datasets、charts、dashboards、bots
+
+**Status**: Complete
+
 ## 当前重构批次（2026-06-08，Dashboard 全局组织与状态收敛）
 
 ## Stage 1: 列表页组件边界收敛

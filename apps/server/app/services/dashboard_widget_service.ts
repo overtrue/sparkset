@@ -11,6 +11,14 @@ export class DashboardWidgetService {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   constructor() {}
 
+  async getWidget(id: number): Promise<DashboardWidget | null> {
+    const validId = toId(id);
+    if (!validId) {
+      return null;
+    }
+    return DashboardWidget.find(validId);
+  }
+
   /**
    * 添加 widget
    */

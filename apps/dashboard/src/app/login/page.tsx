@@ -15,6 +15,7 @@ import { z } from 'zod';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/i18n/use-translations';
+import { getOIDCAuthUrl } from '@/lib/auth';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,11 +56,12 @@ type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>;
 type RegisterFormData = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export default function LoginPage() {
-  const { login, register: registerUser, authenticated, loading } = useAuth();
+  const { login, register: registerUser, authenticated, loading, localAuth, oidcAuth } = useAuth();
   const router = useRouter();
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [error, setError] = useState<string | null>(null);
+  const [oidcLoading, setOidcLoading] = useState(false);
   const loginSchema = useMemo(() => createLoginSchema(t), [t]);
   const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
 
@@ -109,8 +111,44 @@ export default function LoginPage() {
     }
   };
 
+  const onOidcLogin = async () => {
+    setError(null);
+    setOidcLoading(true);
+
+    const url = await getOIDCAuthUrl();
+    if (url) {
+      window.location.href = url;
+      return;
+    }
+
+    setError(t('SSO login is unavailable'));
+    setOidcLoading(false);
+  };
+
   // Show info about header auth
   const isDev = process.env.NODE_ENV === 'development';
+  const showLocalCredentials = isDev && (loading || localAuth.enabled);
+  const canRegister = isDev && localAuth.enabled && localAuth.allowRegistration;
+  const showOidcLogin = !loading && oidcAuth.enabled;
+
+  useEffect(() => {
+    if (!canRegister && activeTab === 'register') {
+      setActiveTab('login');
+    }
+  }, [activeTab, canRegister]);
+
+  const oidcLoginButton = showOidcLogin ? (
+    <Button
+      type="button"
+      className="w-full"
+      variant={showLocalCredentials ? 'outline' : 'default'}
+      disabled={oidcLoading}
+      onClick={() => void onOidcLogin()}
+    >
+      <RiShieldKeyholeLine className="h-4 w-4" aria-hidden="true" />
+      {oidcLoading ? t('Opening SSO…') : t('Continue with SSO')}
+    </Button>
+  ) : null;
 
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
@@ -127,144 +165,183 @@ export default function LoginPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-xl">{t('Welcome back')}</CardTitle>
             <CardDescription>
-              {isDev
-                ? t('Login or register to access the dashboard (development)')
-                : t('Use intranet access with header authentication')}
+              {showLocalCredentials
+                ? canRegister
+                  ? t('Login or register to access the dashboard (development)')
+                  : t('Login to access the dashboard (development)')
+                : showOidcLogin
+                  ? t('Sign in with your organization SSO')
+                  : t('Use intranet access with header authentication')}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
-            {isDev ? (
-              <Tabs
-                value={activeTab}
-                onValueChange={(value) => setActiveTab(value as 'login' | 'register')}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">{t('Login')}</TabsTrigger>
-                  <TabsTrigger value="register">{t('Register')}</TabsTrigger>
-                </TabsList>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-                {/* Error Alert */}
-                {error && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+            {showLocalCredentials ? (
+              <>
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(value) => setActiveTab(value as 'login' | 'register')}
+                  className="w-full"
+                >
+                  <TabsList
+                    className={`mb-4 grid w-full ${canRegister ? 'grid-cols-2' : 'grid-cols-1'}`}
+                  >
+                    <TabsTrigger value="login">{t('Login')}</TabsTrigger>
+                    {canRegister && <TabsTrigger value="register">{t('Register')}</TabsTrigger>}
+                  </TabsList>
 
-                {/* Login Tab */}
-                <TabsContent value="login">
-                  <Form {...loginForm}>
-                    <form
-                      onSubmit={(event) => void loginForm.handleSubmit(onLogin)(event)}
-                      className="space-y-4"
-                    >
-                      <FormField
-                        control={loginForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Username')}</FormLabel>
-                            <FormControl>
-                              <Input placeholder={t('Enter username')} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Password')}</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder={t('Enter password')} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? t('Logging in…') : t('Login')}
-                      </Button>
-                    </form>
-                  </Form>
-                </TabsContent>
+                  {/* Login Tab */}
+                  <TabsContent value="login">
+                    <Form {...loginForm}>
+                      <form
+                        onSubmit={(event) => void loginForm.handleSubmit(onLogin)(event)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={loginForm.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Username')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  autoComplete="username"
+                                  placeholder={t('Enter username')}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={loginForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('Password')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  autoComplete="current-password"
+                                  type="password"
+                                  placeholder={t('Enter password')}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" className="w-full" disabled={loading}>
+                          {loading ? t('Logging in…') : t('Login')}
+                        </Button>
+                      </form>
+                    </Form>
+                  </TabsContent>
 
-                {/* Register Tab */}
-                <TabsContent value="register">
-                  <Form {...registerForm}>
-                    <form
-                      onSubmit={(event) => void registerForm.handleSubmit(onRegister)(event)}
-                      className="space-y-4"
-                    >
-                      <FormField
-                        control={registerForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Username')}</FormLabel>
-                            <FormControl>
-                              <Input placeholder={t('Set username')} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Password')}</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder={t('Set password')} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Confirm Password')}</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="password"
-                                placeholder={t('Enter password again')}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('Email (optional)')}</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="example@email.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? t('Registering…') : t('Register')}
-                      </Button>
-                    </form>
-                  </Form>
-                </TabsContent>
-              </Tabs>
+                  {canRegister && (
+                    <TabsContent value="register">
+                      <Form {...registerForm}>
+                        <form
+                          onSubmit={(event) => void registerForm.handleSubmit(onRegister)(event)}
+                          className="space-y-4"
+                        >
+                          <FormField
+                            control={registerForm.control}
+                            name="username"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t('Username')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    autoComplete="username"
+                                    placeholder={t('Set username')}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={registerForm.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t('Password')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    autoComplete="new-password"
+                                    type="password"
+                                    placeholder={t('Set password')}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={registerForm.control}
+                            name="confirmPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t('Confirm Password')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    autoComplete="new-password"
+                                    type="password"
+                                    placeholder={t('Enter password again')}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={registerForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t('Email (optional)')}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    autoComplete="email"
+                                    type="email"
+                                    placeholder="example@email.com"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="submit" className="w-full" disabled={loading}>
+                            {loading ? t('Registering…') : t('Register')}
+                          </Button>
+                        </form>
+                      </Form>
+                    </TabsContent>
+                  )}
+                </Tabs>
+                {oidcLoginButton && <div className="mt-4 border-t pt-4">{oidcLoginButton}</div>}
+              </>
+            ) : showOidcLogin ? (
+              <div className="space-y-3">{oidcLoginButton}</div>
             ) : (
               <div className="space-y-4 text-center text-sm text-muted-foreground">
-                <p>{t('This page is only available in the intranet environment.')}</p>
+                <p>
+                  {isDev
+                    ? t('Local username/password authentication is disabled for this deployment.')
+                    : t('This page is only available in the intranet environment.')}
+                </p>
                 <p>
                   {t(
                     'Make sure you access through a trusted proxy with the required authentication headers.',
@@ -282,18 +359,24 @@ export default function LoginPage() {
         </Card>
 
         {/* Development Environment Info */}
-        {isDev && (
+        {showLocalCredentials && (
           <div className="px-6 text-center text-xs text-muted-foreground">
             <div className="flex items-center gap-2 justify-center mb-2">
               <RiLoginCircleLine className="h-4 w-4" aria-hidden="true" />
-              <span>{t('Development mode: use local credentials to login or register')}</span>
-            </div>
-            <div className="flex items-center gap-2 justify-center mb-2">
-              <RiUserAddLine className="h-4 w-4" aria-hidden="true" />
               <span>
-                {t(`First time here? Click the 'Register' tab above to create an account`)}
+                {canRegister
+                  ? t('Development mode: use local credentials to login or register')
+                  : t('Development mode: use local credentials to login')}
               </span>
             </div>
+            {canRegister && (
+              <div className="flex items-center gap-2 justify-center mb-2">
+                <RiUserAddLine className="h-4 w-4" aria-hidden="true" />
+                <span>
+                  {t(`First time here? Click the 'Register' tab above to create an account`)}
+                </span>
+              </div>
+            )}
             <div>{t('Default test account: admin / admin123')}</div>
           </div>
         )}

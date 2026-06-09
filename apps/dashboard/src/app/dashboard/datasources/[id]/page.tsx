@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { toast } from 'sonner';
 
 import DatasourceDetail from '@/components/datasource/detail';
+import { ErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from '@/i18n/client-routing';
 import { useTranslations } from '@/i18n/use-translations';
@@ -18,7 +18,9 @@ export default function DatasourceDetailPage() {
   const datasourceId = useMemo(() => Number(params.id), [params.id]);
 
   const [datasource, setDatasource] = useState<DatasourceDetailDTO | null>(null);
+  const [error, setError] = useState<Error | string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!Number.isFinite(datasourceId) || datasourceId <= 0) {
@@ -29,18 +31,19 @@ export default function DatasourceDetailPage() {
     const loadDatasource = async () => {
       try {
         setLoading(true);
+        setError(null);
         const data = await fetchDatasourceDetail(datasourceId);
         setDatasource(data);
       } catch (error) {
-        toast.error((error as Error)?.message ?? t('Failed to load datasource'));
-        router.push('/dashboard/datasources');
+        setDatasource(null);
+        setError(error instanceof Error ? error : t('Failed to load datasource'));
       } finally {
         setLoading(false);
       }
     };
 
     void loadDatasource();
-  }, [datasourceId, router, t]);
+  }, [datasourceId, reloadKey, router, t]);
 
   if (loading) {
     return (
@@ -50,6 +53,10 @@ export default function DatasourceDetailPage() {
         <Skeleton className="h-72 w-full" />
       </div>
     );
+  }
+
+  if (error) {
+    return <ErrorState error={error} onRetry={() => setReloadKey((key) => key + 1)} />;
   }
 
   if (!datasource) {

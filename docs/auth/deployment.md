@@ -7,6 +7,7 @@
 ## 📋 数据库状态
 
 ### 已完成的迁移
+
 - ✅ `users` 表创建
 - ✅ 所有业务表添加 `creator_id` 和 `updater_id`
 - ✅ 外键约束和索引
@@ -41,6 +42,7 @@ SELECT 'dashboards', COUNT(*), COUNT(creator_id) FROM dashboards;
 **场景**：企业内网 + Nginx/Apache 反向代理
 
 **环境变量**：
+
 ```bash
 # 启用 Header 认证
 AUTH_HEADER_ENABLED=true
@@ -56,6 +58,7 @@ AUTH_HEADER_REQUIRED=Id
 ```
 
 **Nginx 配置示例**：
+
 ```nginx
 server {
     listen 80;
@@ -96,31 +99,58 @@ server {
 
 **场景**：Keycloak/Authentik/Azure AD SSO
 
+当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、用加密 httpOnly pending-state cookie 校验 state/nonce、调用 token endpoint、通过短期缓存的 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。缓存的 JWKS 如果缺少当前 ID Token 的 `kid`，会重新拉取一次以兼容 key rotation。OIDC 回调会记录成功和失败审计事件，审计 metadata 只包含 subject、username、issuer、角色/权限来源或安全失败原因，不记录 authorization code、ID token、client secret 等敏感材料。
+
+生产环境仍建议优先使用 Header Auth 加可信网关；如果直接启用 OIDC，请确保 IdP 只下发最小角色/权限 claim，并配置 HTTPS 回调地址。
+
 **环境变量**：
+
 ```bash
 # 启用 OIDC 认证
 AUTH_OIDC_ENABLED=true
 
 # OIDC 配置
 AUTH_OIDC_ISSUER=https://id.example.com/realms/main
+AUTH_OIDC_AUTHORIZATION_URL=https://id.example.com/realms/main/protocol/openid-connect/auth
+AUTH_OIDC_TOKEN_URL=https://id.example.com/realms/main/protocol/openid-connect/token
+AUTH_OIDC_JWKS_URL=https://id.example.com/realms/main/protocol/openid-connect/certs
 AUTH_OIDC_CLIENT_ID=sparkset
 AUTH_OIDC_CLIENT_SECRET=your_secret
 
 # 回调地址
 AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
+AUTH_OIDC_SUCCESS_REDIRECT_URL=https://sparkset.example.com/dashboard
+AUTH_OIDC_FAILURE_REDIRECT_URL=https://sparkset.example.com/login?error=oidc
+AUTH_OIDC_SCOPES=openid,profile,email
+
+# 可选：当 IdP 未下发 roles/permissions claim 时使用，默认均为空
+AUTH_OIDC_DEFAULT_ROLES=viewer
+AUTH_OIDC_DEFAULT_PERMISSIONS=query:read
 ```
 
-**部署步骤**：
-1. 在 IdP 中创建客户端
-2. 配置回调 URL
-3. 设置 scopes: `openid profile email`
-4. 配置 claim mapping
+**IdP claim 要求**：
+
+1. `sub`：稳定用户 ID，会映射为 `uid=oidc:{sub}`
+2. `preferred_username`：用户名
+3. `email`：邮箱，可为空
+4. `roles`：字符串数组或逗号分隔字符串
+5. `permissions`：字符串数组或逗号分隔字符串
+
+当 IdP 下发的 `roles` 或 `permissions` claim 存在且非空时，Sparkset 总是优先使用 claim 值；只有 claim 缺失或为空时，才会使用 `AUTH_OIDC_DEFAULT_ROLES` 和 `AUTH_OIDC_DEFAULT_PERMISSIONS`。两个默认模板未配置时都是空列表，不会自动授予数据源权限。
+
+**仍需企业化增强**：
+
+1. 登录审计和失败原因检索 UI
+2. IdP 组/角色到 Sparkset 权限的可视化映射
+3. 管理员侧的 SSO 诊断页面
+4. SSO 配置健康检查和回调连通性测试
 
 ### 3. 开发/演示环境
 
 **场景**：本地开发、演示、开源用户快速体验
 
 **环境变量**：
+
 ```bash
 # 启用 Local 认证（仅开发环境）
 AUTH_LOCAL_ENABLED=true
@@ -130,6 +160,7 @@ AUTH_LOCAL_ENABLED=true
 ```
 
 **预设账号**：
+
 - 用户名：`admin`，密码：`admin123`，角色：`admin`
 - 用户名：`analyst`，密码：`analyst123`，角色：`analyst`
 
@@ -140,16 +171,23 @@ AUTH_LOCAL_ENABLED=true
 ### 1. 准备环境变量
 
 创建 `.env` 文件：
+
 ```bash
 # 认证配置（选择一种）
 AUTH_HEADER_ENABLED=true
 AUTH_HEADER_TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 
-# 或者
+# 或者（OIDC）
 # AUTH_OIDC_ENABLED=true
 # AUTH_OIDC_ISSUER=...
+# AUTH_OIDC_AUTHORIZATION_URL=...
+# AUTH_OIDC_TOKEN_URL=...
+# AUTH_OIDC_JWKS_URL=...
 # AUTH_OIDC_CLIENT_ID=...
 # AUTH_OIDC_CLIENT_SECRET=...
+# AUTH_OIDC_REDIRECT_URI=...
+# AUTH_OIDC_DEFAULT_ROLES=
+# AUTH_OIDC_DEFAULT_PERMISSIONS=
 
 # 或者（仅开发）
 # AUTH_LOCAL_ENABLED=true
@@ -179,18 +217,20 @@ npm start
 
 ### 4. 验证认证
 
-测试认证状态端点：
+测试本地 cookie session 状态端点：
+
 ```bash
-curl http://localhost:3333/auth/status
+curl http://localhost:3333/auth/local/status
 ```
 
-如果配置了 Header Auth，使用 curl 模拟：
+如果配置了 Header Auth，使用 curl 访问受保护 API：
+
 ```bash
 curl -H "X-User-Id: 123" \
      -H "X-User-Name: zhangsan" \
      -H "X-User-Email: zhangsan@example.com" \
      -H "X-User-Roles: admin,analyst" \
-     http://localhost:3333/auth/status
+     http://localhost:3333/datasources
 ```
 
 ## 🔍 故障排查
@@ -198,42 +238,48 @@ curl -H "X-User-Id: 123" \
 ### 问题 1：所有请求返回 401
 
 **检查**：
+
 1. 环境变量是否正确设置
 2. Header 前缀是否匹配
 3. 必需的 header 是否存在
 4. IP 是否在信任代理列表中
 
 **调试**：
+
 ```bash
 # 检查环境变量
 echo $AUTH_HEADER_ENABLED
 echo $AUTH_HEADER_TRUSTED_PROXIES
 
-# 测试 Header 解析
-curl -v -H "X-User-Id: test" http://localhost:3333/auth/status
+# 测试 Header Auth 是否能进入受保护 API
+curl -v -H "X-User-Id: test" http://localhost:3333/datasources
 ```
 
 ### 问题 2：用户无法创建/更新数据
 
 **检查**：
+
 1. 认证中间件是否正确应用到路由
 2. ctx.auth.user 是否正确绑定
 3. 控制器中是否正确使用 user.id
 
 **调试**：
+
 ```typescript
 // 在控制器中添加调试
-console.log('Current user:', ctx.auth.user)
+console.log('Current user:', ctx.auth.user);
 ```
 
 ### 问题 3：数据库外键错误
 
 **检查**：
+
 1. users 表是否存在
 2. creator_id/updater_id 字段是否正确添加
 3. 外键约束是否创建
 
 **修复**：
+
 ```sql
 -- 检查外键
 SELECT * FROM information_schema.KEY_COLUMN_USAGE
@@ -246,6 +292,7 @@ AND REFERENCED_TABLE_NAME = 'users';
 ### 日志监控
 
 认证系统会输出以下日志：
+
 - `✅ Auth success via header: zhangsan` - 认证成功
 - `❌ All auth providers failed` - 所有提供者失败
 - `Auth error from header: ...` - 提供者错误
@@ -253,6 +300,7 @@ AND REFERENCED_TABLE_NAME = 'users';
 ### 数据清理
 
 如果需要清理测试数据：
+
 ```sql
 -- 删除测试用户（保留系统用户）
 DELETE FROM users WHERE uid LIKE 'header:%' AND uid != 'system:anonymous';
@@ -264,7 +312,7 @@ UPDATE datasources SET creator_id = NULL, updater_id = NULL;
 ## 🛡️ 安全建议
 
 1. **内网部署**：严格限制 trusted_proxies，仅允许内网网段
-2. **OIDC 部署**：使用 HTTPS，保护 client_secret
+2. **OIDC 部署**：使用 HTTPS 回调地址，限制 IdP 下发的角色和权限 claim
 3. **Local Auth**：仅限开发环境，生产环境必须禁用
 4. **Header Auth**：确保上游网关已完成身份验证
 
@@ -281,7 +329,7 @@ services:
       - AUTH_HEADER_TRUSTED_PROXIES=172.16.0.0/12
       - AUTH_HEADER_PREFIX=X-User-
     ports:
-      - "3333:3333"
+      - '3333:3333'
 ```
 
 ### Helm Values
@@ -291,9 +339,9 @@ auth:
   header:
     enabled: true
     trustedProxies:
-      - "10.0.0.0/8"
-      - "172.16.0.0/12"
-    headerPrefix: "X-User-"
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+    headerPrefix: 'X-User-'
 ```
 
 ## 🔗 相关文档

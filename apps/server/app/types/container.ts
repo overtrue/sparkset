@@ -1,5 +1,6 @@
 import type { ActionService } from '../services/action_service';
 import type { AIProviderService } from '../services/ai_provider_service';
+import type { AuthorizationService } from '../services/authorization_service';
 import type { ConversationService } from '../services/conversation_service';
 import type { DatasourceService } from '../services/datasource_service';
 import type { QueryService } from '../services/query_service';
@@ -16,6 +17,7 @@ import type { Database } from '@adonisjs/lucid/database';
 declare module '@adonisjs/core/types' {
   interface ContainerBindings {
     DatasourceService: DatasourceService;
+    AuthorizationService: AuthorizationService;
     ActionService: ActionService;
     ConversationService: ConversationService;
     SchemaService: SchemaService;

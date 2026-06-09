@@ -1,14 +1,13 @@
 /**
  * Authentication API Client
  * Handles authentication-related API calls to the AdonisJS backend
- * 使用 localStorage 存储 Access Token
+ * 浏览器认证依赖后端设置的 httpOnly session cookie。
  */
 
 import { API_BASE_URL } from '@/lib/config';
 import { apiPost } from '@/lib/fetch';
 
-// LocalStorage 键名
-const TOKEN_KEY = 'sparkset_access_token';
+const LEGACY_TOKEN_KEY = 'sparkset_access_token';
 
 export interface AuthUser {
   id: number;
@@ -27,7 +26,9 @@ export interface AuthUser {
 export interface AuthResponse {
   authenticated: boolean;
   user?: AuthUser;
-  token?: string;
+  enabled?: boolean;
+  allowRegistration?: boolean;
+  oidcEnabled?: boolean;
   error?: string;
   message?: string;
 }
@@ -45,77 +46,34 @@ export interface RegisterRequest {
 }
 
 /**
- * 获取存储的 Access Token
+ * 清理旧版浏览器可读 token。
  */
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-/**
- * 存储 Access Token
- * 同时存储到 localStorage 和 cookie (用于服务端渲染)
- */
-export function setAccessToken(token: string): void {
+function clearLegacyAccessToken(): void {
   if (typeof window === 'undefined') return;
 
-  // 存储到 localStorage
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 
-  // 同时设置 cookie，用于服务端组件访问
-  // Cookie 有效期设置为 7 天
-  const expires = new Date();
-  expires.setDate(expires.getDate() + 7);
-  document.cookie = `${TOKEN_KEY}=${token}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
-}
-
-/**
- * 移除 Access Token (登出)
- * 同时清除 localStorage 和 cookie
- */
-export function removeAccessToken(): void {
-  if (typeof window === 'undefined') return;
-
-  // 清除 localStorage
-  localStorage.removeItem(TOKEN_KEY);
-
-  // 清除 cookie
-  document.cookie = `${TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-}
-
-/**
- * 检查是否已认证（是否有 token）
- */
-export function isAuthenticated(): boolean {
-  return !!getAccessToken();
+  // 清除旧版 JS 可读 cookie。新的 sparkset_session 由服务端 httpOnly cookie 管理。
+  document.cookie = `${LEGACY_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
 /**
  * 检查认证状态
- * 使用 Authorization header 发送 token
  */
 export async function checkAuthStatus(): Promise<AuthResponse> {
   try {
-    const token = getAccessToken();
-    if (!token) {
-      return { authenticated: false };
-    }
-
-    // 使用带 token 的请求
     const response = await fetch(`${API_BASE_URL}/auth/local/status`, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      credentials: 'omit', // 不使用 cookie
+      credentials: 'include',
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      // Token 无效，清除它
-      removeAccessToken();
+      clearLegacyAccessToken();
       return { authenticated: false, error: data.message || 'Token invalid' };
     }
 
@@ -128,7 +86,6 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
 
 /**
  * Login with local credentials
- * 返回 token 并存储到 localStorage
  */
 export async function loginWithCredentials(
   username: string,
@@ -137,9 +94,8 @@ export async function loginWithCredentials(
   try {
     const response = await apiPost<AuthResponse>('/auth/local/login', { username, password });
 
-    if (response.authenticated && response.token) {
-      // 存储 token
-      setAccessToken(response.token);
+    if (response.authenticated) {
+      clearLegacyAccessToken();
     }
 
     return response;
@@ -150,7 +106,6 @@ export async function loginWithCredentials(
 
 /**
  * Register new local user
- * 返回 token 并存储到 localStorage
  */
 export async function registerWithCredentials(
   username: string,
@@ -166,9 +121,8 @@ export async function registerWithCredentials(
       displayName,
     });
 
-    if (response.authenticated && response.token) {
-      // 存储 token
-      setAccessToken(response.token);
+    if (response.authenticated) {
+      clearLegacyAccessToken();
     }
 
     return response;
@@ -179,68 +133,48 @@ export async function registerWithCredentials(
 
 /**
  * Logout current user
- * 撤销 token 并清除 localStorage
  */
 export async function logout(): Promise<{ success: boolean; message?: string }> {
   try {
-    const token = getAccessToken();
-    if (token) {
-      // 调用后端登出接口，撤销 token
-      await fetch(`${API_BASE_URL}/auth/local/logout`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'omit',
-      });
-    }
+    await fetch(`${API_BASE_URL}/auth/local/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
 
-    // 清除本地 token
-    removeAccessToken();
+    clearLegacyAccessToken();
     return { success: true };
   } catch (error) {
     console.error('Logout failed:', error);
-    // 即使后端失败，也要清除本地 token
-    removeAccessToken();
+    clearLegacyAccessToken();
     return { success: false, message: String(error) };
   }
 }
 
 /**
  * Refresh access token
- * 使用旧 token 换取新 token
+ * 使用 httpOnly session cookie 换取新 session token
  */
 export async function refreshToken(): Promise<AuthResponse> {
   try {
-    const token = getAccessToken();
-    if (!token) {
-      return { authenticated: false, error: 'No token to refresh' };
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333'}/auth/local/refresh`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'omit',
+    const response = await fetch(`${API_BASE_URL}/auth/local/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+      credentials: 'include',
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      removeAccessToken();
+      clearLegacyAccessToken();
       return { authenticated: false, error: data.message || 'Refresh failed' };
     }
 
-    // 存储新 token
-    if (data.token) {
-      setAccessToken(data.token);
-    }
+    clearLegacyAccessToken();
 
     return data as AuthResponse;
   } catch (error) {
@@ -254,21 +188,14 @@ export async function refreshToken(): Promise<AuthResponse> {
  */
 export async function getOIDCAuthUrl(): Promise<string | null> {
   try {
-    const token = getAccessToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3333'}/auth/oidc/url`,
-      {
-        headers,
-        credentials: 'omit',
-      },
-    );
+    const response = await fetch(`${API_BASE_URL}/auth/oidc/url`, {
+      headers,
+      credentials: 'include',
+    });
 
     const data = await response.json();
     return data.url;

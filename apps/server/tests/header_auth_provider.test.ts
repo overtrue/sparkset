@@ -26,6 +26,24 @@ describe('HeaderAuthProvider', () => {
   });
 
   describe('enabled()', () => {
+    it('should use injected config when provided', () => {
+      provider = new HeaderAuthProvider({
+        enabled: true,
+        trustedProxies: ['203.0.113.10'],
+        headerPrefix: 'SSO-',
+        requiredHeaders: ['Id', 'Name'],
+      });
+
+      const ctx = createMockContext('203.0.113.10', {
+        'SSO-Id': '123',
+        'SSO-Name': 'ada',
+      });
+
+      expect(provider.enabled()).toBe(true);
+      expect(provider.canHandle(ctx)).toBe(true);
+      expect(provider.getConfig().headerPrefix).toBe('SSO-');
+    });
+
     it('should return true when AUTH_HEADER_ENABLED is true', () => {
       process.env.AUTH_HEADER_ENABLED = 'true';
       expect(provider.enabled()).toBe(true);

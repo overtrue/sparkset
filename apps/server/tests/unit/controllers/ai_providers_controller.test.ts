@@ -1,0 +1,481 @@
+import 'reflect-metadata';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HttpContext } from '@adonisjs/core/http';
+import AIProvidersController from '../../../app/controllers/ai_providers_controller.js';
+import type { AIProviderService } from '../../../app/services/ai_provider_service.js';
+import type { AuthorizationService } from '../../../app/services/authorization_service.js';
+import type { AuditLogService } from '../../../app/services/audit_log_service.js';
+import type { AIProvider } from '../../../app/models/types.js';
+
+interface AIProviderServiceMock {
+  list: ReturnType<typeof vi.fn>;
+  create: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
+  setDefault: ReturnType<typeof vi.fn>;
+  testConnection: ReturnType<typeof vi.fn>;
+  testConnectionById: ReturnType<typeof vi.fn>;
+}
+
+interface AuthorizationServiceMock {
+  canPerformGlobalAction: ReturnType<typeof vi.fn>;
+}
+
+interface AuditLogServiceMock {
+  recordHttp: ReturnType<typeof vi.fn>;
+}
+
+interface MockResponse {
+  statusCode: number;
+  payload: unknown;
+  ok: (payload: unknown) => unknown;
+  created: (payload: unknown) => unknown;
+  badRequest: (payload: unknown) => unknown;
+  unauthorized: (payload: unknown) => unknown;
+  forbidden: (payload: unknown) => unknown;
+  noContent: () => null;
+}
+
+const provider = (input: Partial<AIProvider> = {}): AIProvider => ({
+  id: input.id ?? 1,
+  name: input.name ?? 'OpenAI',
+  type: input.type ?? 'openai',
+  apiKey: input.apiKey ?? 'sk-secret',
+  baseURL: input.baseURL ?? 'https://api.openai.com/v1',
+  defaultModel: input.defaultModel ?? 'gpt-4o-mini',
+  isDefault: input.isDefault ?? true,
+  createdAt: input.createdAt ?? new Date(),
+  updatedAt: input.updatedAt ?? new Date(),
+});
+
+const createMockResponse = (): MockResponse => {
+  const response: MockResponse = {
+    statusCode: 200,
+    payload: undefined,
+    ok(payload) {
+      response.statusCode = 200;
+      response.payload = payload;
+      return payload;
+    },
+    created(payload) {
+      response.statusCode = 201;
+      response.payload = payload;
+      return payload;
+    },
+    badRequest(payload) {
+      response.statusCode = 400;
+      response.payload = payload;
+      return payload;
+    },
+    unauthorized(payload) {
+      response.statusCode = 401;
+      response.payload = payload;
+      return payload;
+    },
+    forbidden(payload) {
+      response.statusCode = 403;
+      response.payload = payload;
+      return payload;
+    },
+    noContent() {
+      response.statusCode = 204;
+      response.payload = null;
+      return null;
+    },
+  };
+  return response;
+};
+
+const createMockContext = ({
+  params,
+  body,
+  user,
+  response,
+}: {
+  params?: Record<string, string | number>;
+  body?: Record<string, unknown>;
+  user?: { id: number; roles?: string[]; permissions?: string[]; isActive?: boolean };
+  response: MockResponse;
+}): HttpContext =>
+  ({
+    params: params ?? {},
+    request: {
+      body: () => body ?? {},
+    },
+    response,
+    auth: user
+      ? {
+          user: {
+            id: user.id,
+            roles: user.roles ?? [],
+            permissions: user.permissions ?? [],
+            isActive: user.isActive ?? true,
+          },
+        }
+      : undefined,
+  }) as unknown as HttpContext;
+
+describe('AIProvidersController authorization', () => {
+  let aiProviderService: AIProviderServiceMock;
+  let authorizationService: AuthorizationServiceMock;
+  let auditLogService: AuditLogServiceMock;
+  let createController: () => AIProvidersController;
+
+  beforeEach(() => {
+    aiProviderService = {
+      list: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+      setDefault: vi.fn(),
+      testConnection: vi.fn(),
+      testConnectionById: vi.fn(),
+    };
+    authorizationService = {
+      canPerformGlobalAction: vi.fn(),
+    };
+    auditLogService = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
+    createController = () =>
+      new AIProvidersController(
+        aiProviderService as unknown as AIProviderService,
+        authorizationService as unknown as AuthorizationService,
+        auditLogService as unknown as AuditLogService,
+      );
+  });
+
+  it('lists provider summaries only for ai_provider:view users and includes capabilities', async () => {
+    const response = createMockResponse();
+    aiProviderService.list.mockResolvedValue([provider({ id: 5 })]);
+    authorizationService.canPerformGlobalAction.mockImplementation((_user, action) =>
+      ['ai_provider:view', 'ai_provider:manage'].includes(String(action)),
+    );
+
+    await createController().index(
+      createMockContext({
+        response,
+        user: { id: 7 },
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.payload).toEqual({
+      items: [
+        expect.objectContaining({
+          id: 5,
+          hasApiKey: true,
+        }),
+      ],
+      capabilities: {
+        canView: true,
+        canManage: true,
+        canManageCredentials: false,
+      },
+    });
+    expect(JSON.stringify(response.payload)).not.toContain('sk-secret');
+  });
+
+  it('rejects listing providers without ai_provider:view', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+
+    await createController().index(
+      createMockContext({
+        response,
+        user: { id: 7 },
+      }),
+    );
+
+    expect(aiProviderService.list).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires ai_provider:manage_credentials before creating a provider', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage',
+    );
+
+    await createController().store(
+      createMockContext({
+        response,
+        user: { id: 7 },
+        body: {
+          name: 'OpenAI',
+          type: 'openai',
+          apiKey: 'sk-secret',
+          defaultModel: 'gpt-4o-mini',
+          isDefault: false,
+        },
+      }),
+    );
+
+    expect(aiProviderService.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires ai_provider:manage_credentials when updating connection settings', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage',
+    );
+
+    await createController().update(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+        body: {
+          apiKey: 'rotated-secret',
+        },
+      }),
+    );
+
+    expect(aiProviderService.update).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('allows display-only updates with ai_provider:manage', async () => {
+    const response = createMockResponse();
+    aiProviderService.update.mockResolvedValue(provider({ id: 5, name: 'Renamed' }));
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage',
+    );
+
+    await createController().update(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+        body: { name: 'Renamed' },
+      }),
+    );
+
+    expect(aiProviderService.update).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }));
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('requires ai_provider:manage_credentials before testing an unsaved provider config', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+
+    await createController().testConnectionByConfig(
+      createMockContext({
+        response,
+        user: { id: 7 },
+        body: {
+          type: 'openai',
+          apiKey: 'sk-secret',
+          defaultModel: 'gpt-4o-mini',
+        },
+      }),
+    );
+
+    expect(aiProviderService.testConnection).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires ai_provider:manage before deleting a provider', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+
+    await createController().destroy(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(aiProviderService.remove).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('records a redacted audit event when creating a provider', async () => {
+    const response = createMockResponse();
+    aiProviderService.create.mockResolvedValue(provider({ id: 5, name: 'OpenAI' }));
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage_credentials',
+    );
+
+    await createController().store(
+      createMockContext({
+        response,
+        user: { id: 7 },
+        body: {
+          name: 'OpenAI',
+          type: 'openai',
+          apiKey: 'sk-secret',
+          baseURL: 'https://api.openai.com/v1',
+          defaultModel: 'gpt-4o-mini',
+          isDefault: false,
+        },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.create',
+        outcome: 'success',
+        resourceType: 'ai_provider',
+        resourceId: '5',
+        metadata: expect.objectContaining({
+          name: 'OpenAI',
+          type: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          defaultModel: 'gpt-4o-mini',
+          isDefault: true,
+          hasApiKey: true,
+        }),
+      }),
+    );
+    expect(JSON.stringify((auditLogService.recordHttp.mock.calls[0] ?? [])[1])).not.toContain(
+      'sk-secret',
+    );
+  });
+
+  it('records only changed field names when updating a provider', async () => {
+    const response = createMockResponse();
+    aiProviderService.update.mockResolvedValue(provider({ id: 5, name: 'OpenAI Updated' }));
+    authorizationService.canPerformGlobalAction.mockImplementation((_user, action) =>
+      ['ai_provider:manage', 'ai_provider:manage_credentials'].includes(String(action)),
+    );
+
+    await createController().update(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+        body: {
+          name: 'OpenAI Updated',
+          apiKey: 'rotated-secret',
+        },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.update',
+        outcome: 'success',
+        resourceType: 'ai_provider',
+        resourceId: '5',
+        metadata: {
+          changedFields: ['name', 'apiKey'],
+          connectionSettingsChanged: true,
+        },
+      }),
+    );
+    expect(JSON.stringify((auditLogService.recordHttp.mock.calls[0] ?? [])[1])).not.toContain(
+      'rotated-secret',
+    );
+  });
+
+  it('records audit events when setting defaults and deleting providers', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage',
+    );
+
+    await createController().setDefault(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+    await createController().destroy(
+      createMockContext({
+        response: createMockResponse(),
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.set_default',
+        outcome: 'success',
+        resourceType: 'ai_provider',
+        resourceId: '5',
+      }),
+    );
+    expect(auditLogService.recordHttp).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.delete',
+        outcome: 'success',
+        resourceType: 'ai_provider',
+        resourceId: '5',
+      }),
+    );
+  });
+
+  it('records redacted audit events for saved and unsaved provider connection tests', async () => {
+    const response = createMockResponse();
+    aiProviderService.testConnectionById.mockResolvedValue({ success: true, message: 'ok' });
+    aiProviderService.testConnection.mockResolvedValue({ success: false, message: 'bad key' });
+    authorizationService.canPerformGlobalAction.mockImplementation(
+      (_user, action) => action === 'ai_provider:manage_credentials',
+    );
+
+    await createController().testConnection(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+    await createController().testConnectionByConfig(
+      createMockContext({
+        response: createMockResponse(),
+        user: { id: 7 },
+        body: {
+          type: 'openai',
+          apiKey: 'sk-secret',
+          baseURL: 'https://api.openai.com/v1',
+          defaultModel: 'gpt-4o-mini',
+        },
+      }),
+    );
+
+    expect(auditLogService.recordHttp).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.connection_test',
+        outcome: 'success',
+        resourceType: 'ai_provider',
+        resourceId: '5',
+      }),
+    );
+    expect(auditLogService.recordHttp).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'ai_provider.connection_test',
+        outcome: 'failure',
+        resourceType: 'ai_provider_config',
+        metadata: expect.objectContaining({
+          type: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          defaultModel: 'gpt-4o-mini',
+          hasApiKey: true,
+          message: 'bad key',
+        }),
+      }),
+    );
+    expect(JSON.stringify(auditLogService.recordHttp.mock.calls)).not.toContain('sk-secret');
+  });
+});

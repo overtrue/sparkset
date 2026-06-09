@@ -1,32 +1,103 @@
+import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
-import { botService } from '../services/bot_service.js';
+import type { Action } from '../models/types.js';
+import { ActionService } from '../services/action_service.js';
+import { BotService } from '../services/bot_service.js';
+import { DerivedResourceAuthorizationService } from '../services/derived_resource_authorization_service.js';
 import { createBotValidator, updateBotValidator } from '../validators/bot.js';
 import { toId } from '../utils/validation.js';
 import BotEvent from '../models/bot_event.js';
-
-interface AuthContext {
-  auth?: {
-    user?: { id: number };
-  };
-}
+import { getAuthenticatedUser } from '../utils/auth_context.js';
+import type { AuthorizationAction, AuthorizationUser } from '../types/authorization.js';
 
 /**
  * Bots RESTful API Controller
  */
+@inject()
 export default class BotsController {
+  constructor(
+    private service: BotService,
+    private resourceAuthorization: DerivedResourceAuthorizationService,
+    private actionService: ActionService,
+  ) {}
+
+  private unauthorized(response: HttpContext['response']) {
+    return response.unauthorized({ message: 'Not authenticated' });
+  }
+
+  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: `Missing permission: ${action}`,
+    });
+  }
+
+  private isSqlAction(type: unknown): boolean {
+    return String(type).toLowerCase() === 'sql';
+  }
+
+  private datasourceIdForAction(action: Pick<Action, 'type' | 'payload'>): number | null {
+    if (!this.isSqlAction(action.type)) return null;
+    if (!action.payload || typeof action.payload !== 'object') return null;
+    return toId((action.payload as { datasourceId?: unknown }).datasourceId);
+  }
+
+  private async canManageEnabledActions(
+    user: AuthorizationUser,
+    enabledActions?: number[] | null,
+  ): Promise<boolean> {
+    const actionIds = Array.from(
+      new Set(
+        (enabledActions ?? [])
+          .map((actionId) => toId(actionId))
+          .filter((actionId): actionId is number => actionId !== null),
+      ),
+    );
+
+    for (const actionId of actionIds) {
+      const action = await this.actionService.get(actionId);
+      if (!action) return false;
+
+      const datasourceId = this.datasourceIdForAction(action);
+      if (this.isSqlAction(action.type) && !datasourceId) return false;
+      if (
+        datasourceId &&
+        !(await this.resourceAuthorization.canAccessDatasource(
+          user,
+          datasourceId,
+          'datasource:manage',
+        ))
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /**
    * 获取 Bot 列表
    * GET /api/bots
    */
-  async index({ request, response }: HttpContext) {
+  async index(ctx: HttpContext) {
+    const { request, response } = ctx;
     try {
+      const user = getAuthenticatedUser(ctx);
+      if (!user) return this.unauthorized(response);
+
       const page = request.input('page', 1);
       const perPage = request.input('per_page', 10);
 
-      const result = await botService.listBots(page, perPage);
+      const result = await this.service.listBots(page, perPage);
+      const authorizedItems = [];
+      for (const bot of result.data) {
+        if (await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:view')) {
+          authorizedItems.push(bot);
+        }
+      }
 
       return response.ok({
-        items: result.data,
+        items: authorizedItems,
       });
     } catch (error) {
       return response.internalServerError({
@@ -39,20 +110,37 @@ export default class BotsController {
    * 创建新 Bot
    * POST /api/bots
    */
-  async store(ctx: HttpContext & AuthContext) {
+  async store(ctx: HttpContext) {
     try {
       const { request, response } = ctx;
       // 验证请求数据
       const payload = createBotValidator.parse(request.body());
 
       // 获取当前用户 ID
-      const user = (ctx as unknown as AuthContext).auth?.user;
+      const user = getAuthenticatedUser(ctx);
       if (!user) {
-        return response.unauthorized({ message: 'Not authenticated' });
+        return this.unauthorized(response);
+      }
+
+      const datasourceConfig = {
+        enabledDataSources: payload.enabledDataSources,
+        defaultDataSourceId: payload.defaultDataSourceId,
+      };
+      if (
+        !(await this.resourceAuthorization.canAccessBotConfig(
+          user,
+          datasourceConfig,
+          'datasource:query',
+        ))
+      ) {
+        return this.forbidden(response, 'datasource:query');
+      }
+      if (!(await this.canManageEnabledActions(user, payload.enabledActions))) {
+        return this.forbidden(response, 'datasource:manage');
       }
 
       // 创建 Bot
-      const bot = await botService.createBot(payload, user.id);
+      const bot = await this.service.createBot(payload, user.id);
 
       return response.created(bot.serialize());
     } catch (error) {
@@ -73,16 +161,23 @@ export default class BotsController {
    * 获取 Bot 详情
    * GET /api/bots/:id
    */
-  async show({ params, response }: HttpContext) {
+  async show(ctx: HttpContext) {
+    const { params, response } = ctx;
     try {
       const id = toId(params.id);
       if (!id) {
         return response.badRequest({ message: 'Invalid bot ID' });
       }
 
-      const bot = await botService.getBot(id);
+      const bot = await this.service.getBot(id);
       if (!bot) {
         return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+
+      const user = getAuthenticatedUser(ctx);
+      if (!user) return this.unauthorized(response);
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:view'))) {
+        return this.forbidden(response, 'datasource:view');
       }
 
       return response.ok(bot.serialize());
@@ -97,7 +192,7 @@ export default class BotsController {
    * 更新 Bot
    * PUT /api/bots/:id
    */
-  async update(ctx: HttpContext & AuthContext) {
+  async update(ctx: HttpContext) {
     try {
       const { params, request, response } = ctx;
       const id = toId(params.id);
@@ -109,13 +204,42 @@ export default class BotsController {
       const payload = updateBotValidator.parse(request.body());
 
       // 获取当前用户 ID
-      const user = (ctx as unknown as AuthContext).auth?.user;
+      const user = getAuthenticatedUser(ctx);
       if (!user) {
-        return response.unauthorized({ message: 'Not authenticated' });
+        return this.unauthorized(response);
+      }
+
+      const existing = await this.service.getBot(id);
+      if (!existing) {
+        return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+      if (!(await this.resourceAuthorization.canAccessBot(user, existing, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+      const datasourceConfig = {
+        enabledDataSources: payload.enabledDataSources ?? existing.enabledDataSources,
+        defaultDataSourceId: payload.defaultDataSourceId ?? existing.defaultDataSourceId,
+      };
+      if (
+        !(await this.resourceAuthorization.canAccessBotConfig(
+          user,
+          datasourceConfig,
+          'datasource:query',
+        ))
+      ) {
+        return this.forbidden(response, 'datasource:query');
+      }
+      if (
+        !(await this.canManageEnabledActions(
+          user,
+          payload.enabledActions ?? existing.enabledActions,
+        ))
+      ) {
+        return this.forbidden(response, 'datasource:manage');
       }
 
       // 更新 Bot
-      const bot = await botService.updateBot(id, payload, user.id);
+      const bot = await this.service.updateBot(id, payload, user.id);
 
       return response.ok(bot.serialize());
     } catch (error) {
@@ -139,7 +263,7 @@ export default class BotsController {
    * 删除 Bot
    * DELETE /api/bots/:id
    */
-  async destroy(ctx: HttpContext & AuthContext) {
+  async destroy(ctx: HttpContext) {
     try {
       const { params, response } = ctx;
       const id = toId(params.id);
@@ -148,12 +272,20 @@ export default class BotsController {
       }
 
       // 获取当前用户 ID
-      const user = (ctx as unknown as AuthContext).auth?.user;
+      const user = getAuthenticatedUser(ctx);
       if (!user) {
-        return response.unauthorized({ message: 'Not authenticated' });
+        return this.unauthorized(response);
       }
 
-      await botService.deleteBot(id, user.id);
+      const bot = await this.service.getBot(id);
+      if (!bot) {
+        return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+
+      await this.service.deleteBot(id, user.id);
 
       return response.noContent();
     } catch (error) {
@@ -171,7 +303,7 @@ export default class BotsController {
    * 重新生成 Webhook Token
    * POST /api/bots/:id/regenerate-token
    */
-  async regenerateToken(ctx: HttpContext & AuthContext) {
+  async regenerateToken(ctx: HttpContext) {
     try {
       const { params, response } = ctx;
       const id = toId(params.id);
@@ -180,15 +312,23 @@ export default class BotsController {
       }
 
       // 获取当前用户 ID
-      const user = (ctx as unknown as AuthContext).auth?.user;
+      const user = getAuthenticatedUser(ctx);
       if (!user) {
-        return response.unauthorized({ message: 'Not authenticated' });
+        return this.unauthorized(response);
       }
 
-      const newToken = await botService.regenerateToken(id, user.id);
+      const bot = await this.service.getBot(id);
+      if (!bot) {
+        return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+
+      const newToken = await this.service.regenerateToken(id, user.id);
 
       // 返回新 Token 和完整的 Webhook URL
-      const webhookUrl = await botService.getWebhookUrlForBot(id);
+      const webhookUrl = await this.service.getWebhookUrlForBot(id);
 
       return response.ok({
         webhookToken: newToken,
@@ -210,7 +350,7 @@ export default class BotsController {
    * POST /api/bots/:id/test
    * 用于测试 bot 对特定消息的响应
    */
-  async test(ctx: HttpContext & AuthContext) {
+  async test(ctx: HttpContext) {
     try {
       const { params, request, response } = ctx;
       const id = toId(params.id);
@@ -219,15 +359,18 @@ export default class BotsController {
       }
 
       // 获取当前用户 ID
-      const user = (ctx as unknown as AuthContext).auth?.user;
+      const user = getAuthenticatedUser(ctx);
       if (!user) {
-        return response.unauthorized({ message: 'Not authenticated' });
+        return this.unauthorized(response);
       }
 
       // 获取 bot
-      const bot = await botService.getBot(id);
+      const bot = await this.service.getBot(id);
       if (!bot) {
         return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:query'))) {
+        return this.forbidden(response, 'datasource:query');
       }
 
       // 获取请求体中的测试消息
@@ -240,7 +383,7 @@ export default class BotsController {
       }
 
       // 调用测试服务
-      const result = await botService.testBot(id, message);
+      const result = await this.service.testBot(id, message);
 
       return response.ok(result);
     } catch (error) {
@@ -257,7 +400,7 @@ export default class BotsController {
    * GET /api/bots/:id/events
    * 用于获取 bot 处理的事件列表
    */
-  async events(ctx: HttpContext & AuthContext) {
+  async events(ctx: HttpContext) {
     try {
       const { params, request, response } = ctx;
       const id = toId(params.id);
@@ -266,9 +409,14 @@ export default class BotsController {
       }
 
       // 验证 bot 存在
-      const bot = await botService.getBot(id);
+      const bot = await this.service.getBot(id);
       if (!bot) {
         return response.notFound({ message: `Bot with ID ${id} not found` });
+      }
+      const user = getAuthenticatedUser(ctx);
+      if (!user) return this.unauthorized(response);
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:query'))) {
+        return this.forbidden(response, 'datasource:query');
       }
 
       // 获取分页参数
@@ -319,7 +467,7 @@ export default class BotsController {
    * POST /api/bots/:botId/events/:eventId/replay
    * 用于重新处理之前的事件
    */
-  async replayEvent(ctx: HttpContext & AuthContext) {
+  async replayEvent(ctx: HttpContext) {
     try {
       const { params, response } = ctx;
       const botId = toId(params.botId);
@@ -330,9 +478,14 @@ export default class BotsController {
       }
 
       // 验证 bot 存在
-      const bot = await botService.getBot(botId);
+      const bot = await this.service.getBot(botId);
       if (!bot) {
         return response.notFound({ message: `Bot with ID ${botId} not found` });
+      }
+      const user = getAuthenticatedUser(ctx);
+      if (!user) return this.unauthorized(response);
+      if (!(await this.resourceAuthorization.canAccessBot(user, bot, 'datasource:query'))) {
+        return this.forbidden(response, 'datasource:query');
       }
 
       // 获取原始事件
@@ -343,7 +496,7 @@ export default class BotsController {
       }
 
       // 重放事件 - 重新处理该消息
-      const result = await botService.testBot(botId, event.content);
+      const result = await this.service.testBot(botId, event.content);
 
       return response.ok({
         success: result.success,

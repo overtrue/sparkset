@@ -4,6 +4,7 @@ import { RiAlertLine, RiRefreshLine } from '@remixicon/react';
 import { useTranslations } from '@/i18n/use-translations';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ApiError } from '@/lib/fetch';
 import { cn } from '@/lib/utils';
 
 interface ErrorStateProps {
@@ -31,8 +32,20 @@ interface ErrorStateProps {
 
 export function ErrorState({ error, title, onRetry, retryText, className = '' }: ErrorStateProps) {
   const t = useTranslations();
-  const errorMessage = error instanceof Error ? error.message : error || t('An error occurred');
-  const errorTitle = title || t('Error');
+  const isApiError = error instanceof ApiError;
+  let errorMessage = error instanceof Error ? error.message : error || t('An error occurred');
+  let errorTitle = title || t('Error');
+
+  if (isApiError && error.status === 403) {
+    errorTitle = title || t('Insufficient permissions');
+    errorMessage = t('You do not have permission to access this page');
+  }
+
+  if (isApiError && error.status === 401) {
+    errorTitle = title || t('Session expired');
+    errorMessage = t('Please sign in again');
+  }
+
   const displayRetryText = retryText || t('Retry');
 
   return (

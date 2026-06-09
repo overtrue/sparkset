@@ -3,6 +3,7 @@ import { QueryExecutor, QueryPlanner } from '@sparkset/core';
 import type { DataSource } from '../models/types';
 import { Exception } from '@adonisjs/core/exceptions';
 import {
+  AuthorizationException,
   ConfigurationException,
   DatabaseException,
   ExternalServiceException,
@@ -12,6 +13,7 @@ import {
 import { AIProviderService } from '../services/ai_provider_service';
 import { DatasourceService } from '../services/datasource_service';
 import { SchemaService } from '../services/schema_service';
+import type { AuthorizationUser } from '../types/authorization.js';
 
 interface AIClientLogger {
   info: (msg: string, ...args: unknown[]) => void;
@@ -143,18 +145,25 @@ export class QueryService {
     };
   }
 
-  async run(input: QueryRequest): Promise<QueryResponse> {
+  async run(input: QueryRequest, user?: AuthorizationUser): Promise<QueryResponse> {
     // 动态创建 AI Client
     const { aiClient, aiProviderId } = await this.createAIClient(input.aiProvider);
 
     // Plan
     // 如果未指定数据源，使用默认数据源
-    const datasources = await this.deps.datasourceService.list();
+    const datasources = user
+      ? await this.deps.datasourceService.listAuthorized(user, 'datasource:query')
+      : await this.deps.datasourceService.list();
     const explicitDatasourceId = input.datasource
       ? datasources.find((datasource) => datasource.id === input.datasource)?.id
       : undefined;
 
     if (input.datasource && !explicitDatasourceId) {
+      if (user) {
+        throw new AuthorizationException(
+          `Selected datasource (ID: ${input.datasource}) is not available to the current user.`,
+        );
+      }
       throw new ValidationException(
         `Selected datasource (ID: ${input.datasource}) not found. Please select a valid datasource.`,
       );
@@ -167,6 +176,11 @@ export class QueryService {
       undefined;
 
     if (!datasourceId) {
+      if (user) {
+        throw new AuthorizationException(
+          'No queryable datasource is available to the current user.',
+        );
+      }
       throw new ConfigurationException(
         'No datasource configured. Please configure a datasource before querying.',
       );

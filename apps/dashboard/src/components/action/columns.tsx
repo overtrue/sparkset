@@ -89,6 +89,9 @@ export function createActionColumns({
       header: () => <span className="sr-only">{t('Actions')}</span>,
       cell: ({ row }) => {
         const action = row.original;
+        const capabilities = action.capabilities;
+        const canExecute = Boolean(capabilities?.canExecute);
+        const canManage = Boolean(capabilities?.canManage);
         const isExecuting = executingId === action.id;
         const isDeleting = deletingId === action.id;
 
@@ -97,7 +100,7 @@ export function createActionColumns({
             size="sm"
             variant="outline"
             onClick={() => onExecute(action.id)}
-            disabled={isExecuting}
+            disabled={!canExecute || isExecuting}
             className="h-7"
           >
             <RiPlayLine
@@ -113,14 +116,14 @@ export function createActionColumns({
             label: t('Edit'),
             icon: <RiEditLine className="h-4 w-4" aria-hidden="true" />,
             onClick: () => onEdit(action),
-            disabled: isDeleting,
+            disabled: !canManage || isDeleting,
           },
           {
             label: t('Delete'),
             icon: <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />,
             onClick: () => onDelete(action.id),
             variant: 'destructive',
-            disabled: isDeleting,
+            disabled: !canManage || isDeleting,
           },
         ];
 
