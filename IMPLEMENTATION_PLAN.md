@@ -49,9 +49,13 @@
 
 - `pnpm --filter @sparkset/server test -- tests/unit/controllers/queries_controller.test.ts`
 - `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasets_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/charts_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/dashboards_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/dashboard_widgets_controller.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/bots_controller.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 4: 数据源授权管理 UI
 

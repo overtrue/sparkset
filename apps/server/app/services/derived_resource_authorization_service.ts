@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core';
 import Chart from '../models/chart.js';
+import type Bot from '../models/bot.js';
 import type Dashboard from '../models/dashboard.js';
 import DashboardWidget, { type WidgetConfig, type WidgetType } from '../models/dashboard_widget.js';
 import Dataset from '../models/dataset.js';
@@ -9,6 +10,8 @@ import type { AuthorizationAction, AuthorizationUser } from '../types/authorizat
 type ChartLike = Chart | { id?: number; datasetId?: number; dataset?: { datasourceId?: number } };
 type DashboardLike = Dashboard | { id?: number; widgets?: WidgetLike[] };
 type WidgetLike = DashboardWidget | { id?: number; type: WidgetType; config: WidgetConfig };
+type BotLike = Bot | { enabledDataSources?: number[] | null; defaultDataSourceId?: number | null };
+interface BotConfigLike { enabledDataSources?: number[] | null; defaultDataSourceId?: number | null }
 
 @inject()
 export class DerivedResourceAuthorizationService {
@@ -59,6 +62,24 @@ export class DerivedResourceAuthorizationService {
     action: AuthorizationAction,
   ): Promise<boolean> {
     const datasourceIds = await this.datasourceIdsForWidgetConfig(type, config);
+    return this.canAccessDatasourceIds(user, datasourceIds, action);
+  }
+
+  async canAccessBot(
+    user: AuthorizationUser,
+    bot: BotLike,
+    action: AuthorizationAction,
+  ): Promise<boolean> {
+    const datasourceIds = this.datasourceIdsForBotConfig(bot);
+    return this.canAccessDatasourceIds(user, datasourceIds, action);
+  }
+
+  async canAccessBotConfig(
+    user: AuthorizationUser,
+    config: BotConfigLike,
+    action: AuthorizationAction,
+  ): Promise<boolean> {
+    const datasourceIds = this.datasourceIdsForBotConfig(config);
     return this.canAccessDatasourceIds(user, datasourceIds, action);
   }
 
@@ -141,5 +162,18 @@ export class DerivedResourceAuthorizationService {
     }
 
     return [];
+  }
+
+  private datasourceIdsForBotConfig(config: BotConfigLike): number[] {
+    const datasourceIds = new Set<number>();
+    for (const datasourceId of config.enabledDataSources ?? []) {
+      if (Number.isFinite(datasourceId)) {
+        datasourceIds.add(datasourceId);
+      }
+    }
+    if (config.defaultDataSourceId && Number.isFinite(config.defaultDataSourceId)) {
+      datasourceIds.add(config.defaultDataSourceId);
+    }
+    return Array.from(datasourceIds);
   }
 }
