@@ -38,6 +38,27 @@ export default class LocalAuthController {
     response.clearCookie(ACCESS_TOKEN_SESSION_COOKIE, CLEAR_SESSION_COOKIE_OPTIONS);
   }
 
+  private async recordLoginFailure(
+    ctx: HttpContext,
+    input: {
+      username: string;
+      reason: 'unknown_user' | 'invalid_password' | 'account_disabled';
+      userId?: number | null;
+    },
+  ): Promise<void> {
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: input.userId ?? null,
+      action: 'auth.login',
+      outcome: 'failure',
+      resourceType: 'user',
+      resourceId: input.userId ? String(input.userId) : null,
+      metadata: {
+        username: input.username,
+        reason: input.reason,
+      },
+    });
+  }
+
   /**
    * 检查认证状态
    * 支持从 Authorization header、x-access-token 或 httpOnly session cookie 验证
@@ -108,6 +129,10 @@ export default class LocalAuthController {
         .first();
 
       if (!user || !user.passwordHash) {
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'unknown_user',
+        });
         return response.unauthorized({
           error: 'AUTH_FAILED',
           message: '用户名或密码错误',
@@ -118,6 +143,11 @@ export default class LocalAuthController {
       const bcrypt = await import('bcrypt');
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'invalid_password',
+          userId: user.id,
+        });
         return response.unauthorized({
           error: 'AUTH_FAILED',
           message: '用户名或密码错误',
@@ -126,6 +156,11 @@ export default class LocalAuthController {
 
       // 检查用户状态
       if (!user.isActive) {
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'account_disabled',
+          userId: user.id,
+        });
         return response.forbidden({
           error: 'ACCOUNT_DISABLED',
           message: '账户已被禁用',

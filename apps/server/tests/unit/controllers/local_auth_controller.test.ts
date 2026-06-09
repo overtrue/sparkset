@@ -190,6 +190,118 @@ describe('LocalAuthController session cookies', () => {
     expect(response.cookie).not.toHaveBeenCalled();
   });
 
+  it('records an audit event for unknown local login usernames', async () => {
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(null) as never);
+    const audit = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
+    const response = createMockResponse();
+
+    await new LocalAuthController(audit as unknown as AuditLogService).login(
+      createMockContext({
+        response,
+        body: { username: 'missing-user', password: 'secret123' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(audit.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: null,
+        action: 'auth.login',
+        outcome: 'failure',
+        resourceType: 'user',
+        resourceId: null,
+        metadata: expect.objectContaining({
+          username: 'missing-user',
+          reason: 'unknown_user',
+        }),
+      }),
+    );
+    expect(JSON.stringify((audit.recordHttp.mock.calls[0] ?? [])[1])).not.toContain('secret123');
+  });
+
+  it('records an audit event for invalid local login passwords', async () => {
+    const user = {
+      id: 1,
+      username: 'analyst',
+      passwordHash: 'hashed-password',
+      isActive: true,
+    };
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(user) as never);
+    bcryptMock.compare.mockResolvedValue(false);
+    const audit = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
+    const response = createMockResponse();
+
+    await new LocalAuthController(audit as unknown as AuditLogService).login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'wrong-password' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(audit.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 1,
+        action: 'auth.login',
+        outcome: 'failure',
+        resourceType: 'user',
+        resourceId: '1',
+        metadata: expect.objectContaining({
+          username: 'analyst',
+          reason: 'invalid_password',
+        }),
+      }),
+    );
+    expect(JSON.stringify((audit.recordHttp.mock.calls[0] ?? [])[1])).not.toContain(
+      'wrong-password',
+    );
+  });
+
+  it('records an audit event for disabled local login accounts', async () => {
+    const user = {
+      id: 1,
+      username: 'analyst',
+      passwordHash: 'hashed-password',
+      isActive: false,
+    };
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(user) as never);
+    bcryptMock.compare.mockResolvedValue(true);
+    const audit = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
+    const response = createMockResponse();
+
+    await new LocalAuthController(audit as unknown as AuditLogService).login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'secret123' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(audit.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 1,
+        action: 'auth.login',
+        outcome: 'failure',
+        resourceType: 'user',
+        resourceId: '1',
+        metadata: expect.objectContaining({
+          username: 'analyst',
+          reason: 'account_disabled',
+        }),
+      }),
+    );
+    expect(JSON.stringify((audit.recordHttp.mock.calls[0] ?? [])[1])).not.toContain('secret123');
+  });
+
   it('sets an httpOnly session cookie without returning token after local registration', async () => {
     const user = {
       id: 2,

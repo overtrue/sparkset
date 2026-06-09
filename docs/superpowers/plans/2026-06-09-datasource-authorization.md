@@ -403,3 +403,24 @@
 - [x] Implement global authorization action support.
 - [x] Enforce `datasource:create` in datasource create and ad-hoc test endpoints.
 - [x] Run focused validation.
+
+## Stage 17: Login Failure Audit Trail
+
+**Goal:** Make local account authentication failures visible for security review without leaking passwords.
+
+**Success Criteria:**
+
+- Unknown local username login attempts emit `auth.login` failure audit events.
+- Invalid password attempts emit `auth.login` failure audit events tied to the user.
+- Disabled account attempts emit `auth.login` failure audit events tied to the user.
+- Audit metadata contains username and reason, but never the submitted password.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for failed login audit events.
+- [x] Implement redacted login failure audit helper.
+- [x] Wire unknown-user, bad-password, and disabled-account failures.
+- [x] Run focused validation.
