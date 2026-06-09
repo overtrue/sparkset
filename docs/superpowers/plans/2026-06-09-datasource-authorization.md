@@ -599,3 +599,23 @@
 - [x] Return local auth capabilities from status.
 - [x] Wire dashboard auth context and login page to backend capabilities.
 - [x] Run focused validation and browser verification.
+
+## Stage 26: Bot Action Datasource Authorization
+
+**Goal:** Prevent Bot configurations from enabling SQL actions bound to datasources the current user cannot manage.
+
+**Success Criteria:**
+
+- Creating a Bot with `enabledActions` checks SQL action datasource bindings before persistence.
+- Updating a Bot with new or retained `enabledActions` checks SQL action datasource bindings before persistence.
+- SQL actions without an explicit datasource binding cannot be enabled on a Bot.
+- Existing Bot datasource query authorization remains unchanged.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/bots_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing controller tests for SQL action datasource authorization.
+- [x] Enforce datasource manage permission for Bot-enabled SQL actions.
+- [x] Run focused validation.

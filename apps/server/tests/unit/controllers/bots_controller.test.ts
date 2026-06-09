@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HttpContext } from '@adonisjs/core/http';
 import BotsController from '../../../app/controllers/bots_controller.js';
+import type { ActionService } from '../../../app/services/action_service.js';
 import type { BotService } from '../../../app/services/bot_service.js';
 import type { DerivedResourceAuthorizationService } from '../../../app/services/derived_resource_authorization_service.js';
 
@@ -19,6 +20,11 @@ interface BotServiceMock {
 interface ResourceAuthorizationMock {
   canAccessBot: ReturnType<typeof vi.fn>;
   canAccessBotConfig: ReturnType<typeof vi.fn>;
+  canAccessDatasource: ReturnType<typeof vi.fn>;
+}
+
+interface ActionServiceMock {
+  get: ReturnType<typeof vi.fn>;
 }
 
 interface MockResponse {
@@ -123,6 +129,7 @@ const serializeBot = (bot: Record<string, unknown>) => ({
 describe('BotsController authorization', () => {
   let botService: BotServiceMock;
   let resourceAuthorization: ResourceAuthorizationMock;
+  let actionService: ActionServiceMock;
   let createController: () => BotsController;
 
   beforeEach(() => {
@@ -139,11 +146,16 @@ describe('BotsController authorization', () => {
     resourceAuthorization = {
       canAccessBot: vi.fn(),
       canAccessBotConfig: vi.fn(),
+      canAccessDatasource: vi.fn(),
+    };
+    actionService = {
+      get: vi.fn(),
     };
     createController = () =>
       new BotsController(
         botService as unknown as BotService,
         resourceAuthorization as unknown as DerivedResourceAuthorizationService,
+        actionService as unknown as ActionService,
       );
   });
 
@@ -197,6 +209,77 @@ describe('BotsController authorization', () => {
       'datasource:query',
     );
     expect(botService.createBot).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires datasource manage permission before enabling SQL actions on create', async () => {
+    resourceAuthorization.canAccessBotConfig.mockResolvedValue(true);
+    resourceAuthorization.canAccessDatasource.mockResolvedValue(false);
+    actionService.get.mockResolvedValue({
+      id: 4,
+      type: 'sql',
+      payload: { sql: 'update orders set status = :status', datasourceId: 9 },
+    });
+    const response = createMockResponse();
+
+    await createController().store(
+      createMockContext({
+        response,
+        user: { id: 7 },
+        body: {
+          name: 'Assistant',
+          type: 'custom',
+          enabledDataSources: [3],
+          defaultDataSourceId: 3,
+          enabledActions: [4],
+        },
+      }),
+    );
+
+    expect(resourceAuthorization.canAccessDatasource).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      9,
+      'datasource:manage',
+    );
+    expect(botService.createBot).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires datasource manage permission before enabling SQL actions on update', async () => {
+    const bot = serializeBot({
+      id: 1,
+      enabledDataSources: [3],
+      defaultDataSourceId: 3,
+      enabledActions: [],
+    });
+    botService.getBot.mockResolvedValue(bot);
+    resourceAuthorization.canAccessBot.mockResolvedValue(true);
+    resourceAuthorization.canAccessBotConfig.mockResolvedValue(true);
+    resourceAuthorization.canAccessDatasource.mockResolvedValue(false);
+    actionService.get.mockResolvedValue({
+      id: 4,
+      type: 'sql',
+      payload: { sql: 'delete from orders where id = :id', datasourceId: 9 },
+    });
+    const response = createMockResponse();
+
+    await createController().update(
+      createMockContext({
+        response,
+        user: { id: 7 },
+        params: { id: '1' },
+        body: {
+          enabledActions: [4],
+        },
+      }),
+    );
+
+    expect(resourceAuthorization.canAccessDatasource).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      9,
+      'datasource:manage',
+    );
+    expect(botService.updateBot).not.toHaveBeenCalled();
     expect(response.statusCode).toBe(403);
   });
 

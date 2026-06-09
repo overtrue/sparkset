@@ -1,12 +1,14 @@
 import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
+import type { Action } from '../models/types.js';
+import { ActionService } from '../services/action_service.js';
 import { BotService } from '../services/bot_service.js';
 import { DerivedResourceAuthorizationService } from '../services/derived_resource_authorization_service.js';
 import { createBotValidator, updateBotValidator } from '../validators/bot.js';
 import { toId } from '../utils/validation.js';
 import BotEvent from '../models/bot_event.js';
 import { getAuthenticatedUser } from '../utils/auth_context.js';
-import type { AuthorizationAction } from '../types/authorization.js';
+import type { AuthorizationAction, AuthorizationUser } from '../types/authorization.js';
 
 /**
  * Bots RESTful API Controller
@@ -16,6 +18,7 @@ export default class BotsController {
   constructor(
     private service: BotService,
     private resourceAuthorization: DerivedResourceAuthorizationService,
+    private actionService: ActionService,
   ) {}
 
   private unauthorized(response: HttpContext['response']) {
@@ -27,6 +30,49 @@ export default class BotsController {
       error: 'Forbidden',
       message: `Missing permission: ${action}`,
     });
+  }
+
+  private isSqlAction(type: unknown): boolean {
+    return String(type).toLowerCase() === 'sql';
+  }
+
+  private datasourceIdForAction(action: Pick<Action, 'type' | 'payload'>): number | null {
+    if (!this.isSqlAction(action.type)) return null;
+    if (!action.payload || typeof action.payload !== 'object') return null;
+    return toId((action.payload as { datasourceId?: unknown }).datasourceId);
+  }
+
+  private async canManageEnabledActions(
+    user: AuthorizationUser,
+    enabledActions?: number[] | null,
+  ): Promise<boolean> {
+    const actionIds = Array.from(
+      new Set(
+        (enabledActions ?? [])
+          .map((actionId) => toId(actionId))
+          .filter((actionId): actionId is number => actionId !== null),
+      ),
+    );
+
+    for (const actionId of actionIds) {
+      const action = await this.actionService.get(actionId);
+      if (!action) return false;
+
+      const datasourceId = this.datasourceIdForAction(action);
+      if (this.isSqlAction(action.type) && !datasourceId) return false;
+      if (
+        datasourceId &&
+        !(await this.resourceAuthorization.canAccessDatasource(
+          user,
+          datasourceId,
+          'datasource:manage',
+        ))
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
@@ -88,6 +134,9 @@ export default class BotsController {
         ))
       ) {
         return this.forbidden(response, 'datasource:query');
+      }
+      if (!(await this.canManageEnabledActions(user, payload.enabledActions))) {
+        return this.forbidden(response, 'datasource:manage');
       }
 
       // 创建 Bot
@@ -179,6 +228,14 @@ export default class BotsController {
         ))
       ) {
         return this.forbidden(response, 'datasource:query');
+      }
+      if (
+        !(await this.canManageEnabledActions(
+          user,
+          payload.enabledActions ?? existing.enabledActions,
+        ))
+      ) {
+        return this.forbidden(response, 'datasource:manage');
       }
 
       // 更新 Bot
