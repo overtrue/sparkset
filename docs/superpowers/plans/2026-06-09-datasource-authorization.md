@@ -381,3 +381,25 @@
 - [x] Share browser origin normalization between CORS and CSRF checks.
 - [x] Wire server CORS config to the trusted origin resolver.
 - [x] Run focused validation.
+
+## Stage 16: Datasource Connection Test Authorization
+
+**Goal:** Prevent arbitrary authenticated users from using datasource creation and ad-hoc connection tests as network probing tools.
+
+**Success Criteria:**
+
+- Creating a datasource requires the global `datasource:create` permission.
+- Testing an unsaved datasource configuration requires the global `datasource:create` permission.
+- Admin, `*`, and `datasource:*` users can still create and test datasource configurations.
+- Rejected ad-hoc connection tests write a redacted audit event without passwords.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for global datasource creation permission.
+- [x] Add failing tests for ad-hoc connection test authorization and audit.
+- [x] Implement global authorization action support.
+- [x] Enforce `datasource:create` in datasource create and ad-hoc test endpoints.
+- [x] Run focused validation.

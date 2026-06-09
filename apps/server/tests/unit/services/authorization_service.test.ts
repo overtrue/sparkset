@@ -64,6 +64,38 @@ describe('AuthorizationService', () => {
     expect(allowed).toBe(true);
   });
 
+  it('allows global datasource creation for admin and explicit global permissions', async () => {
+    const service = new AuthorizationService(new FakeGrantReader([]));
+
+    expect(service.canPerformGlobalAction(user({ roles: ['admin'] }), 'datasource:create')).toBe(
+      true,
+    );
+    expect(
+      service.canPerformGlobalAction(
+        user({ permissions: ['datasource:create'] }),
+        'datasource:create',
+      ),
+    ).toBe(true);
+    expect(
+      service.canPerformGlobalAction(user({ permissions: ['datasource:*'] }), 'datasource:create'),
+    ).toBe(true);
+  });
+
+  it('denies global datasource creation for inactive or unprivileged users', async () => {
+    const service = new AuthorizationService(new FakeGrantReader([]));
+
+    expect(service.canPerformGlobalAction(user({ isActive: false }), 'datasource:create')).toBe(
+      false,
+    );
+    expect(service.canPerformGlobalAction(user(), 'datasource:create')).toBe(false);
+    expect(
+      service.canPerformGlobalAction(
+        user({ permissions: ['datasource:manage_credentials'] }),
+        'datasource:create',
+      ),
+    ).toBe(false);
+  });
+
   it('does not let legacy datasource read permissions bypass datasource grants', async () => {
     const service = new AuthorizationService(new FakeGrantReader([]));
     const currentUser = user({ permissions: ['read:datasource'] });

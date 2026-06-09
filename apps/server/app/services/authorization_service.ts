@@ -5,6 +5,7 @@ import {
   type AuthorizationUser,
   type DatasourceGrant,
   type DatasourcePermission,
+  type GlobalAuthorizationAction,
 } from '../types/authorization.js';
 
 export interface DatasourceGrantReader {
@@ -68,7 +69,21 @@ export class AuthorizationService {
     }
   }
 
-  private hasGlobalPermission(user: AuthorizationUser, action: AuthorizationAction): boolean {
+  canPerformGlobalAction(
+    user: AuthorizationUser | null | undefined,
+    action: GlobalAuthorizationAction,
+  ): boolean {
+    if (!user?.isActive) {
+      return false;
+    }
+
+    return this.hasGlobalPermission(user, action);
+  }
+
+  private hasGlobalPermission(
+    user: AuthorizationUser,
+    action: AuthorizationAction | GlobalAuthorizationAction,
+  ): boolean {
     if (user.roles.includes('admin')) {
       return true;
     }

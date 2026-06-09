@@ -29,6 +29,7 @@ interface SchemaServiceMock {
 
 interface AuthorizationServiceMock {
   can: ReturnType<typeof vi.fn>;
+  canPerformGlobalAction: ReturnType<typeof vi.fn>;
 }
 
 interface AuditLogServiceMock {
@@ -163,6 +164,7 @@ describe('DatasourcesController authorization', () => {
     };
     authorizationService = {
       can: vi.fn(),
+      canPerformGlobalAction: vi.fn(),
     };
     auditLogService = {
       recordHttp: vi.fn().mockResolvedValue(undefined),
@@ -198,6 +200,35 @@ describe('DatasourcesController authorization', () => {
     });
     expect(response.statusCode).toBe(200);
     expect((response.payload as { items: unknown[] }).items).toHaveLength(1);
+  });
+
+  it('requires global datasource:create permission before creating a datasource', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+    const controller = createController();
+
+    await controller.store(
+      createMockContext({
+        response,
+        body: {
+          name: 'New datasource',
+          type: 'mysql',
+          host: '127.0.0.1',
+          port: 3306,
+          username: 'root',
+          password: 'secret',
+          database: 'sparkset',
+        },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.canPerformGlobalAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:create',
+    );
+    expect(datasourceService.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
   });
 
   it('returns forbidden when the user cannot view a datasource', async () => {
@@ -316,6 +347,52 @@ describe('DatasourcesController authorization', () => {
       expect.objectContaining({ id: 7 }),
       'datasource:manage_credentials',
       { type: 'datasource', id: 5 },
+    );
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('requires global datasource:create permission before testing an unsaved connection config', async () => {
+    const response = createMockResponse();
+    authorizationService.canPerformGlobalAction.mockReturnValue(false);
+    const controller = createController();
+
+    await controller.testConnectionByConfig(
+      createMockContext({
+        response,
+        body: {
+          type: 'mysql',
+          host: '10.0.0.8',
+          port: 3306,
+          username: 'root',
+          password: 'secret',
+          database: 'internal',
+        },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.canPerformGlobalAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:create',
+    );
+    expect(auditLogService.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 7,
+        action: 'datasource.connection_test',
+        outcome: 'failure',
+        resourceType: 'datasource_config',
+        metadata: expect.objectContaining({
+          type: 'mysql',
+          host: '10.0.0.8',
+          port: 3306,
+          database: 'internal',
+          reason: 'missing datasource:create',
+        }),
+      }),
+    );
+    expect(JSON.stringify((auditLogService.recordHttp.mock.calls[0] ?? [])[1])).not.toContain(
+      'secret',
     );
     expect(response.statusCode).toBe(403);
   });

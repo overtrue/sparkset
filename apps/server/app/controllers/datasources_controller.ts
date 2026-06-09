@@ -17,6 +17,7 @@ import {
   DATASOURCE_PERMISSIONS,
   type AuthorizationAction,
   type DatasourcePermission,
+  type GlobalAuthorizationAction,
 } from '../types/authorization.js';
 import { AuditLogService } from '../services/audit_log_service.js';
 import { z } from 'zod';
@@ -48,7 +49,10 @@ export default class DatasourcesController {
     });
   }
 
-  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+  private forbidden(
+    response: HttpContext['response'],
+    action: AuthorizationAction | GlobalAuthorizationAction,
+  ) {
     return response.forbidden({
       error: 'Forbidden',
       message: `Missing permission: ${action}`,
@@ -59,6 +63,22 @@ export default class DatasourcesController {
     const user = this.getUser(ctx);
     if (!user) return false;
     return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
+  }
+
+  private canCreateDatasource(ctx: HttpContext): boolean {
+    return this.authorization.canPerformGlobalAction(this.getUser(ctx), 'datasource:create');
+  }
+
+  private getConnectionTestAuditMetadata(input: Record<string, unknown>) {
+    return {
+      type: typeof input.type === 'string' ? input.type : null,
+      host: typeof input.host === 'string' ? input.host : null,
+      port:
+        typeof input.port === 'number' || typeof input.port === 'string'
+          ? Number(input.port)
+          : null,
+      database: typeof input.database === 'string' ? input.database : null,
+    };
   }
 
   private hasConnectionSettingChanges(input: Record<string, unknown>): boolean {
@@ -91,6 +111,9 @@ export default class DatasourcesController {
   async store(ctx: HttpContext) {
     const user = this.getUser(ctx);
     if (!user) return this.unauthorized(ctx.response);
+    if (!this.canCreateDatasource(ctx)) {
+      return this.forbidden(ctx.response, 'datasource:create');
+    }
     const { request, response } = ctx;
     const parsed = datasourceCreateSchema.parse(request.body());
     const record = await this.service.create(parsed, user);
@@ -322,7 +345,8 @@ export default class DatasourcesController {
     }
   }
 
-  async testConnectionByConfig({ request, response }: HttpContext) {
+  async testConnectionByConfig(ctx: HttpContext) {
+    const { request, response } = ctx;
     const body = request.body() as {
       type: string;
       host: string;
@@ -331,9 +355,25 @@ export default class DatasourcesController {
       password: string | null;
       database: string;
     };
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
 
     if (!body.type || !body.host || !body.port || !body.username || !body.database) {
       return response.badRequest({ message: '缺少必要的配置参数' });
+    }
+
+    if (!this.canCreateDatasource(ctx)) {
+      await this.auditLog.recordHttp(ctx, {
+        actorUserId: user.id,
+        action: 'datasource.connection_test',
+        outcome: 'failure',
+        resourceType: 'datasource_config',
+        metadata: {
+          ...this.getConnectionTestAuditMetadata(body),
+          reason: 'missing datasource:create',
+        },
+      });
+      return this.forbidden(response, 'datasource:create');
     }
 
     // 密码不是测试连通性的必要条件，可以为空
