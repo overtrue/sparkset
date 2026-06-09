@@ -65,4 +65,4 @@
 
 - Pre-commit and pre-push hooks.
 
-**Status**: In Progress
+**Status**: Complete
