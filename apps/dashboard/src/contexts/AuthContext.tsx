@@ -31,6 +31,10 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   authenticated: boolean;
+  localAuth: {
+    enabled: boolean;
+    allowRegistration: boolean;
+  };
   checkAuth: () => Promise<void>;
   login: (username: string, password: string) => Promise<boolean>;
   register: (
@@ -55,6 +59,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [localAuth, setLocalAuth] = useState({
+    enabled: false,
+    allowRegistration: false,
+  });
   const lastSessionExpiredNoticeAtRef = useRef(0);
 
   const clearAuthState = useCallback(() => {
@@ -70,6 +78,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     try {
       const response: AuthResponse = await checkAuthStatus();
+      setLocalAuth({
+        enabled: Boolean(response.enabled),
+        allowRegistration: Boolean(response.allowRegistration),
+      });
 
       if (response.authenticated && response.user) {
         setUser(response.user);
@@ -216,6 +228,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     loading,
     authenticated,
+    localAuth,
     checkAuth,
     login,
     register,

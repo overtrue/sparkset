@@ -49,6 +49,14 @@ export default class LocalAuthController {
     });
   }
 
+  private localAuthCapabilities() {
+    const config = this.authProvider.getConfig();
+    return {
+      enabled: this.authProvider.enabled(),
+      allowRegistration: config.allowRegistration,
+    };
+  }
+
   private async recordLoginFailure(
     ctx: HttpContext,
     input: {
@@ -90,7 +98,7 @@ export default class LocalAuthController {
     if (!token) {
       return {
         authenticated: false,
-        enabled: this.authProvider.enabled(),
+        ...this.localAuthCapabilities(),
         message: '未认证',
       };
     }
@@ -111,6 +119,7 @@ export default class LocalAuthController {
             permissions: user.permissions,
             provider: user.provider,
           },
+          ...this.localAuthCapabilities(),
         };
       }
     } catch (error) {
@@ -119,7 +128,7 @@ export default class LocalAuthController {
 
     return {
       authenticated: false,
-      enabled: this.authProvider.enabled(),
+      ...this.localAuthCapabilities(),
       message: '令牌无效',
     };
   }

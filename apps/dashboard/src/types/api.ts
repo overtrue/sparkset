@@ -548,6 +548,8 @@ export interface AuthUser {
 export interface AuthResponse {
   authenticated: boolean;
   user?: AuthUser;
+  enabled?: boolean;
+  allowRegistration?: boolean;
   error?: string;
   message?: string;
 }

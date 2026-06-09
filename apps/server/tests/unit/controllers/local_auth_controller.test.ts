@@ -124,6 +124,24 @@ describe('LocalAuthController session cookies', () => {
     vi.restoreAllMocks();
   });
 
+  it('returns local auth capabilities in unauthenticated status responses', async () => {
+    vi.stubEnv('AUTH_LOCAL_ALLOW_REGISTRATION', 'false');
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().status(
+      createMockContext({
+        response,
+      }),
+    );
+
+    expect(result).toEqual({
+      authenticated: false,
+      enabled: true,
+      allowRegistration: false,
+      message: '未认证',
+    });
+  });
+
   it('sets an httpOnly session cookie without returning token after a successful local login', async () => {
     const user = {
       id: 1,

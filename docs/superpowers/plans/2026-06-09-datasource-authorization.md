@@ -575,3 +575,27 @@
 - [x] Add failing controller tests for disabled local login and registration.
 - [x] Enforce local provider `enabled()` in `LocalAuthController`.
 - [x] Run focused validation.
+
+## Stage 25: Local Auth Capability Feedback
+
+**Goal:** Let the dashboard render local login and registration controls from backend auth capabilities.
+
+**Success Criteria:**
+
+- `/auth/local/status` returns local auth enabled and registration capability fields.
+- Dashboard AuthContext exposes local auth capabilities.
+- Login page hides registration UI when registration is disabled.
+- Login page shows a clear disabled-local-auth message when local auth is disabled.
+- i18n files remain flat and key-aligned.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+- [x] Add failing status capability test.
+- [x] Return local auth capabilities from status.
+- [x] Wire dashboard auth context and login page to backend capabilities.
+- [x] Run focused validation and browser verification.
