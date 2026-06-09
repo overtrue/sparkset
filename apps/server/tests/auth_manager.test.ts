@@ -1,9 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthManager } from '../app/services/auth_manager';
 import { LocalAuthProvider } from '../app/providers/local_auth_provider';
 import type { AuthConfig, AuthProvider } from '../app/types/auth';
 import { HttpContext } from '@adonisjs/core/http';
 import User from '../app/models/user';
+import { getLocalAuthConfig } from '../config/auth';
 
 // Mock HeaderAuthProvider
 class MockHeaderProvider implements AuthProvider {
@@ -55,6 +56,10 @@ describe('AuthManager', () => {
   beforeEach(() => {
     authManager = new AuthManager();
     mockProvider = new MockHeaderProvider();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('should register providers on initialization', () => {
@@ -227,6 +232,16 @@ describe('AuthManager', () => {
 });
 
 describe('LocalAuthProvider configuration', () => {
+  it('does not grant datasource access to registered local users by default', () => {
+    vi.stubEnv('AUTH_LOCAL_DEFAULT_PERMISSIONS', undefined);
+
+    const config = getLocalAuthConfig();
+
+    expect(config.defaultPermissions).not.toContain('read:datasource');
+    expect(config.defaultPermissions).not.toContain('datasource:read');
+    expect(config.defaultPermissions).not.toContain('datasource:*');
+  });
+
   it('should use injected local auth config', () => {
     const config = {
       enabled: true,

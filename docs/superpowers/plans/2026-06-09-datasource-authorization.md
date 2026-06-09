@@ -255,3 +255,49 @@
 - [x] Remove dashboard localStorage token reads from the auth API.
 - [x] Run focused validation.
 - [x] Commit and push: `fix(auth): harden browser session tokens`.
+
+## Stage 10: Resource Authorization Hardening
+
+**Goal:** Remove remaining datasource grant bypasses after the broad authorization rollout.
+
+**Success Criteria:**
+
+- Legacy datasource permission strings no longer grant global datasource access.
+- New local users do not receive datasource access by default.
+- Updating connection settings requires `datasource:manage_credentials`.
+- Testing a saved datasource connection requires `datasource:manage_credentials`.
+- Table and column metadata updates verify that the target schema record belongs to the URL datasource.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts tests/auth_manager.test.ts tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for legacy datasource permissions and local auth defaults.
+- [x] Remove legacy datasource permission expansion and clean local default/example permissions.
+- [x] Add failing tests for credential updates, saved connection tests, and schema metadata ownership.
+- [x] Enforce credential-level permissions and schema ownership in `DatasourcesController`.
+- [x] Run focused validation.
+
+## Stage 11: Browser Session Synchronization
+
+**Goal:** Keep the dashboard auth context synchronized with API request failures.
+
+**Success Criteria:**
+
+- `apiRequest` dispatches a session-expired event on 401 responses.
+- 403 responses remain normal `ApiError` failures and do not clear auth state.
+- `AuthProvider` clears local auth state and routes to login when the session expires.
+- i18n files remain flat and key-aligned.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm exec tsx -e "<401/403 session event assertion>"` from `apps/dashboard`
+- Message parity check for `en.json` and `zh-CN.json`
+- Browser verification for login and protected dashboard navigation.
+
+- [x] Add request-layer session-expiry event handling.
+- [x] Wire `AuthProvider` to clear state and navigate to login.
+- [x] Add session-expiry translations.
+- [x] Run lint, runtime assertion, and message parity check.

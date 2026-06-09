@@ -11,8 +11,10 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   checkAuthStatus,
   loginWithCredentials,
@@ -21,6 +23,7 @@ import {
   AuthUser,
   AuthResponse,
 } from '@/lib/auth';
+import { AUTH_SESSION_EXPIRED_EVENT, type AuthSessionExpiredEvent } from '@/lib/fetch';
 import { useTranslations } from '@/i18n/use-translations';
 import { toast } from 'sonner';
 
@@ -48,9 +51,17 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const t = useTranslations();
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const lastSessionExpiredNoticeAtRef = useRef(0);
+
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    setAuthenticated(false);
+    setLoading(false);
+  }, []);
 
   /**
    * Check authentication status
@@ -64,17 +75,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(response.user);
         setAuthenticated(true);
       } else {
-        setUser(null);
-        setAuthenticated(false);
+        clearAuthState();
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      setUser(null);
-      setAuthenticated(false);
+      clearAuthState();
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clearAuthState]);
 
   /**
    * Login with credentials
@@ -160,16 +169,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(async () => {
     try {
       await apiLogout();
-      setUser(null);
-      setAuthenticated(false);
+      clearAuthState();
       toast.success(t('Logged out'));
     } catch (error) {
       console.error('Logout failed:', error);
       // Still clear local state even if API call fails
-      setUser(null);
-      setAuthenticated(false);
+      clearAuthState();
     }
-  }, [t]);
+  }, [clearAuthState, t]);
 
   /**
    * Refresh user data
@@ -182,6 +189,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     void checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    const handleSessionExpired = (event: Event) => {
+      const detail = (event as AuthSessionExpiredEvent).detail;
+      clearAuthState();
+
+      const now = Date.now();
+      if (now - lastSessionExpiredNoticeAtRef.current > 3000) {
+        lastSessionExpiredNoticeAtRef.current = now;
+        toast.error(t('Session expired'), {
+          description: detail?.message || t('Please sign in again'),
+        });
+      }
+
+      if (window.location.pathname !== '/login') {
+        router.push('/login');
+      }
+    };
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [clearAuthState, router, t]);
 
   const value: AuthContextType = {
     user,

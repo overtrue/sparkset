@@ -64,16 +64,16 @@ describe('AuthorizationService', () => {
     expect(allowed).toBe(true);
   });
 
-  it('maps legacy read datasource permission to view and query', async () => {
+  it('does not let legacy datasource read permissions bypass datasource grants', async () => {
     const service = new AuthorizationService(new FakeGrantReader([]));
     const currentUser = user({ permissions: ['read:datasource'] });
 
     await expect(
       service.can(currentUser, 'datasource:view', { type: 'datasource', id: 10 }),
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
     await expect(
       service.can(currentUser, 'datasource:query', { type: 'datasource', id: 10 }),
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
     await expect(
       service.can(currentUser, 'datasource:manage', { type: 'datasource', id: 10 }),
     ).resolves.toBe(false);

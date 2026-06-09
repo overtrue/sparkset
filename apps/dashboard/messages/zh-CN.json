@@ -802,6 +802,8 @@
   "Welcome, {username}": "欢迎，{username}",
   "Registration failed": "注册失败",
   "Logged out": "已退出登录",
+  "Please sign in again": "请重新登录",
+  "Session expired": "登录已过期",
   "User ID": "用户 ID",
   "UID": "UID",
   "Provider": "提供者",

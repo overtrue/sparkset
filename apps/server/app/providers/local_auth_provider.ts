@@ -18,7 +18,7 @@ type LocalAuthConfigResolver = () => LocalAuthConfig;
  *     enabled: true
  *     allowRegistration: true
  *     defaultRoles: ['viewer']
- *     defaultPermissions: ['read:datasource']
+ *     defaultPermissions: ['read:action', 'read:conversation']
  *
  * 登录请求：
  * POST /auth/local/login

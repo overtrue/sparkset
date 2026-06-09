@@ -59,6 +59,25 @@ export default class DatasourcesController {
     return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
   }
 
+  private hasConnectionSettingChanges(input: Record<string, unknown>): boolean {
+    return ['type', 'host', 'port', 'username', 'password', 'database'].some((field) =>
+      Object.prototype.hasOwnProperty.call(input, field),
+    );
+  }
+
+  private async tableBelongsToDatasource(datasourceId: number, tableId: number): Promise<boolean> {
+    const tables = await this.schemaService.list(datasourceId);
+    return tables.some((table) => table.id === tableId);
+  }
+
+  private async columnBelongsToDatasource(
+    datasourceId: number,
+    columnId: number,
+  ): Promise<boolean> {
+    const tables = await this.schemaService.list(datasourceId);
+    return tables.some((table) => table.columns.some((column) => column.id === columnId));
+  }
+
   async index(ctx: HttpContext) {
     const user = this.getUser(ctx);
     if (!user) return this.unauthorized(ctx.response);
@@ -78,13 +97,20 @@ export default class DatasourcesController {
 
   async update(ctx: HttpContext) {
     const { params, request, response } = ctx;
-    const parsed = datasourceUpdateSchema.parse({ ...request.body(), ...params });
+    const body = request.body() as Record<string, unknown>;
+    const parsed = datasourceUpdateSchema.parse({ ...body, ...params });
     const datasource = await this.service.get(parsed.id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
     if (!(await this.canAccess(ctx, parsed.id, 'datasource:manage'))) {
       return this.forbidden(response, 'datasource:manage');
+    }
+    if (
+      this.hasConnectionSettingChanges(body) &&
+      !(await this.canAccess(ctx, parsed.id, 'datasource:manage_credentials'))
+    ) {
+      return this.forbidden(response, 'datasource:manage_credentials');
     }
     const record = await this.service.update(parsed, this.getUser(ctx) ?? undefined);
     return response.ok(serializeDataSource(record));
@@ -180,6 +206,9 @@ export default class DatasourcesController {
     if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
       return this.forbidden(response, 'datasource:manage');
     }
+    if (!(await this.tableBelongsToDatasource(datasourceId, tableId))) {
+      return response.notFound({ message: 'Table not found for datasource' });
+    }
 
     const body = request.body() as {
       tableComment?: string | null;
@@ -204,6 +233,9 @@ export default class DatasourcesController {
     }
     if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
       return this.forbidden(response, 'datasource:manage');
+    }
+    if (!(await this.columnBelongsToDatasource(datasourceId, columnId))) {
+      return response.notFound({ message: 'Column not found for datasource' });
     }
 
     const body = request.body() as {
@@ -240,8 +272,8 @@ export default class DatasourcesController {
     if (!datasource) {
       return response.notFound({ message: '数据源未找到' });
     }
-    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
-      return this.forbidden(response, 'datasource:view');
+    if (!(await this.canAccess(ctx, id, 'datasource:manage_credentials'))) {
+      return this.forbidden(response, 'datasource:manage_credentials');
     }
 
     // 允许通过请求体传入密码（用于编辑模式下的连接测试）

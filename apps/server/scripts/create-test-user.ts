@@ -36,14 +36,7 @@ async function createTestUser() {
     displayName: 'Administrator',
     passwordHash,
     roles: ['admin', 'viewer'],
-    permissions: [
-      'read:datasource',
-      'write:datasource',
-      'read:action',
-      'write:action',
-      'read:conversation',
-      'write:conversation',
-    ],
+    permissions: ['*'],
     isActive: true,
   });
 

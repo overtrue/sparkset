@@ -166,7 +166,11 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>{t('Username')}</FormLabel>
                             <FormControl>
-                              <Input placeholder={t('Enter username')} {...field} />
+                              <Input
+                                autoComplete="username"
+                                placeholder={t('Enter username')}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -179,7 +183,12 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>{t('Password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder={t('Enter password')} {...field} />
+                              <Input
+                                autoComplete="current-password"
+                                type="password"
+                                placeholder={t('Enter password')}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -206,7 +215,11 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>{t('Username')}</FormLabel>
                             <FormControl>
-                              <Input placeholder={t('Set username')} {...field} />
+                              <Input
+                                autoComplete="username"
+                                placeholder={t('Set username')}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -219,7 +232,12 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>{t('Password')}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder={t('Set password')} {...field} />
+                              <Input
+                                autoComplete="new-password"
+                                type="password"
+                                placeholder={t('Set password')}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -233,6 +251,7 @@ export default function LoginPage() {
                             <FormLabel>{t('Confirm Password')}</FormLabel>
                             <FormControl>
                               <Input
+                                autoComplete="new-password"
                                 type="password"
                                 placeholder={t('Enter password again')}
                                 {...field}
@@ -249,7 +268,12 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>{t('Email (optional)')}</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="example@email.com" {...field} />
+                              <Input
+                                autoComplete="email"
+                                type="email"
+                                placeholder="example@email.com"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

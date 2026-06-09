@@ -20,6 +20,8 @@ interface DatasourceServiceMock {
 interface SchemaServiceMock {
   sync: ReturnType<typeof vi.fn>;
   list: ReturnType<typeof vi.fn>;
+  updateTableMetadata: ReturnType<typeof vi.fn>;
+  updateColumnMetadata: ReturnType<typeof vi.fn>;
 }
 
 interface AuthorizationServiceMock {
@@ -146,6 +148,8 @@ describe('DatasourcesController authorization', () => {
     schemaService = {
       sync: vi.fn(),
       list: vi.fn(),
+      updateTableMetadata: vi.fn(),
+      updateColumnMetadata: vi.fn(),
     };
     authorizationService = {
       can: vi.fn(),
@@ -225,6 +229,129 @@ describe('DatasourcesController authorization', () => {
       { type: 'datasource', id: 5 },
     );
     expect(response.statusCode).toBe(403);
+  });
+
+  it('requires manage_credentials permission when updating datasource connection settings', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    datasourceService.update.mockResolvedValue(datasource({ id: 5, password: 'rotated' }));
+    authorizationService.can.mockImplementation((_user, action) => action === 'datasource:manage');
+    const controller = createController();
+
+    await controller.update(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        body: { password: 'rotated' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.can).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:manage_credentials',
+      { type: 'datasource', id: 5 },
+    );
+    expect(datasourceService.update).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('allows datasource display updates without manage_credentials permission', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    datasourceService.update.mockResolvedValue(datasource({ id: 5, name: 'Renamed' }));
+    authorizationService.can.mockImplementation((_user, action) => action === 'datasource:manage');
+    const controller = createController();
+
+    await controller.update(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        body: { name: 'Renamed' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.can).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'datasource:manage_credentials',
+      expect.anything(),
+    );
+    expect(datasourceService.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 5, name: 'Renamed' }),
+      expect.objectContaining({ id: 7 }),
+    );
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('requires manage_credentials permission before testing a saved datasource connection', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    authorizationService.can.mockImplementation((_user, action) => action === 'datasource:view');
+    const controller = createController();
+
+    await controller.testConnection(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.can).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:manage_credentials',
+      { type: 'datasource', id: 5 },
+    );
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('does not update table metadata when the table is not in the requested datasource', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    authorizationService.can.mockResolvedValue(true);
+    schemaService.list.mockResolvedValue([]);
+    const controller = createController();
+
+    await controller.updateTableMetadata(
+      createMockContext({
+        response,
+        params: { id: '5', tableId: '99' },
+        body: { semanticDescription: 'User account table' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(schemaService.updateTableMetadata).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('does not update column metadata when the column is not in the requested datasource', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    authorizationService.can.mockResolvedValue(true);
+    schemaService.list.mockResolvedValue([
+      {
+        id: 10,
+        datasourceId: 5,
+        tableName: 'users',
+        columns: [{ id: 11, name: 'id', type: 'int' }],
+        updatedAt: new Date(),
+      },
+    ]);
+    const controller = createController();
+
+    await controller.updateColumnMetadata(
+      createMockContext({
+        response,
+        params: { id: '5', columnId: '99' },
+        body: { semanticDescription: 'User name' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(schemaService.updateColumnMetadata).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(404);
   });
 
   it('allows read-only grant listing for datasource viewers', async () => {

@@ -33,36 +33,6 @@ const datasourcePermissionImplications: Record<DatasourcePermission, DatasourceP
   'datasource:grant': ['datasource:view', 'datasource:grant'],
 };
 
-const legacyDatasourcePermissions: Record<string, DatasourcePermission[]> = {
-  'read:*': ['datasource:view', 'datasource:query'],
-  'read:datasource': ['datasource:view', 'datasource:query'],
-  'datasource:read': ['datasource:view', 'datasource:query'],
-  'write:*': [
-    'datasource:view',
-    'datasource:query',
-    'datasource:sync_schema',
-    'datasource:manage',
-    'datasource:manage_credentials',
-  ],
-  'write:datasource': [
-    'datasource:view',
-    'datasource:query',
-    'datasource:sync_schema',
-    'datasource:manage',
-    'datasource:manage_credentials',
-  ],
-  'datasource:write': [
-    'datasource:view',
-    'datasource:query',
-    'datasource:sync_schema',
-    'datasource:manage',
-    'datasource:manage_credentials',
-  ],
-  'delete:*': ['datasource:manage'],
-  'delete:datasource': ['datasource:manage'],
-  'datasource:delete': ['datasource:manage'],
-};
-
 export class AuthorizationService {
   constructor(private readonly datasourceGrants: DatasourceGrantReader) {}
 
@@ -114,8 +84,7 @@ export class AuthorizationService {
         return action.startsWith('datasource:');
       }
 
-      const legacyPermissions = legacyDatasourcePermissions[permission];
-      return legacyPermissions ? legacyPermissions.includes(action) : false;
+      return false;
     });
   }
 

@@ -802,6 +802,8 @@
   "Welcome, {username}": "Welcome, {username}",
   "Registration failed": "Registration failed",
   "Logged out": "Logged out",
+  "Please sign in again": "Please sign in again",
+  "Session expired": "Session expired",
   "User ID": "User ID",
   "UID": "UID",
   "Provider": "Provider",

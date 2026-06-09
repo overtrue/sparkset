@@ -35,7 +35,6 @@ export function getLocalAuthConfig(): LocalAuthConfig {
     allowRegistration: process.env.AUTH_LOCAL_ALLOW_REGISTRATION !== 'false',
     defaultRoles: splitEnvList(process.env.AUTH_LOCAL_DEFAULT_ROLES, ['viewer']),
     defaultPermissions: splitEnvList(process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS, [
-      'read:datasource',
       'read:action',
       'read:conversation',
     ]),
@@ -50,7 +49,7 @@ export function getLocalAuthConfig(): LocalAuthConfig {
         username: 'analyst',
         password: 'analyst123',
         roles: ['analyst'],
-        permissions: ['query:read', 'datasource:read'],
+        permissions: ['query:read'],
       },
     ],
   };

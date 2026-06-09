@@ -15,6 +15,17 @@ export interface ApiErrorPayload {
   retryAfter?: number;
 }
 
+export const AUTH_SESSION_EXPIRED_EVENT = 'sparkset:auth-session-expired';
+
+export interface AuthSessionExpiredDetail {
+  status: number;
+  message: string;
+  code?: string;
+  payload?: ApiErrorPayload;
+}
+
+export type AuthSessionExpiredEvent = CustomEvent<AuthSessionExpiredDetail>;
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -27,6 +38,34 @@ export class ApiError extends Error {
     this.code = code;
     this.payload = payload;
   }
+}
+
+function dispatchAuthSessionExpired(error: ApiError): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(
+    new CustomEvent<AuthSessionExpiredDetail>(AUTH_SESSION_EXPIRED_EVENT, {
+      detail: {
+        status: error.status,
+        message: error.message,
+        code: error.code,
+        payload: error.payload,
+      },
+    }),
+  );
+}
+
+function throwApiError(
+  message: string,
+  status: number,
+  payload?: ApiErrorPayload,
+  code?: string,
+): never {
+  const error = new ApiError(message, status, payload, code);
+  if (status === 401) {
+    dispatchAuthSessionExpired(error);
+  }
+  throw error;
 }
 
 const normalizeErrorPayload = (json: unknown): ApiErrorPayload | undefined => {
@@ -133,7 +172,7 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
             }
           : rawTextPayload;
         const message = buildApiErrorMessage(payload, text || `API error ${res.status}`);
-        throw new ApiError(message, res.status, payload, payload?.code);
+        throwApiError(message, res.status, payload, payload?.code);
       }
 
       // If response is OK but not JSON, return undefined
@@ -156,14 +195,14 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInit = 
         fallbackPayload,
         text || `API error ${res.status}`,
       );
-      throw new ApiError(fallbackMessage, res.status, fallbackPayload, fallbackPayload?.code);
+      throwApiError(fallbackMessage, res.status, fallbackPayload, fallbackPayload?.code);
     }
 
     const payload = mergedPayload ?? normalizeErrorPayload(json) ?? {};
     const payloadWithRetryAfter =
       payload.retryAfter === undefined && retryAfter ? { ...payload, retryAfter } : payload;
     const message = buildApiErrorMessage(payloadWithRetryAfter, text || `API error ${res.status}`);
-    throw new ApiError(message, res.status, payloadWithRetryAfter, payloadWithRetryAfter?.code);
+    throwApiError(message, res.status, payloadWithRetryAfter, payloadWithRetryAfter?.code);
   }
 
   return json as T;
