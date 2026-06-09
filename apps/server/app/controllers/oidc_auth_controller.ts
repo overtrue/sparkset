@@ -5,6 +5,7 @@ import User from '#models/user';
 import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
 import type { OIDCAuthConfig } from '#types/auth';
 import { getOIDCAuthConfig, isOIDCAuthConfigured } from '../../config/auth.js';
+import { AuditLogService } from '../services/audit_log_service.js';
 
 const OIDC_STATE_COOKIE = 'sparkset_oidc_state';
 const OIDC_NONCE_COOKIE = 'sparkset_oidc_nonce';
@@ -62,6 +63,20 @@ interface OIDCPendingState {
 }
 
 type OIDCPendingStates = Record<string, OIDCPendingState>;
+type OIDCListSource = 'claim' | 'default' | 'empty';
+
+interface OIDCListResolution {
+  values: string[];
+  source: OIDCListSource;
+}
+
+interface OIDCProvisioningResult {
+  user: User;
+  subject: string;
+  username: string;
+  rolesSource: OIDCListSource;
+  permissionsSource: OIDCListSource;
+}
 
 export default class OIDCAuthController {
   private static jwksCache = new Map<
@@ -69,7 +84,10 @@ export default class OIDCAuthController {
     { expiresAt: number; keys: NonNullable<OIDCJwksResponse['keys']> }
   >();
 
-  constructor(private readonly config: OIDCAuthConfig = getOIDCAuthConfig()) {}
+  constructor(
+    private readonly config: OIDCAuthConfig = getOIDCAuthConfig(),
+    private readonly auditLog: Pick<AuditLogService, 'recordHttp'> = new AuditLogService(),
+  ) {}
 
   private token(): string {
     return randomBytes(32).toString('base64url');
@@ -116,12 +134,6 @@ export default class OIDCAuthController {
         redirectUri,
       },
     };
-  }
-
-  private clearOIDCCookies(response: HttpContext['response']): void {
-    response.clearCookie(OIDC_PENDING_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
-    response.clearCookie(OIDC_STATE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
-    response.clearCookie(OIDC_NONCE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
   }
 
   private clearLegacyOIDCCookies(response: HttpContext['response']): void {
@@ -218,6 +230,24 @@ export default class OIDCAuthController {
     }
 
     return [];
+  }
+
+  private resolveListClaim(
+    claims: OIDCClaims,
+    claimName: string,
+    defaultValues: string[],
+  ): OIDCListResolution {
+    const claimValues = this.getListClaim(claims, claimName);
+    if (claimValues.length > 0) {
+      return { values: claimValues, source: 'claim' };
+    }
+
+    const configuredDefaults = defaultValues.filter((item) => item.trim() !== '');
+    if (configuredDefaults.length > 0) {
+      return { values: configuredDefaults, source: 'default' };
+    }
+
+    return { values: [], source: 'empty' };
   }
 
   private async exchangeCode(
@@ -329,7 +359,7 @@ export default class OIDCAuthController {
     return claims;
   }
 
-  private async upsertOIDCUser(claims: OIDCClaims): Promise<User> {
+  private async upsertOIDCUser(claims: OIDCClaims): Promise<OIDCProvisioningResult> {
     const { claimMapping } = this.config;
     const subject = claims.sub;
     if (!subject) {
@@ -340,16 +370,20 @@ export default class OIDCAuthController {
     const username =
       this.getStringClaim(claims, claimMapping.username) || email || `oidc-${subject}`;
     const displayName = this.getStringClaim(claims, 'name') || username;
-    const roles = this.getListClaim(claims, claimMapping.roles);
-    const permissions = this.getListClaim(claims, claimMapping.permissions);
+    const roles = this.resolveListClaim(claims, claimMapping.roles, this.config.defaultRoles);
+    const permissions = this.resolveListClaim(
+      claims,
+      claimMapping.permissions,
+      this.config.defaultPermissions,
+    );
     const userData = {
       uid: `oidc:${subject}`,
       provider: 'oidc' as const,
       username,
       email,
       displayName,
-      roles,
-      permissions,
+      roles: roles.values,
+      permissions: permissions.values,
       isActive: true,
     };
     const user = await User.firstOrCreate({ uid: userData.uid }, userData);
@@ -362,12 +396,63 @@ export default class OIDCAuthController {
       username,
       email,
       displayName,
-      roles,
-      permissions,
+      roles: roles.values,
+      permissions: permissions.values,
     });
     await user.save();
 
-    return user;
+    return {
+      user,
+      subject,
+      username,
+      rolesSource: roles.source,
+      permissionsSource: permissions.source,
+    };
+  }
+
+  private async recordOIDCSuccess(ctx: HttpContext, result: OIDCProvisioningResult): Promise<void> {
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: result.user.id,
+      action: 'auth.oidc.login',
+      outcome: 'success',
+      resourceType: 'user',
+      resourceId: String(result.user.id),
+      metadata: {
+        subject: result.subject,
+        username: result.username,
+        issuer: this.config.issuer ?? null,
+        rolesSource: result.rolesSource,
+        permissionsSource: result.permissionsSource,
+      },
+    });
+  }
+
+  private async recordOIDCFailure(
+    ctx: HttpContext,
+    reason: string,
+    metadata: Record<string, unknown> = {},
+  ): Promise<void> {
+    await this.auditLog.recordHttp(ctx, {
+      actorUserId: null,
+      action: 'auth.oidc.login',
+      outcome: 'failure',
+      resourceType: 'auth_provider',
+      resourceId: 'oidc',
+      metadata: {
+        issuer: this.config.issuer ?? null,
+        reason,
+        ...metadata,
+      },
+    });
+  }
+
+  private async redirectOIDCFailure(
+    ctx: HttpContext,
+    reason: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    await this.recordOIDCFailure(ctx, reason, metadata);
+    return this.redirectFailure(ctx.response);
   }
 
   async authorizationUrl(ctx: HttpContext) {
@@ -413,38 +498,41 @@ export default class OIDCAuthController {
 
     try {
       if (!isOIDCAuthConfigured(this.config)) {
-        return this.redirectFailure(response);
+        return this.redirectOIDCFailure(ctx, 'oidc_not_configured');
       }
 
       const requiredConfiguration = this.requiredConfiguration();
       if (!requiredConfiguration.ok) {
-        return this.redirectFailure(response);
+        return this.redirectOIDCFailure(ctx, 'oidc_not_configured');
       }
 
       const code = request.input('code');
       const state = request.input('state');
 
       if (typeof code !== 'string' || !code || typeof state !== 'string' || !state) {
-        return this.redirectFailure(response);
+        return this.redirectOIDCFailure(ctx, 'invalid_callback_state');
       }
 
       const expectedNonce = this.consumePendingState(ctx, state);
       if (!expectedNonce) {
-        return this.redirectFailure(response);
+        return this.redirectOIDCFailure(ctx, 'invalid_callback_state');
       }
 
       const idToken = await this.exchangeCode(code, requiredConfiguration.value);
       const claims = await this.verifyIDToken(idToken, requiredConfiguration.value, expectedNonce);
-      const user = await this.upsertOIDCUser(claims);
+      const provisioning = await this.upsertOIDCUser(claims);
       const guard = new AccessTokenGuard(ctx);
-      const { token } = await guard.generateToken(user, `oidc_${Date.now()}`);
+      const { token } = await guard.generateToken(provisioning.user, `oidc_${Date.now()}`);
 
       response.cookie(ACCESS_TOKEN_SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
-      this.clearOIDCCookies(response);
+      this.clearLegacyOIDCCookies(response);
+      await this.recordOIDCSuccess(ctx, provisioning);
       return this.redirectSuccess(response);
     } catch (error) {
       ctx.logger?.error({ error }, 'OIDC callback failed');
-      return this.redirectFailure(response);
+      return this.redirectOIDCFailure(ctx, 'callback_error', {
+        errorType: error instanceof Error ? error.name : 'unknown',
+      });
     }
   }
 }

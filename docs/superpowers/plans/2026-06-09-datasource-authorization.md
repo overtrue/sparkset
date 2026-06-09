@@ -796,3 +796,27 @@
 - [x] Implement encrypted pending-state cookie storage with pruning and state consumption.
 - [x] Implement JWKS cache with key rotation refresh.
 - [x] Run focused validation.
+
+## Stage 35: OIDC Default Role Template and Login Audit
+
+**Goal:** Make OIDC user provisioning operationally traceable and configurable without granting broad access by accident.
+
+**Success Criteria:**
+
+- OIDC users receive roles and permissions from ID token claims when those claims are present.
+- If OIDC role or permission claims are absent or empty, the controller applies explicitly configured default OIDC roles and permissions.
+- The default OIDC role and permission templates default to empty lists unless configured.
+- Successful OIDC callbacks record an audit event with actor user ID, subject, username, issuer, and role/permission sources.
+- Failed OIDC callbacks record an audit event with a safe failure reason and no authorization code, ID token, client secret, or raw credential material.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/oidc_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for default role/permission fallback.
+- [x] Add failing tests for OIDC success and failure audit records.
+- [x] Implement OIDC default role/permission configuration and fallback source metadata.
+- [x] Implement OIDC callback audit records without leaking sensitive values.
+- [x] Update env examples and deployment docs.
+- [x] Run focused validation.

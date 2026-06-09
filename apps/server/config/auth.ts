@@ -78,6 +78,8 @@ export function getOIDCAuthConfig(): OIDCAuthConfig {
         ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/login?error=oidc`
         : undefined),
     scopes: splitEnvList(process.env.AUTH_OIDC_SCOPES, ['openid', 'profile', 'email']),
+    defaultRoles: splitEnvList(process.env.AUTH_OIDC_DEFAULT_ROLES, []),
+    defaultPermissions: splitEnvList(process.env.AUTH_OIDC_DEFAULT_PERMISSIONS, []),
     claimMapping: {
       uid: 'sub',
       username: 'preferred_username',

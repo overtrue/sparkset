@@ -6,6 +6,8 @@ import OIDCAuthController from '../../../app/controllers/oidc_auth_controller.js
 import type { OIDCAuthConfig } from '../../../app/types/auth.js';
 import User from '#models/user';
 import { AccessTokenGuard } from '#guards/access_token_guard';
+import type { AuditLogService } from '../../../app/services/audit_log_service.js';
+import AuditLog from '../../../app/models/audit_log.js';
 
 interface CookieRecord {
   name: string;
@@ -42,6 +44,8 @@ function oidcConfig(overrides: Partial<OIDCAuthConfig> = {}): OIDCAuthConfig {
     successRedirectUrl: 'https://dashboard.example.test/dashboard',
     failureRedirectUrl: 'https://dashboard.example.test/login?error=oidc',
     scopes: ['openid', 'profile', 'email'],
+    defaultRoles: [],
+    defaultPermissions: [],
     claimMapping: {
       uid: 'sub',
       username: 'preferred_username',
@@ -137,6 +141,8 @@ function signIdToken(input: {
   keyId: string;
   nonce: string;
   subject?: string;
+  roles?: string[] | null;
+  permissions?: string[] | null;
 }) {
   return jwt.sign(
     {
@@ -144,8 +150,10 @@ function signIdToken(input: {
       preferred_username: 'alice',
       email: 'alice@example.test',
       name: 'Alice Example',
-      roles: ['analyst'],
-      permissions: ['datasource:view'],
+      ...(input.roles === null ? {} : { roles: input.roles ?? ['analyst'] }),
+      ...(input.permissions === null
+        ? {}
+        : { permissions: input.permissions ?? ['datasource:view'] }),
       nonce: input.nonce,
     },
     input.privateKey,
@@ -159,9 +167,41 @@ function signIdToken(input: {
   );
 }
 
+type AuditLogRecorder = Pick<AuditLogService, 'recordHttp'>;
+
+type OIDCControllerWithAudit = new (
+  config: OIDCAuthConfig,
+  auditLog: AuditLogRecorder,
+) => OIDCAuthController;
+
+function createControllerWithAudit(config: OIDCAuthConfig, auditLog: AuditLogRecorder) {
+  return new (OIDCAuthController as unknown as OIDCControllerWithAudit)(config, auditLog);
+}
+
+function createOIDCUser(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 42,
+    uid: 'oidc:user-123',
+    provider: 'oidc',
+    username: 'alice',
+    email: 'alice@example.test',
+    displayName: 'Alice Example',
+    roles: ['analyst'],
+    permissions: ['datasource:view'],
+    isActive: true,
+    merge: vi.fn(function merge(this: Record<string, unknown>, values: Record<string, unknown>) {
+      Object.assign(this, values);
+      return this;
+    }),
+    save: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
 describe('OIDCAuthController', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(AuditLog, 'create').mockResolvedValue({} as AuditLog);
   });
 
   afterEach(() => {
@@ -462,6 +502,192 @@ describe('OIDCAuthController', () => {
         },
       }),
     );
+    expect(response.clearedCookies).not.toContainEqual(
+      expect.objectContaining({
+        name: 'sparkset_oidc_pending',
+      }),
+    );
+  });
+
+  it('uses explicit default OIDC roles and permissions when ID token claims are missing', async () => {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const keyId = 'sparkset-defaults-key';
+    const publicJwk = publicKey.export({ format: 'jwk' });
+    const idToken = signIdToken({
+      privateKey,
+      keyId,
+      nonce: 'expected-nonce',
+      roles: null,
+      permissions: null,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        if (url.includes('/token')) {
+          return new Response(JSON.stringify({ id_token: idToken }), { status: 200 });
+        }
+
+        return new Response(
+          JSON.stringify({
+            keys: [{ ...publicJwk, kid: keyId, use: 'sig', alg: 'RS256' }],
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+
+    const user = createOIDCUser({
+      roles: ['viewer'],
+      permissions: ['query:read'],
+    });
+    vi.spyOn(User, 'firstOrCreate').mockResolvedValue(user as unknown as User);
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_oidc_session',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+
+    const response = createMockResponse();
+    await new OIDCAuthController(
+      oidcConfig({
+        defaultRoles: ['viewer'],
+        defaultPermissions: ['query:read'],
+      }),
+    ).callback(
+      createMockContext(response, {
+        query: { code: 'auth-code', state: 'expected-state' },
+        encryptedCookies: {
+          sparkset_oidc_pending: {
+            'expected-state': {
+              nonce: 'expected-nonce',
+              createdAt: Date.now(),
+            },
+          },
+        },
+      }),
+    );
+
+    expect(User.firstOrCreate).toHaveBeenCalledWith(
+      { uid: 'oidc:user-123' },
+      expect.objectContaining({
+        roles: ['viewer'],
+        permissions: ['query:read'],
+      }),
+    );
+    expect(user.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roles: ['viewer'],
+        permissions: ['query:read'],
+      }),
+    );
+    expect(response.redirectTo).toBe('https://dashboard.example.test/dashboard');
+  });
+
+  it('records a safe audit event for successful OIDC callbacks', async () => {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const keyId = 'sparkset-audit-key';
+    const publicJwk = publicKey.export({ format: 'jwk' });
+    const idToken = signIdToken({ privateKey, keyId, nonce: 'expected-nonce' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        if (url.includes('/token')) {
+          return new Response(JSON.stringify({ id_token: idToken }), { status: 200 });
+        }
+
+        return new Response(
+          JSON.stringify({
+            keys: [{ ...publicJwk, kid: keyId, use: 'sig', alg: 'RS256' }],
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    vi.spyOn(User, 'firstOrCreate').mockResolvedValue(createOIDCUser() as unknown as User);
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_oidc_session',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+    const recordHttpMock = vi.fn().mockResolvedValue(undefined);
+    const auditLog: AuditLogRecorder = { recordHttp: recordHttpMock };
+
+    const response = createMockResponse();
+    await createControllerWithAudit(oidcConfig(), auditLog).callback(
+      createMockContext(response, {
+        query: { code: 'auth-code', state: 'expected-state' },
+        encryptedCookies: {
+          sparkset_oidc_pending: {
+            'expected-state': {
+              nonce: 'expected-nonce',
+              createdAt: Date.now(),
+            },
+          },
+        },
+      }),
+    );
+
+    expect(recordHttpMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: 42,
+        action: 'auth.oidc.login',
+        outcome: 'success',
+        resourceType: 'user',
+        resourceId: '42',
+        metadata: expect.objectContaining({
+          subject: 'user-123',
+          username: 'alice',
+          issuer: 'https://identity.example.test/realms/main',
+          rolesSource: 'claim',
+          permissionsSource: 'claim',
+        }),
+      }),
+    );
+  });
+
+  it('records a safe audit event for failed OIDC callbacks', async () => {
+    const response = createMockResponse();
+    const recordHttpMock = vi.fn().mockResolvedValue(undefined);
+    const auditLog: AuditLogRecorder = { recordHttp: recordHttpMock };
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createControllerWithAudit(oidcConfig(), auditLog).callback(
+      createMockContext(response, {
+        query: { code: 'auth-code', state: 'returned-state' },
+        encryptedCookies: {
+          sparkset_oidc_pending: {
+            'expected-state': {
+              nonce: 'expected-nonce',
+              createdAt: Date.now(),
+            },
+          },
+        },
+      }),
+    );
+
+    expect(response.redirectTo).toBe('https://dashboard.example.test/login?error=oidc');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(recordHttpMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: null,
+        action: 'auth.oidc.login',
+        outcome: 'failure',
+        resourceType: 'auth_provider',
+        resourceId: 'oidc',
+        metadata: expect.objectContaining({
+          issuer: 'https://identity.example.test/realms/main',
+          reason: 'invalid_callback_state',
+        }),
+      }),
+    );
+    const metadata = recordHttpMock.mock.calls[0]?.[1]?.metadata ?? {};
+    const serializedMetadata = JSON.stringify(metadata);
+    expect(serializedMetadata).not.toContain('auth-code');
+    expect(serializedMetadata).not.toContain('client-secret');
+    expect(serializedMetadata).not.toContain('id_token');
   });
 
   it('reuses cached JWKS for repeated callbacks with the same key', async () => {

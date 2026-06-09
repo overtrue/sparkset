@@ -38,6 +38,8 @@ const createAuthConfig = (overrides: AuthConfigOverrides = {}): AuthConfig => ({
   oidc: {
     enabled: false,
     scopes: ['openid', 'profile', 'email'],
+    defaultRoles: [],
+    defaultPermissions: [],
     claimMapping: {
       uid: 'sub',
       username: 'preferred_username',

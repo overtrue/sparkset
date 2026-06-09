@@ -70,6 +70,8 @@ export interface OIDCAuthConfig {
   successRedirectUrl?: string;
   failureRedirectUrl?: string;
   scopes: string[];
+  defaultRoles: string[];
+  defaultPermissions: string[];
   claimMapping: {
     uid: string;
     username: string;

@@ -99,7 +99,7 @@ server {
 
 **场景**：Keycloak/Authentik/Azure AD SSO
 
-当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、用加密 httpOnly pending-state cookie 校验 state/nonce、调用 token endpoint、通过短期缓存的 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。缓存的 JWKS 如果缺少当前 ID Token 的 `kid`，会重新拉取一次以兼容 key rotation。
+当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、用加密 httpOnly pending-state cookie 校验 state/nonce、调用 token endpoint、通过短期缓存的 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。缓存的 JWKS 如果缺少当前 ID Token 的 `kid`，会重新拉取一次以兼容 key rotation。OIDC 回调会记录成功和失败审计事件，审计 metadata 只包含 subject、username、issuer、角色/权限来源或安全失败原因，不记录 authorization code、ID token、client secret 等敏感材料。
 
 生产环境仍建议优先使用 Header Auth 加可信网关；如果直接启用 OIDC，请确保 IdP 只下发最小角色/权限 claim，并配置 HTTPS 回调地址。
 
@@ -122,6 +122,10 @@ AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
 AUTH_OIDC_SUCCESS_REDIRECT_URL=https://sparkset.example.com/dashboard
 AUTH_OIDC_FAILURE_REDIRECT_URL=https://sparkset.example.com/login?error=oidc
 AUTH_OIDC_SCOPES=openid,profile,email
+
+# 可选：当 IdP 未下发 roles/permissions claim 时使用，默认均为空
+AUTH_OIDC_DEFAULT_ROLES=viewer
+AUTH_OIDC_DEFAULT_PERMISSIONS=query:read
 ```
 
 **IdP claim 要求**：
@@ -132,12 +136,14 @@ AUTH_OIDC_SCOPES=openid,profile,email
 4. `roles`：字符串数组或逗号分隔字符串
 5. `permissions`：字符串数组或逗号分隔字符串
 
+当 IdP 下发的 `roles` 或 `permissions` claim 存在且非空时，Sparkset 总是优先使用 claim 值；只有 claim 缺失或为空时，才会使用 `AUTH_OIDC_DEFAULT_ROLES` 和 `AUTH_OIDC_DEFAULT_PERMISSIONS`。两个默认模板未配置时都是空列表，不会自动授予数据源权限。
+
 **仍需企业化增强**：
 
-1. OIDC 用户首次登录默认角色模板
-2. 登录审计和失败原因检索
-3. IdP 组/角色到 Sparkset 权限的可视化映射
-4. 管理员侧的 SSO 诊断页面
+1. 登录审计和失败原因检索 UI
+2. IdP 组/角色到 Sparkset 权限的可视化映射
+3. 管理员侧的 SSO 诊断页面
+4. SSO 配置健康检查和回调连通性测试
 
 ### 3. 开发/演示环境
 
@@ -180,6 +186,8 @@ AUTH_HEADER_TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 # AUTH_OIDC_CLIENT_ID=...
 # AUTH_OIDC_CLIENT_SECRET=...
 # AUTH_OIDC_REDIRECT_URI=...
+# AUTH_OIDC_DEFAULT_ROLES=
+# AUTH_OIDC_DEFAULT_PERMISSIONS=
 
 # 或者（仅开发）
 # AUTH_LOCAL_ENABLED=true
