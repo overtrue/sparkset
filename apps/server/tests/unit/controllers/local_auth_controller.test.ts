@@ -5,6 +5,7 @@ import LocalAuthController from '../../../app/controllers/local_auth_controller.
 import User from '#models/user';
 import { AccessTokenGuard } from '#guards/access_token_guard';
 import { AuditLogService } from '../../../app/services/audit_log_service.js';
+import { LocalLoginAttemptLimiter } from '../../../app/services/local_login_attempt_limiter.js';
 
 const bcryptMock = vi.hoisted(() => ({
   compare: vi.fn(),
@@ -23,6 +24,7 @@ interface MockResponse {
   forbidden: (payload: unknown) => unknown;
   conflict: (payload: unknown) => unknown;
   internalServerError: (payload: unknown) => unknown;
+  status: (code: number) => { send: (payload: unknown) => unknown };
 }
 
 const createMockResponse = (): MockResponse => {
@@ -55,6 +57,15 @@ const createMockResponse = (): MockResponse => {
       response.statusCode = 500;
       response.payload = payload;
       return payload;
+    },
+    status(code) {
+      response.statusCode = code;
+      return {
+        send(payload) {
+          response.payload = payload;
+          return payload;
+        },
+      };
     },
   };
   return response;
@@ -220,6 +231,125 @@ describe('LocalAuthController session cookies', () => {
       }),
     );
     expect(JSON.stringify((audit.recordHttp.mock.calls[0] ?? [])[1])).not.toContain('secret123');
+  });
+
+  it('returns 429 for locked local login attempts without verifying the password', async () => {
+    const limiter = {
+      check: vi.fn(() => ({ allowed: false, retryAfterSeconds: 60 })),
+      recordFailure: vi.fn(),
+      recordSuccess: vi.fn(),
+    };
+    const audit = {
+      recordHttp: vi.fn().mockResolvedValue(undefined),
+    };
+    const response = createMockResponse();
+    const userQuery = vi.spyOn(User, 'query');
+
+    const result = await new LocalAuthController(
+      audit as unknown as AuditLogService,
+      limiter as unknown as LocalLoginAttemptLimiter,
+    ).login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'secret123' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(429);
+    expect(result).toEqual({
+      error: 'AUTH_RATE_LIMITED',
+      message: '登录尝试过于频繁，请稍后再试',
+      retryAfterSeconds: 60,
+    });
+    expect(userQuery).not.toHaveBeenCalled();
+    expect(bcryptMock.compare).not.toHaveBeenCalled();
+    expect(audit.recordHttp).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorUserId: null,
+        action: 'auth.login',
+        outcome: 'failure',
+        resourceType: 'user',
+        resourceId: null,
+        metadata: expect.objectContaining({
+          username: 'analyst',
+          reason: 'rate_limited',
+          retryAfterSeconds: 60,
+        }),
+      }),
+    );
+    expect(JSON.stringify((audit.recordHttp.mock.calls[0] ?? [])[1])).not.toContain('secret123');
+  });
+
+  it('records a failed local login attempt when the password is invalid', async () => {
+    const user = {
+      id: 1,
+      username: 'analyst',
+      passwordHash: 'hashed-password',
+      isActive: true,
+    };
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(user) as never);
+    bcryptMock.compare.mockResolvedValue(false);
+    const limiter = {
+      check: vi.fn(() => ({ allowed: true })),
+      recordFailure: vi.fn(() => ({ allowed: true })),
+      recordSuccess: vi.fn(),
+    };
+    const response = createMockResponse();
+
+    await new LocalAuthController(
+      { recordHttp: vi.fn().mockResolvedValue(undefined) } as unknown as AuditLogService,
+      limiter as unknown as LocalLoginAttemptLimiter,
+    ).login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'wrong-password' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(limiter.recordFailure).toHaveBeenCalledWith('analyst', null);
+    expect(limiter.recordSuccess).not.toHaveBeenCalled();
+  });
+
+  it('clears failed local login attempts after a successful login', async () => {
+    const user = {
+      id: 1,
+      username: 'analyst',
+      email: 'analyst@example.com',
+      displayName: 'Analyst',
+      roles: ['admin'],
+      permissions: ['datasource:view'],
+      provider: 'local',
+      passwordHash: 'hashed-password',
+      isActive: true,
+    };
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(user) as never);
+    bcryptMock.compare.mockResolvedValue(true);
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_login_token',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+    const limiter = {
+      check: vi.fn(() => ({ allowed: true })),
+      recordFailure: vi.fn(),
+      recordSuccess: vi.fn(),
+    };
+    const response = createMockResponse();
+
+    await new LocalAuthController(
+      { recordHttp: vi.fn().mockResolvedValue(undefined) } as unknown as AuditLogService,
+      limiter as unknown as LocalLoginAttemptLimiter,
+    ).login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'secret123' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(limiter.recordSuccess).toHaveBeenCalledWith('analyst', null);
+    expect(limiter.recordFailure).not.toHaveBeenCalled();
   });
 
   it('records an audit event for invalid local login passwords', async () => {

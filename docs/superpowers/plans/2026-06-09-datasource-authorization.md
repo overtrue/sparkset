@@ -424,3 +424,24 @@
 - [x] Implement redacted login failure audit helper.
 - [x] Wire unknown-user, bad-password, and disabled-account failures.
 - [x] Run focused validation.
+
+## Stage 18: Local Login Attempt Limiting
+
+**Goal:** Add a minimal built-in brute-force protection boundary for the default username/password provider.
+
+**Success Criteria:**
+
+- Local login attempts are keyed by normalized username and request IP.
+- Failed local login attempts eventually lock subsequent attempts for a bounded window.
+- Successful local login clears previous failed attempts for the same username/IP key.
+- Rate-limited login attempts return `429` and write a redacted audit event without touching password verification.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/local_login_attempt_limiter.test.ts tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for login attempt windowing, lockout, and success reset.
+- [x] Implement configurable local login attempt limiter service.
+- [x] Wire limiter into local login controller and redacted audit events.
+- [x] Run focused validation.

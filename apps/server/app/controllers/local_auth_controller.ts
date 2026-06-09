@@ -4,6 +4,7 @@ import { LocalAuthProvider } from '#providers/local_auth_provider';
 import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
 import { rejectUntrustedBrowserOrigin } from '../security/trusted_origins.js';
 import { AuditLogService } from '../services/audit_log_service.js';
+import { LocalLoginAttemptLimiter } from '../services/local_login_attempt_limiter.js';
 
 const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_COOKIE_OPTIONS = {
@@ -26,7 +27,10 @@ const CLEAR_SESSION_COOKIE_OPTIONS = {
 export default class LocalAuthController {
   private authProvider: LocalAuthProvider;
 
-  constructor(private readonly auditLog = new AuditLogService()) {
+  constructor(
+    private readonly auditLog = new AuditLogService(),
+    private readonly loginAttemptLimiter = new LocalLoginAttemptLimiter(),
+  ) {
     this.authProvider = new LocalAuthProvider();
   }
 
@@ -42,8 +46,9 @@ export default class LocalAuthController {
     ctx: HttpContext,
     input: {
       username: string;
-      reason: 'unknown_user' | 'invalid_password' | 'account_disabled';
+      reason: 'unknown_user' | 'invalid_password' | 'account_disabled' | 'rate_limited';
       userId?: number | null;
+      retryAfterSeconds?: number;
     },
   ): Promise<void> {
     await this.auditLog.recordHttp(ctx, {
@@ -55,8 +60,16 @@ export default class LocalAuthController {
       metadata: {
         username: input.username,
         reason: input.reason,
+        ...(input.retryAfterSeconds === undefined
+          ? {}
+          : { retryAfterSeconds: input.retryAfterSeconds }),
       },
     });
+  }
+
+  private getRequestIp(ctx: HttpContext): string | null {
+    const requestWithIp = ctx.request as unknown as { ip?: () => string | null };
+    return requestWithIp.ip?.() ?? null;
   }
 
   /**
@@ -122,6 +135,21 @@ export default class LocalAuthController {
         });
       }
 
+      const ipAddress = this.getRequestIp(ctx);
+      const limit = this.loginAttemptLimiter.check(username, ipAddress);
+      if (!limit.allowed) {
+        await this.recordLoginFailure(ctx, {
+          username,
+          reason: 'rate_limited',
+          retryAfterSeconds: limit.retryAfterSeconds,
+        });
+        return response.status(429).send({
+          error: 'AUTH_RATE_LIMITED',
+          message: '登录尝试过于频繁，请稍后再试',
+          retryAfterSeconds: limit.retryAfterSeconds,
+        });
+      }
+
       // 查找用户
       const user = await User.query()
         .where('provider', 'local')
@@ -129,6 +157,7 @@ export default class LocalAuthController {
         .first();
 
       if (!user || !user.passwordHash) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
         await this.recordLoginFailure(ctx, {
           username,
           reason: 'unknown_user',
@@ -143,6 +172,7 @@ export default class LocalAuthController {
       const bcrypt = await import('bcrypt');
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
         await this.recordLoginFailure(ctx, {
           username,
           reason: 'invalid_password',
@@ -156,6 +186,7 @@ export default class LocalAuthController {
 
       // 检查用户状态
       if (!user.isActive) {
+        this.loginAttemptLimiter.recordFailure(username, ipAddress);
         await this.recordLoginFailure(ctx, {
           username,
           reason: 'account_disabled',
@@ -170,6 +201,7 @@ export default class LocalAuthController {
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `login_${Date.now()}`);
+      this.loginAttemptLimiter.recordSuccess(username, ipAddress);
       this.setSessionCookie(response, token);
 
       ctx.logger.info({ username: user.username }, 'Local login success');
