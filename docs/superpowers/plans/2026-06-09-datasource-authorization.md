@@ -67,11 +67,11 @@
 - `pnpm --filter @sparkset/server test -- tests/unit/services/datasource_service.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-- [ ] Add controller tests for forbidden view/manage/sync paths.
-- [ ] Add service tests for creator grant bootstrap and filtered listing.
-- [ ] Wire `AuthorizationService` into datasource controller/service.
-- [ ] Add `/datasources/:id/grants` management endpoints.
-- [ ] Run focused tests and typecheck.
+- [x] Add controller tests for forbidden view/manage/sync paths.
+- [x] Add service tests for creator grant bootstrap and filtered listing.
+- [x] Wire `AuthorizationService` into datasource controller/service.
+- [x] Add `/datasources/:id/grants` management endpoints.
+- [x] Run focused tests and typecheck.
 - [ ] Commit and push: `feat(authz): enforce datasource permissions`.
 
 ## Stage 3: Query And Derived Resource Enforcement

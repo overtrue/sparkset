@@ -4,6 +4,7 @@ import { Database } from '@adonisjs/lucid/database';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 import { DatasourceService } from '../services/datasource_service.js';
 import { SchemaService } from '../services/schema_service.js';
+import { AuthorizationService } from '../services/authorization_service.js';
 import {
   datasourceCreateSchema,
   datasourceUpdateSchema,
@@ -11,6 +12,19 @@ import {
 } from '../validators/datasource.js';
 import { toId } from '../utils/validation.js';
 import { serializeDataSource, serializeDataSources } from '../utils/serializers.js';
+import { getAuthenticatedUser } from '../utils/auth_context.js';
+import {
+  DATASOURCE_PERMISSIONS,
+  type AuthorizationAction,
+  type DatasourcePermission,
+} from '../types/authorization.js';
+import { z } from 'zod';
+
+const grantSchema = z.object({
+  subjectType: z.enum(['user', 'role']),
+  subjectId: z.string().min(1),
+  permissions: z.array(z.enum(DATASOURCE_PERMISSIONS)).min(1),
+});
 
 @inject()
 export default class DatasourcesController {
@@ -18,79 +32,143 @@ export default class DatasourcesController {
     private service: DatasourceService,
     private schemaService: SchemaService,
     private database: Database,
+    private authorization: AuthorizationService,
   ) {}
 
-  async index({ response }: HttpContext) {
-    const items = await this.service.list();
+  private getUser(ctx: HttpContext) {
+    return getAuthenticatedUser(ctx);
+  }
+
+  private unauthorized(response: HttpContext['response']) {
+    return response.unauthorized({
+      error: 'Authentication required',
+      message: '请提供有效的访问令牌',
+    });
+  }
+
+  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: `Missing permission: ${action}`,
+    });
+  }
+
+  private async canAccess(ctx: HttpContext, datasourceId: number, action: AuthorizationAction) {
+    const user = this.getUser(ctx);
+    if (!user) return false;
+    return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
+  }
+
+  async index(ctx: HttpContext) {
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(ctx.response);
+    const items = await this.service.listAuthorized(user);
+    const { response } = ctx;
     return response.ok({ items: serializeDataSources(items) });
   }
 
-  async store({ request, response }: HttpContext) {
+  async store(ctx: HttpContext) {
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(ctx.response);
+    const { request, response } = ctx;
     const parsed = datasourceCreateSchema.parse(request.body());
-    const record = await this.service.create(parsed);
+    const record = await this.service.create(parsed, user);
     return response.created(serializeDataSource(record));
   }
 
-  async update({ params, request, response }: HttpContext) {
+  async update(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const parsed = datasourceUpdateSchema.parse({ ...request.body(), ...params });
-    const record = await this.service.update(parsed);
+    const datasource = await this.service.get(parsed.id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, parsed.id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    const record = await this.service.update(parsed, this.getUser(ctx) ?? undefined);
     return response.ok(serializeDataSource(record));
   }
 
-  async destroy({ params, response }: HttpContext) {
-    const id = toId(params.id);
-    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
-    await this.service.remove(id);
-    return response.noContent();
-  }
-
-  async sync({ params, response }: HttpContext) {
+  async destroy(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    await this.service.remove(id);
+    return response.noContent();
+  }
+
+  async sync(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:sync_schema'))) {
+      return this.forbidden(response, 'datasource:sync_schema');
     }
     const lastSyncAt = await this.schemaService.sync(datasource);
     await this.service.update({ ...datasource, lastSyncAt });
     return response.ok({ id, lastSyncAt });
   }
 
-  async generateSemanticDescriptions({ params, response }: HttpContext) {
+  async generateSemanticDescriptions(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
     }
 
     await this.schemaService.generateSemanticDescriptions(id);
     return response.ok({ success: true });
   }
 
-  async schema({ params, response }: HttpContext) {
+  async schema(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
     }
     const tables = await this.schemaService.list(id);
     return response.ok({ id, tables });
   }
 
-  async show({ params, response }: HttpContext) {
+  async show(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
+    }
     const tables = await this.schemaService.list(id);
     return response.ok({ ...serializeDataSource(datasource), tables });
   }
 
-  async updateTableMetadata({ params, request, response }: HttpContext) {
+  async updateTableMetadata(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const datasourceId = toId(params.id);
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const tableId = toId(params.tableId);
@@ -98,6 +176,9 @@ export default class DatasourcesController {
     const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
     }
 
     const body = request.body() as {
@@ -111,7 +192,8 @@ export default class DatasourcesController {
     return response.ok({ success: true });
   }
 
-  async updateColumnMetadata({ params, request, response }: HttpContext) {
+  async updateColumnMetadata(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const datasourceId = toId(params.id);
     if (!datasourceId) return response.badRequest({ message: 'Invalid datasource ID' });
     const columnId = toId(params.columnId);
@@ -119,6 +201,9 @@ export default class DatasourcesController {
     const datasource = await this.service.get(datasourceId);
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, datasourceId, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
     }
 
     const body = request.body() as {
@@ -132,19 +217,31 @@ export default class DatasourcesController {
     return response.ok({ success: true });
   }
 
-  async setDefault({ params, response }: HttpContext) {
+  async setDefault(ctx: HttpContext) {
+    const { params, response } = ctx;
     const parsed = setDefaultSchema.parse(params);
+    const datasource = await this.service.get(parsed.id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, parsed.id, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
     await this.service.setDefault(parsed.id);
     return response.ok({ success: true });
   }
 
-  async testConnection({ params, request, response }: HttpContext) {
+  async testConnection(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
     const datasource = await this.service.get(id);
 
     if (!datasource) {
       return response.notFound({ message: '数据源未找到' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
     }
 
     // 允许通过请求体传入密码（用于编辑模式下的连接测试）
@@ -246,5 +343,67 @@ export default class DatasourcesController {
         message: `连接测试异常: ${error instanceof Error ? error.message : '未知错误'}`,
       });
     }
+  }
+
+  async grants(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
+      return this.forbidden(response, 'datasource:grant');
+    }
+
+    return response.ok({ items: await this.service.listGrants(id) });
+  }
+
+  async grant(ctx: HttpContext) {
+    const { params, request, response } = ctx;
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
+      return this.forbidden(response, 'datasource:grant');
+    }
+
+    const parsed = grantSchema.parse(request.body()) as {
+      subjectType: 'user' | 'role';
+      subjectId: string;
+      permissions: DatasourcePermission[];
+    };
+    const grant = await this.service.grantDatasource({
+      datasourceId: id,
+      ...parsed,
+      createdBy: user.id,
+    });
+    return response.ok(grant);
+  }
+
+  async revokeGrant(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid datasource ID' });
+    const datasource = await this.service.get(id);
+    if (!datasource) {
+      return response.notFound({ message: 'Datasource not found' });
+    }
+    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
+      return this.forbidden(response, 'datasource:grant');
+    }
+
+    const subjectType = String(params.subjectType);
+    if (subjectType !== 'user' && subjectType !== 'role') {
+      return response.badRequest({ message: 'Invalid grant subject type' });
+    }
+    await this.service.revokeDatasourceGrant(id, subjectType, String(params.subjectId));
+    return response.noContent();
   }
 }

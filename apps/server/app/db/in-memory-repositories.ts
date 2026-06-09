@@ -9,9 +9,11 @@ import type {
   ActionRepository,
   AIProviderRepository,
   ConversationRepository,
+  DatasourceGrantRepository,
   DatasourceRepository,
 } from './interfaces.js';
 import type { Action, AIProvider, Conversation, DataSource, Message } from '../models/types.js';
+import type { DatasourceGrant } from '../types/authorization.js';
 
 /**
  * In-memory DatasourceRepository implementation
@@ -96,6 +98,43 @@ export class InMemoryDatasourceRepository implements DatasourceRepository {
 
     // Set specified datasource as default
     this.store.set(id, { ...existing, isDefault: true });
+  }
+}
+
+/**
+ * In-memory DatasourceGrantRepository implementation
+ */
+export class InMemoryDatasourceGrantRepository implements DatasourceGrantRepository {
+  private store = new Map<string, DatasourceGrant>();
+  private currentId = 1;
+
+  async listForDatasource(datasourceId: number): Promise<DatasourceGrant[]> {
+    return Array.from(this.store.values()).filter((grant) => grant.datasourceId === datasourceId);
+  }
+
+  async upsert(
+    input: Omit<DatasourceGrant, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<DatasourceGrant> {
+    const key = this.key(input.datasourceId, input.subjectType, input.subjectId);
+    const existing = this.store.get(key);
+    const now = new Date();
+    const grant: DatasourceGrant = {
+      ...existing,
+      ...input,
+      id: existing?.id ?? this.currentId++,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.store.set(key, grant);
+    return grant;
+  }
+
+  async remove(datasourceId: number, subjectType: string, subjectId: string): Promise<void> {
+    this.store.delete(this.key(datasourceId, subjectType, subjectId));
+  }
+
+  private key(datasourceId: number, subjectType: string, subjectId: string): string {
+    return `${datasourceId}:${subjectType}:${subjectId}`;
   }
 }
 

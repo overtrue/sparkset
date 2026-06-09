@@ -20,6 +20,7 @@ import type { Repositories } from './repository_factory.js';
 import { createLucidDBClientFactory } from '../db/lucid-db-client.js';
 import { ActionService } from '../services/action_service.js';
 import { AIProviderService } from '../services/ai_provider_service.js';
+import { AuthorizationService } from '../services/authorization_service.js';
 import { ConversationService } from '../services/conversation_service.js';
 import { DatasourceService } from '../services/datasource_service.js';
 import { QueryService } from '../services/query_service.js';
@@ -40,6 +41,7 @@ import { createConversationTracker } from '../services/conversation_tracker.js';
  */
 export interface Services {
   datasource: DatasourceService;
+  authorization: AuthorizationService;
   action: ActionService;
   conversation: ConversationService;
   schema: SchemaService;
@@ -70,7 +72,12 @@ export function createServices(options: ServiceFactoryOptions): Services {
   const { database, repositories } = options;
 
   // Create base services
-  const datasourceService = new DatasourceService(repositories.datasource);
+  const authorizationService = new AuthorizationService(repositories.datasourceGrant);
+  const datasourceService = new DatasourceService(
+    repositories.datasource,
+    repositories.datasourceGrant,
+    authorizationService,
+  );
   const actionService = new ActionService(repositories.action);
   const conversationService = new ConversationService(repositories.conversation);
   const aiProviderService = new AIProviderService(repositories.aiProvider);
@@ -175,6 +182,7 @@ export function createServices(options: ServiceFactoryOptions): Services {
 
   return {
     datasource: datasourceService,
+    authorization: authorizationService,
     action: actionService,
     conversation: conversationService,
     schema: schemaService,

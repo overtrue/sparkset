@@ -46,6 +46,9 @@ router
       DatasourcesController,
       'generateSemanticDescriptions',
     ]);
+    router.get('/:id/grants', [DatasourcesController, 'grants']);
+    router.put('/:id/grants', [DatasourcesController, 'grant']);
+    router.delete('/:id/grants/:subjectType/:subjectId', [DatasourcesController, 'revokeGrant']);
     router.get('/:id/schema', [DatasourcesController, 'schema']);
     router.put('/:id/tables/:tableId', [DatasourcesController, 'updateTableMetadata']);
     router.put('/:id/columns/:columnId', [DatasourcesController, 'updateColumnMetadata']);
