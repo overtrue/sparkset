@@ -183,6 +183,10 @@ describe('DatasourcesController authorization', () => {
     const response = createMockResponse();
     const visibleDatasource = datasource({ id: 2 });
     datasourceService.listAuthorized.mockResolvedValue([visibleDatasource]);
+    authorizationService.can.mockImplementation((_user, action) =>
+      ['datasource:view', 'datasource:query', 'datasource:grant'].includes(String(action)),
+    );
+    authorizationService.canPerformGlobalAction.mockReturnValue(true);
     const controller = createController();
 
     await controller.index(
@@ -199,7 +203,58 @@ describe('DatasourcesController authorization', () => {
       isActive: true,
     });
     expect(response.statusCode).toBe(200);
-    expect((response.payload as { items: unknown[] }).items).toHaveLength(1);
+    expect(response.payload).toEqual(
+      expect.objectContaining({
+        capabilities: { canCreate: true },
+        items: [
+          expect.objectContaining({
+            id: 2,
+            capabilities: {
+              canView: true,
+              canQuery: true,
+              canSyncSchema: false,
+              canManage: false,
+              canManageCredentials: false,
+              canGrant: true,
+            },
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('returns datasource details with per-resource capabilities', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    schemaService.list.mockResolvedValue([]);
+    authorizationService.can.mockImplementation((_user, action) =>
+      ['datasource:view', 'datasource:sync_schema', 'datasource:manage'].includes(String(action)),
+    );
+    const controller = createController();
+
+    await controller.show(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.payload).toEqual(
+      expect.objectContaining({
+        id: 5,
+        tables: [],
+        capabilities: {
+          canView: true,
+          canQuery: false,
+          canSyncSchema: true,
+          canManage: true,
+          canManageCredentials: false,
+          canGrant: false,
+        },
+      }),
+    );
   });
 
   it('requires global datasource:create permission before creating a datasource', async () => {

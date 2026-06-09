@@ -445,3 +445,26 @@
 - [x] Implement configurable local login attempt limiter service.
 - [x] Wire limiter into local login controller and redacted audit events.
 - [x] Run focused validation.
+
+## Stage 19: Datasource Capability DTO And UI Gating
+
+**Goal:** Make datasource permissions explicit in API responses so the dashboard can render allowed actions instead of relying on failed requests.
+
+**Success Criteria:**
+
+- Datasource list responses include global `canCreate` and per-datasource capability snapshots.
+- Datasource detail responses include the same per-datasource capability snapshot.
+- Dashboard list/detail/schema actions are gated by capabilities for create, sync, manage, manage credentials, and grant-adjacent edits.
+- Existing authorization enforcement remains server-side and unchanged.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+- [x] Add failing server tests for datasource capability response fields.
+- [x] Implement server-side datasource capability serialization.
+- [x] Wire dashboard datasource list/detail/schema controls to capabilities.
+- [x] Run focused validation and browser verification.

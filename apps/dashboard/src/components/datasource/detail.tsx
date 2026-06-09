@@ -56,6 +56,11 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const capabilities = datasource.capabilities;
+  const canSyncSchema = Boolean(capabilities?.canSyncSchema);
+  const canManage = Boolean(capabilities?.canManage);
+  const canManageCredentials = Boolean(capabilities?.canManageCredentials);
+  const canEditDatasource = canManage && canManageCredentials;
 
   const canSubmitEdit = useMemo(
     () => Boolean(editForm.name && editForm.host && editForm.username && editForm.database),
@@ -64,6 +69,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   const isBusy = syncing || deleting || schemaBusy;
 
   const handleSync = useCallback(async () => {
+    if (!canSyncSchema) return;
     setSyncing(true);
     try {
       await syncDatasource(datasource.id);
@@ -76,7 +82,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
     } finally {
       setSyncing(false);
     }
-  }, [datasource.id, t]);
+  }, [canSyncSchema, datasource.id, t]);
 
   const onEditFormChange = useCallback(
     (key: keyof DatasourceForm) => (e: ChangeEvent<HTMLInputElement>) =>
@@ -88,6 +94,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   );
 
   const handleOpenEditDialog = useCallback(() => {
+    if (!canEditDatasource) return;
     setEditForm({
       name: datasource.name,
       type: datasource.type,
@@ -99,7 +106,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       isDefault: datasource.isDefault,
     });
     setEditDialogOpen(true);
-  }, [datasource]);
+  }, [canEditDatasource, datasource]);
 
   const handleCloseEditDialog = useCallback(() => {
     setEditDialogOpen(false);
@@ -120,7 +127,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
   const handleEditSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
-      if (!canSubmitEdit || editSubmitting) return;
+      if (!canEditDatasource || !canSubmitEdit || editSubmitting) return;
       setEditSubmitting(true);
       try {
         // 编辑模式：如果密码为空，则不包含在更新数据中
@@ -136,10 +143,19 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         setEditSubmitting(false);
       }
     },
-    [canSubmitEdit, datasource.id, editForm, editSubmitting, handleCloseEditDialog, t],
+    [
+      canEditDatasource,
+      canSubmitEdit,
+      datasource.id,
+      editForm,
+      editSubmitting,
+      handleCloseEditDialog,
+      t,
+    ],
   );
 
   const handleDelete = useCallback(async () => {
+    if (!canManage) return;
     setDeleting(true);
     try {
       await deleteDatasource(datasource.id);
@@ -149,7 +165,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
       toast.error((err as Error)?.message ?? t('Delete failed'));
       setDeleting(false);
     }
-  }, [datasource.id, router, t]);
+  }, [canManage, datasource.id, router, t]);
 
   return (
     <div className="space-y-6">
@@ -159,7 +175,12 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         backButton="/dashboard/datasources"
         action={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleOpenEditDialog} disabled={isBusy}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenEditDialog}
+              disabled={isBusy || !canEditDatasource}
+            >
               <RiEditLine className="h-4 w-4" aria-hidden="true" />
               {t('Edit')}
             </Button>
@@ -169,7 +190,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               onClick={() => {
                 void handleSync();
               }}
-              disabled={isBusy}
+              disabled={isBusy || !canSyncSchema}
             >
               <RiRefreshLine
                 className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
@@ -183,7 +204,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
               onClick={() => {
                 setDeleteDialogOpen(true);
               }}
-              disabled={isBusy}
+              disabled={isBusy || !canManage}
             >
               <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />
               {deleting ? t('Deleting') : t('Delete')}
@@ -229,6 +250,7 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
 
       <SchemaEditor
         datasource={datasource}
+        canManage={canManage}
         onDatasourceChange={setDatasource}
         onBusyChange={setSchemaBusy}
       />

@@ -4,7 +4,7 @@ import type {
   TestConnectionDto,
   TableSchemaDTO,
   DatasourceDetailDTO,
-  ApiListResponse,
+  DatasourceListResponse,
   TestConnectionResult,
 } from '@/types/api';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/fetch';
@@ -15,8 +15,8 @@ const normalizeDatasource = <T extends Datasource>(datasource: T): T => ({
 });
 
 // API functions - can be used in both server and client components
-export async function fetchDatasources(): Promise<ApiListResponse<Datasource>> {
-  const response = await apiGet<ApiListResponse<Datasource>>('/datasources');
+export async function fetchDatasources(): Promise<DatasourceListResponse> {
+  const response = await apiGet<DatasourceListResponse>('/datasources');
   return {
     ...response,
     items: response.items?.map(normalizeDatasource) ?? [],

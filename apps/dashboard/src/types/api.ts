@@ -48,6 +48,22 @@ export interface Datasource {
   createdAt?: string;
   updatedAt?: string;
   description?: string;
+  capabilities?: DatasourceCapabilities;
+}
+
+export interface DatasourceCapabilities {
+  canView: boolean;
+  canQuery: boolean;
+  canSyncSchema: boolean;
+  canManage: boolean;
+  canManageCredentials: boolean;
+  canGrant: boolean;
+}
+
+export interface DatasourceListResponse extends ApiListResponse<Datasource> {
+  capabilities?: {
+    canCreate: boolean;
+  };
 }
 
 export interface CreateDatasourceDto {

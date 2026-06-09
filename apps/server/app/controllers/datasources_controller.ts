@@ -11,15 +11,21 @@ import {
   setDefaultSchema,
 } from '../validators/datasource.js';
 import { toId } from '../utils/validation.js';
-import { serializeDataSource, serializeDataSources } from '../utils/serializers.js';
+import {
+  datasourceCapabilitiesFromPermissions,
+  serializeDataSource,
+  type SafeDataSource,
+} from '../utils/serializers.js';
 import { getAuthenticatedUser } from '../utils/auth_context.js';
 import {
   DATASOURCE_PERMISSIONS,
+  type AuthorizationUser,
   type AuthorizationAction,
   type DatasourcePermission,
   type GlobalAuthorizationAction,
 } from '../types/authorization.js';
 import { AuditLogService } from '../services/audit_log_service.js';
+import type { DataSource } from '../models/types.js';
 import { z } from 'zod';
 
 const grantSchema = z.object({
@@ -65,6 +71,34 @@ export default class DatasourcesController {
     return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
   }
 
+  private async datasourceCapabilities(user: AuthorizationUser, datasourceId: number) {
+    const checks = await Promise.all(
+      DATASOURCE_PERMISSIONS.map(async (permission) => [
+        permission,
+        await this.authorization.can(user, permission, { type: 'datasource', id: datasourceId }),
+      ]),
+    );
+    return datasourceCapabilitiesFromPermissions(
+      Object.fromEntries(checks) as Record<DatasourcePermission, boolean>,
+    );
+  }
+
+  private async serializeDatasourceForUser(
+    user: AuthorizationUser,
+    datasource: DataSource,
+  ): Promise<SafeDataSource> {
+    return serializeDataSource(datasource, {
+      capabilities: await this.datasourceCapabilities(user, datasource.id),
+    });
+  }
+
+  private async serializeDatasourcesForUser(
+    user: AuthorizationUser,
+    datasources: DataSource[],
+  ): Promise<SafeDataSource[]> {
+    return Promise.all(datasources.map((item) => this.serializeDatasourceForUser(user, item)));
+  }
+
   private canCreateDatasource(ctx: HttpContext): boolean {
     return this.authorization.canPerformGlobalAction(this.getUser(ctx), 'datasource:create');
   }
@@ -105,7 +139,12 @@ export default class DatasourcesController {
     if (!user) return this.unauthorized(ctx.response);
     const items = await this.service.listAuthorized(user);
     const { response } = ctx;
-    return response.ok({ items: serializeDataSources(items) });
+    return response.ok({
+      items: await this.serializeDatasourcesForUser(user, items),
+      capabilities: {
+        canCreate: this.canCreateDatasource(ctx),
+      },
+    });
   }
 
   async store(ctx: HttpContext) {
@@ -215,7 +254,9 @@ export default class DatasourcesController {
       return this.forbidden(response, 'datasource:view');
     }
     const tables = await this.schemaService.list(id);
-    return response.ok({ ...serializeDataSource(datasource), tables });
+    const user = this.getUser(ctx);
+    if (!user) return this.unauthorized(response);
+    return response.ok({ ...(await this.serializeDatasourceForUser(user, datasource)), tables });
   }
 
   async updateTableMetadata(ctx: HttpContext) {
