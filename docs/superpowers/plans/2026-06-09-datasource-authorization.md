@@ -97,9 +97,13 @@
 - [x] Add failing tests for dataset preview and create permissions.
 - [x] Run focused query/dataset tests and server typecheck.
 - [x] Commit and push query/dataset batch: `feat(authz): protect query and dataset access`.
-- [ ] Add failing tests for chart/dashboard/bot derived-resource visibility.
-- [ ] Wire authorization checks through the relevant controllers/services.
-- [ ] Run derived-resource focused tests and typecheck.
+- [x] Add failing tests for chart derived-resource visibility.
+- [x] Wire chart authorization checks through the controller and shared derived-resource authorization service.
+- [x] Run chart focused tests and typecheck.
+- [x] Commit and push chart batch: `feat(authz): protect chart data access`.
+- [ ] Add failing tests for dashboard/bot derived-resource visibility.
+- [ ] Wire dashboard and bot authorization checks through the relevant controllers/services.
+- [ ] Run remaining derived-resource focused tests and typecheck.
 - [ ] Commit and push: `feat(authz): protect query and derived resources`.
 
 ## Stage 4: Dashboard Access Management UI

@@ -1,8 +1,11 @@
 import { inject } from '@adonisjs/core';
 import type { HttpContext } from '@adonisjs/core/http';
 import { ChartService } from '../services/chart_service.js';
+import { DerivedResourceAuthorizationService } from '../services/derived_resource_authorization_service.js';
 import { z } from 'zod';
 import { toId } from '../utils/validation.js';
+import { getAuthenticatedUser } from '../utils/auth_context.js';
+import type { AuthorizationAction } from '../types/authorization.js';
 
 const createSchema = z.object({
   datasetId: z.number().int().positive(),
@@ -72,27 +75,72 @@ const previewSchema = z.object({
 
 @inject()
 export default class ChartsController {
-  constructor(private service: ChartService) {}
+  constructor(
+    private service: ChartService,
+    private resourceAuthorization: DerivedResourceAuthorizationService,
+  ) {}
 
-  async index({ request, response }: HttpContext) {
-    const datasetId = request.input('datasetId') ? Number(request.input('datasetId')) : undefined;
-
-    // For now, return all charts (no auth)
-    const items = await this.service.list(datasetId);
-    return response.ok({ items });
+  private unauthorized(response: HttpContext['response']) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: 'Authentication is required for chart access',
+    });
   }
 
-  async store({ request, response }: HttpContext) {
+  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: `Missing permission: ${action}`,
+    });
+  }
+
+  async index(ctx: HttpContext) {
+    const { request, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    const datasetId = request.input('datasetId') ? Number(request.input('datasetId')) : undefined;
+
+    if (
+      datasetId &&
+      !(await this.resourceAuthorization.canAccessDataset(user, datasetId, 'datasource:view'))
+    ) {
+      return response.ok({ items: [] });
+    }
+
+    const items = await this.service.list(datasetId);
+    const authorizedItems = [];
+    for (const item of items) {
+      if (await this.resourceAuthorization.canAccessChart(user, item, 'datasource:view')) {
+        authorizedItems.push(item);
+      }
+    }
+    return response.ok({ items: authorizedItems });
+  }
+
+  async store(ctx: HttpContext) {
+    const { request, response } = ctx;
     const parsed = createSchema.parse(request.body());
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (
+      !(await this.resourceAuthorization.canAccessDataset(
+        user,
+        parsed.datasetId,
+        'datasource:query',
+      ))
+    ) {
+      return this.forbidden(response, 'datasource:query');
+    }
     const record = await this.service.create({
       ...parsed,
       description: parsed.description ?? undefined,
-      ownerId: undefined, // No auth yet
+      ownerId: user.id,
     });
     return response.created(record);
   }
 
-  async show({ params, response }: HttpContext) {
+  async show(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
@@ -103,10 +151,17 @@ export default class ChartsController {
       return response.notFound({ message: 'Chart not found' });
     }
 
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (!(await this.resourceAuthorization.canAccessChart(user, chart, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
+    }
+
     return response.ok(chart);
   }
 
-  async update({ params, request, response }: HttpContext) {
+  async update(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const id = toId(params.id);
     if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
@@ -122,11 +177,28 @@ export default class ChartsController {
       return response.notFound({ message: 'Chart not found' });
     }
 
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (!(await this.resourceAuthorization.canAccessChart(user, existing, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    if (
+      parsed.datasetId &&
+      !(await this.resourceAuthorization.canAccessDataset(
+        user,
+        parsed.datasetId,
+        'datasource:query',
+      ))
+    ) {
+      return this.forbidden(response, 'datasource:query');
+    }
+
     const record = await this.service.update(id, updateInput);
     return response.ok(record);
   }
 
-  async destroy({ params, response }: HttpContext) {
+  async destroy(ctx: HttpContext) {
+    const { params, response } = ctx;
     const id = toId(params.id);
     if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
@@ -137,11 +209,18 @@ export default class ChartsController {
       return response.notFound({ message: 'Chart not found' });
     }
 
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (!(await this.resourceAuthorization.canAccessChart(user, existing, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+
     await this.service.delete(id);
     return response.noContent();
   }
 
-  async render({ params, request, response }: HttpContext) {
+  async render(ctx: HttpContext) {
+    const { params, request, response } = ctx;
     const id = toId(params.id);
     if (!id) {
       return response.badRequest({ message: 'Invalid chart ID' });
@@ -151,6 +230,12 @@ export default class ChartsController {
     const existing = await this.service.get(id);
     if (!existing) {
       return response.notFound({ message: 'Chart not found' });
+    }
+
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (!(await this.resourceAuthorization.canAccessChart(user, existing, 'datasource:query'))) {
+      return this.forbidden(response, 'datasource:query');
     }
 
     try {
@@ -163,8 +248,20 @@ export default class ChartsController {
     }
   }
 
-  async preview({ request, response }: HttpContext) {
+  async preview(ctx: HttpContext) {
+    const { request, response } = ctx;
     const parsed = previewSchema.parse(request.body());
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+    if (
+      !(await this.resourceAuthorization.canAccessDataset(
+        user,
+        parsed.datasetRef.datasetId,
+        'datasource:query',
+      ))
+    ) {
+      return this.forbidden(response, 'datasource:query');
+    }
 
     try {
       const result = await this.service.preview(parsed.datasetRef.datasetId, parsed.spec);
