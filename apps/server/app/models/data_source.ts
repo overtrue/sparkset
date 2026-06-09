@@ -37,10 +37,10 @@ export default class DataSource extends BaseModel {
   @column.dateTime({ columnName: 'last_sync_at' })
   declare lastSyncAt: DateTime<true> | null;
 
-  @column()
+  @column({ columnName: 'creator_id' })
   declare creatorId: number | null;
 
-  @column()
+  @column({ columnName: 'updater_id' })
   declare updaterId: number | null;
 
   @column.dateTime({ autoCreate: true, columnName: 'created_at' })

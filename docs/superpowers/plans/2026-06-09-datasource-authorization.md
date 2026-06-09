@@ -42,10 +42,10 @@
 - `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-- [ ] Add failing unit tests for wildcard, legacy permissions, role grants, and denied users.
-- [ ] Implement authorization types and service.
-- [ ] Add grant repository/model/migration.
-- [ ] Run focused tests and typecheck.
+- [x] Add failing unit tests for wildcard, legacy permissions, role grants, and denied users.
+- [x] Implement authorization types and service.
+- [x] Add grant repository/model/migration.
+- [x] Run focused tests and typecheck.
 - [ ] Commit and push: `feat(authz): add datasource authorization core`.
 
 ## Stage 2: Datasource API Enforcement

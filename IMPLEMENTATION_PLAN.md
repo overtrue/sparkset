@@ -16,7 +16,7 @@
 - `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 2: 数据源 API 授权
 
@@ -34,7 +34,7 @@
 - `pnpm --filter @sparkset/server test -- tests/unit/services/datasource_service.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3: 查询与派生资源授权
 
