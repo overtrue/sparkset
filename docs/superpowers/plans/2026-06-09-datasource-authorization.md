@@ -492,3 +492,25 @@
 - [x] Implement global AI provider permissions and controller checks.
 - [x] Gate dashboard AI provider actions by capabilities.
 - [x] Run focused validation and browser verification.
+
+## Stage 21: AI Provider Management Audit Trail
+
+**Goal:** Make AI provider credential and lifecycle operations traceable without leaking API keys.
+
+**Success Criteria:**
+
+- Creating an AI provider emits a redacted `ai_provider.create` audit event.
+- Updating an AI provider emits an `ai_provider.update` audit event with changed field names, not raw credential values.
+- Setting default and deleting providers emit lifecycle audit events.
+- Saved and unsaved connection tests emit success/failure audit events without raw API keys.
+- Audit writes remain best-effort and do not change primary API responses.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/ai_providers_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing controller tests for AI provider management audit events.
+- [x] Inject the audit service into the AI provider controller.
+- [x] Record redacted audit metadata for create/update/default/delete/test paths.
+- [x] Run focused validation.
