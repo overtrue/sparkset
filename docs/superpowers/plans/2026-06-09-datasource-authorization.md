@@ -208,3 +208,28 @@
 - [x] Refactor access panel subject input into selector with manual fallback.
 - [x] Run automated and browser verification.
 - [x] Commit and push: `feat(authz): add grant subject directory`.
+
+## Stage 8: Runtime Query Authorization Gaps
+
+**Goal:** Close P0 datasource authorization bypasses in Action execution and Bot query runtime.
+
+**Success Criteria:**
+
+- SQL Actions must be explicitly bound to a datasource; no default datasource fallback is allowed.
+- SQL Action execution requires `datasource:manage` because the executor can run DML.
+- SQL Action generation requires `datasource:query` before schema access.
+- Bot query runtime uses only configured bot datasources and fails closed when none are configured.
+- Bot query runtime executes with the bot creator's current authorization context so revoked grants take effect.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/core test -- src/tools/__tests__/actionRunner.test.ts`
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/actions_controller.test.ts tests/unit/services/query_processor.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for SQL Action datasource binding and authorization.
+- [x] Add failing tests for Bot query datasource scoping and creator authorization context.
+- [x] Implement Action controller authorization and remove SQL action default datasource fallback.
+- [x] Implement Bot query runtime datasource scope and creator context.
+- [x] Run focused validation.
+- [x] Commit and push: `fix(authz): enforce runtime datasource bounds`.

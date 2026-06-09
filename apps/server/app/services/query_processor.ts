@@ -1,6 +1,8 @@
 import type Bot from '../models/bot.js';
 import type BotEvent from '../models/bot_event.js';
+import User from '#models/user';
 import { QueryService, type QueryRequest, type QueryResponse } from './query_service.js';
+import type { AuthorizationUser } from '../types/authorization.js';
 
 /**
  * Result of query processing
@@ -27,6 +29,40 @@ export interface QueryProcessingResult {
 export class BotQueryProcessor {
   constructor(private queryService: QueryService) {}
 
+  private configuredDatasourceIds(bot: Bot): number[] {
+    const datasourceIds = new Set<number>();
+    for (const datasourceId of bot.enabledDataSources ?? []) {
+      if (Number.isFinite(datasourceId)) {
+        datasourceIds.add(datasourceId);
+      }
+    }
+    if (bot.defaultDataSourceId && Number.isFinite(bot.defaultDataSourceId)) {
+      datasourceIds.add(bot.defaultDataSourceId);
+    }
+    return Array.from(datasourceIds);
+  }
+
+  private primaryDatasourceId(bot: Bot): number | null {
+    const datasourceIds = this.configuredDatasourceIds(bot);
+    if (datasourceIds.length === 0) return null;
+    if (bot.defaultDataSourceId && datasourceIds.includes(bot.defaultDataSourceId)) {
+      return bot.defaultDataSourceId;
+    }
+    return datasourceIds[0];
+  }
+
+  private async botCreatorUser(bot: Bot): Promise<AuthorizationUser | null> {
+    if (!bot.creatorId) return null;
+    const user = await User.find(bot.creatorId);
+    if (!user?.isActive) return null;
+    return {
+      id: user.id,
+      roles: user.roles ?? [],
+      permissions: user.permissions ?? [],
+      isActive: user.isActive,
+    };
+  }
+
   /**
    * Process a natural language query in bot context
    */
@@ -47,17 +83,40 @@ export class BotQueryProcessor {
         };
       }
 
+      const datasourceId = this.primaryDatasourceId(bot);
+      if (!datasourceId) {
+        return {
+          success: false,
+          error: {
+            message: 'No datasource is configured for this bot',
+            code: 'DATASOURCE_NOT_CONFIGURED',
+          },
+        };
+      }
+
+      const botUser = await this.botCreatorUser(bot);
+      if (!botUser) {
+        return {
+          success: false,
+          error: {
+            message: 'Bot creator is unavailable or inactive',
+            code: 'BOT_OWNER_UNAVAILABLE',
+          },
+        };
+      }
+
       // 2. Build query request
       // Use bot's configured datasource and AI provider if available
       const queryRequest: QueryRequest = {
         question: userMessage,
+        datasource: datasourceId,
         // Optional: Use bot's configured AI provider if available
         aiProvider: bot.aiProviderId || undefined,
         limit: 100,
       };
 
       // 3. Execute query
-      const queryResponse = await this.queryService.run(queryRequest);
+      const queryResponse = await this.queryService.run(queryRequest, botUser);
 
       // 4. Format response for bot
       const formattedResponse = this.formatQueryResponse(queryResponse);

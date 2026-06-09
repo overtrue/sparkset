@@ -3,8 +3,12 @@ import type { HttpContext } from '@adonisjs/core/http';
 import { ActionExecutor } from '@sparkset/core';
 import { ActionService } from '../services/action_service';
 import { AIProviderService } from '../services/ai_provider_service';
+import { AuthorizationService } from '../services/authorization_service.js';
 import { SchemaService } from '../services/schema_service';
 import { actionCreateSchema, actionUpdateSchema } from '../validators/action';
+import type { Action } from '../models/types.js';
+import type { AuthorizationAction, AuthorizationUser } from '../types/authorization.js';
+import { getAuthenticatedUser } from '../utils/auth_context.js';
 import { toId } from '../utils/validation.js';
 
 @inject()
@@ -14,23 +18,103 @@ export default class ActionsController {
     private actionExecutor?: ActionExecutor,
     private schemaService?: SchemaService,
     private aiProviderService?: AIProviderService,
+    private authorization?: AuthorizationService,
   ) {}
 
-  async index({ response }: HttpContext) {
-    const items = await this.service.list();
-    return response.ok({ items });
+  private unauthorized(response: HttpContext['response']) {
+    return response.unauthorized({ message: 'Not authenticated' });
   }
 
-  async show({ params, response }: HttpContext) {
+  private forbidden(response: HttpContext['response'], action: AuthorizationAction) {
+    return response.forbidden({
+      error: 'Forbidden',
+      message: `Missing permission: ${action}`,
+    });
+  }
+
+  private isSqlAction(type: unknown): boolean {
+    return String(type).toLowerCase() === 'sql';
+  }
+
+  private datasourceIdFromPayload(payload: unknown): number | null {
+    if (!payload || typeof payload !== 'object') return null;
+    const datasourceId = (payload as { datasourceId?: unknown }).datasourceId;
+    return toId(datasourceId);
+  }
+
+  private datasourceIdForAction(action: Pick<Action, 'type' | 'payload'>): number | null {
+    if (!this.isSqlAction(action.type)) return null;
+    return this.datasourceIdFromPayload(action.payload);
+  }
+
+  private badSqlActionBinding(response: HttpContext['response']) {
+    return response.badRequest({ message: 'SQL actions must include payload.datasourceId' });
+  }
+
+  private async canAccessDatasource(
+    user: AuthorizationUser,
+    datasourceId: number,
+    action: AuthorizationAction,
+  ): Promise<boolean> {
+    if (!this.authorization) return false;
+    return this.authorization.can(user, action, { type: 'datasource', id: datasourceId });
+  }
+
+  private async canAccessAction(
+    user: AuthorizationUser,
+    action: Pick<Action, 'type' | 'payload'>,
+    permission: AuthorizationAction,
+  ): Promise<boolean> {
+    const datasourceId = this.datasourceIdForAction(action);
+    if (!this.isSqlAction(action.type)) return true;
+    if (!datasourceId) return false;
+    return this.canAccessDatasource(user, datasourceId, permission);
+  }
+
+  async index(ctx: HttpContext) {
+    const { response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
+    const items = await this.service.list();
+    const authorizedItems = [];
+    for (const item of items) {
+      if (await this.canAccessAction(user, item, 'datasource:view')) {
+        authorizedItems.push(item);
+      }
+    }
+    return response.ok({ items: authorizedItems });
+  }
+
+  async show(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
+    if (!(await this.canAccessAction(user, item, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
+    }
     return response.ok(item);
   }
 
-  async store({ request, response }: HttpContext) {
+  async store(ctx: HttpContext) {
+    const { request, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
     const parsed = actionCreateSchema.parse(request.body());
+    const datasourceId = this.datasourceIdFromPayload(parsed.payload);
+    if (this.isSqlAction(parsed.type)) {
+      if (!datasourceId) return this.badSqlActionBinding(response);
+      if (!(await this.canAccessDatasource(user, datasourceId, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+    }
+
     const item = await this.service.create({
       ...parsed,
       description: parsed.description ?? undefined,
@@ -38,8 +122,28 @@ export default class ActionsController {
     return response.created(item);
   }
 
-  async update({ params, request, response }: HttpContext) {
+  async update(ctx: HttpContext) {
+    const { params, request, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
     const parsed = actionUpdateSchema.parse({ ...request.body(), ...params });
+    const existing = await this.service.get(parsed.id);
+    if (!existing) return response.notFound({ message: 'Action not found' });
+    if (!(await this.canAccessAction(user, existing, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+
+    const nextType = parsed.type ?? existing.type;
+    const nextPayload = parsed.payload ?? existing.payload;
+    const nextDatasourceId = this.datasourceIdFromPayload(nextPayload);
+    if (this.isSqlAction(nextType)) {
+      if (!nextDatasourceId) return this.badSqlActionBinding(response);
+      if (!(await this.canAccessDatasource(user, nextDatasourceId, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+    }
+
     const item = await this.service.update({
       ...parsed,
       description: parsed.description ?? undefined,
@@ -47,18 +151,38 @@ export default class ActionsController {
     return response.ok(item);
   }
 
-  async destroy({ params, response }: HttpContext) {
-    const id = toId(params.id);
-    if (!id) return response.badRequest({ message: 'Invalid action ID' });
-    await this.service.remove(id);
-    return response.noContent();
-  }
+  async destroy(ctx: HttpContext) {
+    const { params, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
 
-  async execute({ params, request, response }: HttpContext) {
     const id = toId(params.id);
     if (!id) return response.badRequest({ message: 'Invalid action ID' });
     const item = await this.service.get(id);
     if (!item) return response.notFound({ message: 'Action not found' });
+    if (!(await this.canAccessAction(user, item, 'datasource:manage'))) {
+      return this.forbidden(response, 'datasource:manage');
+    }
+    await this.service.remove(id);
+    return response.noContent();
+  }
+
+  async execute(ctx: HttpContext) {
+    const { params, request, response } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
+    const id = toId(params.id);
+    if (!id) return response.badRequest({ message: 'Invalid action ID' });
+    const item = await this.service.get(id);
+    if (!item) return response.notFound({ message: 'Action not found' });
+    const datasourceId = this.datasourceIdForAction(item);
+    if (this.isSqlAction(item.type)) {
+      if (!datasourceId) return this.badSqlActionBinding(response);
+      if (!(await this.canAccessDatasource(user, datasourceId, 'datasource:manage'))) {
+        return this.forbidden(response, 'datasource:manage');
+      }
+    }
     if (!this.actionExecutor) {
       return response.serviceUnavailable({
         message: 'Action executor is not available on this server',
@@ -87,7 +211,11 @@ export default class ActionsController {
     }
   }
 
-  async generateSQL({ request, response, logger }: HttpContext) {
+  async generateSQL(ctx: HttpContext) {
+    const { request, response, logger } = ctx;
+    const user = getAuthenticatedUser(ctx);
+    if (!user) return this.unauthorized(response);
+
     if (!this.schemaService) {
       return response.status(500).send({ message: 'Schema service not available' });
     }
@@ -107,13 +235,20 @@ export default class ActionsController {
         message: 'Missing required fields: name, datasourceId',
       });
     }
+    const datasourceId = toId(body.datasourceId);
+    if (!datasourceId) {
+      return response.status(400).send({ message: 'Invalid datasource ID' });
+    }
+    if (!(await this.canAccessDatasource(user, datasourceId, 'datasource:query'))) {
+      return this.forbidden(response, 'datasource:query');
+    }
 
     try {
       // 获取数据源 Schema
-      const schemas = await this.schemaService.list(body.datasourceId);
+      const schemas = await this.schemaService.list(datasourceId);
       if (schemas.length === 0) {
         return response.status(400).send({
-          message: `No tables found in datasource ${body.datasourceId}. Please sync the datasource schema first.`,
+          message: `No tables found in datasource ${datasourceId}. Please sync the datasource schema first.`,
         });
       }
 
@@ -144,7 +279,7 @@ export default class ActionsController {
       const result = await this.service.generateSQL(
         body.name,
         body.description || '',
-        body.datasourceId,
+        datasourceId,
         {
           schemas,
           aiProvider,

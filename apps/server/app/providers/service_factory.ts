@@ -139,10 +139,6 @@ export function createServices(options: ServiceFactoryOptions): Services {
   registry.register(
     createSqlActionHandler({
       executor: sqlActionExecutor,
-      defaultDatasourceId: async () => {
-        const list = await datasourceService.list();
-        return list.find((d) => d.isDefault)?.id;
-      },
     }),
   );
   registry.register(createEchoHandler('api'));
