@@ -360,3 +360,24 @@
 - [x] Update shared dashboard error state copy for 401 and 403 API errors.
 - [x] Keep datasource detail authorization failures visible on the current page.
 - [x] Run dashboard lint and browser verification.
+
+## Stage 15: Trusted CORS Boundary
+
+**Goal:** Align credentialed browser CORS with the trusted browser origin policy.
+
+**Success Criteria:**
+
+- Credentialed CORS responses are only emitted for trusted browser origins.
+- `AUTH_TRUSTED_ORIGINS` remains the single configurable browser origin list.
+- Development localhost defaults stay available for dashboard dev servers.
+- Non-browser clients without an Origin header remain unaffected by API auth.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/security/browser_origins.test.ts tests/unit/middleware/api_auth_middleware.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for trusted and untrusted CORS origins.
+- [x] Share browser origin normalization between CORS and CSRF checks.
+- [x] Wire server CORS config to the trusted origin resolver.
+- [x] Run focused validation.

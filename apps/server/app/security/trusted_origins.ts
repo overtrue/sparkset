@@ -1,43 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http';
 import { ACCESS_TOKEN_SESSION_COOKIE } from '#guards/access_token_guard';
+import { isTrustedOrigin, normalizeOrigin } from './browser_origins.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-
-function splitEnvList(value: string | undefined): string[] {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function normalizeOrigin(value: string): string | null {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
-}
-
-export function getTrustedBrowserOrigins(): Set<string> {
-  const origins = [
-    ...splitEnvList(process.env.AUTH_TRUSTED_ORIGINS),
-    ...splitEnvList(process.env.APP_URL),
-    ...splitEnvList(process.env.DASHBOARD_URL),
-    ...splitEnvList(process.env.FRONTEND_URL),
-  ];
-
-  if (process.env.NODE_ENV === 'development') {
-    origins.push(
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3001',
-    );
-  }
-
-  return new Set(origins.map(normalizeOrigin).filter((origin): origin is string => !!origin));
-}
 
 export function isSafeHttpMethod(ctx: HttpContext): boolean {
   const method = ctx.request.method?.() ?? 'GET';
@@ -58,7 +23,6 @@ export function requestUsesSessionCookie(
 }
 
 export function isTrustedBrowserOrigin(ctx: HttpContext): boolean {
-  const trustedOrigins = getTrustedBrowserOrigins();
   const originHeader = ctx.request.header('origin');
   const refererHeader = ctx.request.header('referer');
   const browserOrigin = originHeader
@@ -71,7 +35,7 @@ export function isTrustedBrowserOrigin(ctx: HttpContext): boolean {
     return true;
   }
 
-  return trustedOrigins.has(browserOrigin);
+  return isTrustedOrigin(browserOrigin);
 }
 
 export function rejectUntrustedBrowserOrigin(ctx: HttpContext): unknown | null {
