@@ -26,6 +26,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   ] as const),
   SPARKSET_ENV: Env.schema.enum.optional(['dev', 'test', 'prod'] as const),
   API_KEY: Env.schema.string.optional(),
+  API_BASE_URL: Env.schema.string.optional(),
+  APP_URL: Env.schema.string.optional(),
+  DASHBOARD_URL: Env.schema.string.optional(),
+  FRONTEND_URL: Env.schema.string.optional(),
   DATABASE_URL: Env.schema.string.optional(),
   DB_HOST: Env.schema.string.optional(),
   DB_PORT: Env.schema.number.optional(),
@@ -38,13 +42,23 @@ export default await Env.create(new URL('../', import.meta.url), {
   AUTH_HEADER_TRUSTED_PROXIES: Env.schema.string.optional(),
   AUTH_HEADER_PREFIX: Env.schema.string.optional(),
   AUTH_HEADER_REQUIRED: Env.schema.string.optional(),
+  AUTH_TRUSTED_ORIGINS: Env.schema.string.optional(),
 
   // OIDC (optional)
   AUTH_OIDC_ENABLED: Env.schema.boolean.optional(),
   AUTH_OIDC_ISSUER: Env.schema.string.optional(),
+  AUTH_OIDC_AUTHORIZATION_URL: Env.schema.string.optional(),
   AUTH_OIDC_CLIENT_ID: Env.schema.string.optional(),
   AUTH_OIDC_CLIENT_SECRET: Env.schema.string.optional(),
+  AUTH_OIDC_REDIRECT_URI: Env.schema.string.optional(),
+  AUTH_OIDC_SCOPES: Env.schema.string.optional(),
 
   // Local (optional, dev only)
   AUTH_LOCAL_ENABLED: Env.schema.boolean.optional(),
+  AUTH_LOCAL_ALLOW_REGISTRATION: Env.schema.boolean.optional(),
+  AUTH_LOCAL_DEFAULT_ROLES: Env.schema.string.optional(),
+  AUTH_LOCAL_DEFAULT_PERMISSIONS: Env.schema.string.optional(),
+  AUTH_LOCAL_LOGIN_MAX_ATTEMPTS: Env.schema.number.optional(),
+  AUTH_LOCAL_LOGIN_WINDOW_SECONDS: Env.schema.number.optional(),
+  AUTH_LOCAL_LOGIN_LOCK_SECONDS: Env.schema.number.optional(),
 });

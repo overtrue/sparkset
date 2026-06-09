@@ -7,6 +7,7 @@
 ## 📋 数据库状态
 
 ### 已完成的迁移
+
 - ✅ `users` 表创建
 - ✅ 所有业务表添加 `creator_id` 和 `updater_id`
 - ✅ 外键约束和索引
@@ -41,6 +42,7 @@ SELECT 'dashboards', COUNT(*), COUNT(creator_id) FROM dashboards;
 **场景**：企业内网 + Nginx/Apache 反向代理
 
 **环境变量**：
+
 ```bash
 # 启用 Header 认证
 AUTH_HEADER_ENABLED=true
@@ -56,6 +58,7 @@ AUTH_HEADER_REQUIRED=Id
 ```
 
 **Nginx 配置示例**：
+
 ```nginx
 server {
     listen 80;
@@ -97,20 +100,24 @@ server {
 **场景**：Keycloak/Authentik/Azure AD SSO
 
 **环境变量**：
+
 ```bash
 # 启用 OIDC 认证
 AUTH_OIDC_ENABLED=true
 
 # OIDC 配置
 AUTH_OIDC_ISSUER=https://id.example.com/realms/main
+AUTH_OIDC_AUTHORIZATION_URL=https://id.example.com/realms/main/protocol/openid-connect/auth
 AUTH_OIDC_CLIENT_ID=sparkset
 AUTH_OIDC_CLIENT_SECRET=your_secret
 
 # 回调地址
 AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
+AUTH_OIDC_SCOPES=openid,profile,email
 ```
 
 **部署步骤**：
+
 1. 在 IdP 中创建客户端
 2. 配置回调 URL
 3. 设置 scopes: `openid profile email`
@@ -121,6 +128,7 @@ AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
 **场景**：本地开发、演示、开源用户快速体验
 
 **环境变量**：
+
 ```bash
 # 启用 Local 认证（仅开发环境）
 AUTH_LOCAL_ENABLED=true
@@ -130,6 +138,7 @@ AUTH_LOCAL_ENABLED=true
 ```
 
 **预设账号**：
+
 - 用户名：`admin`，密码：`admin123`，角色：`admin`
 - 用户名：`analyst`，密码：`analyst123`，角色：`analyst`
 
@@ -140,6 +149,7 @@ AUTH_LOCAL_ENABLED=true
 ### 1. 准备环境变量
 
 创建 `.env` 文件：
+
 ```bash
 # 认证配置（选择一种）
 AUTH_HEADER_ENABLED=true
@@ -180,11 +190,13 @@ npm start
 ### 4. 验证认证
 
 测试认证状态端点：
+
 ```bash
 curl http://localhost:3333/auth/status
 ```
 
 如果配置了 Header Auth，使用 curl 模拟：
+
 ```bash
 curl -H "X-User-Id: 123" \
      -H "X-User-Name: zhangsan" \
@@ -198,12 +210,14 @@ curl -H "X-User-Id: 123" \
 ### 问题 1：所有请求返回 401
 
 **检查**：
+
 1. 环境变量是否正确设置
 2. Header 前缀是否匹配
 3. 必需的 header 是否存在
 4. IP 是否在信任代理列表中
 
 **调试**：
+
 ```bash
 # 检查环境变量
 echo $AUTH_HEADER_ENABLED
@@ -216,24 +230,28 @@ curl -v -H "X-User-Id: test" http://localhost:3333/auth/status
 ### 问题 2：用户无法创建/更新数据
 
 **检查**：
+
 1. 认证中间件是否正确应用到路由
 2. ctx.auth.user 是否正确绑定
 3. 控制器中是否正确使用 user.id
 
 **调试**：
+
 ```typescript
 // 在控制器中添加调试
-console.log('Current user:', ctx.auth.user)
+console.log('Current user:', ctx.auth.user);
 ```
 
 ### 问题 3：数据库外键错误
 
 **检查**：
+
 1. users 表是否存在
 2. creator_id/updater_id 字段是否正确添加
 3. 外键约束是否创建
 
 **修复**：
+
 ```sql
 -- 检查外键
 SELECT * FROM information_schema.KEY_COLUMN_USAGE
@@ -246,6 +264,7 @@ AND REFERENCED_TABLE_NAME = 'users';
 ### 日志监控
 
 认证系统会输出以下日志：
+
 - `✅ Auth success via header: zhangsan` - 认证成功
 - `❌ All auth providers failed` - 所有提供者失败
 - `Auth error from header: ...` - 提供者错误
@@ -253,6 +272,7 @@ AND REFERENCED_TABLE_NAME = 'users';
 ### 数据清理
 
 如果需要清理测试数据：
+
 ```sql
 -- 删除测试用户（保留系统用户）
 DELETE FROM users WHERE uid LIKE 'header:%' AND uid != 'system:anonymous';
@@ -281,7 +301,7 @@ services:
       - AUTH_HEADER_TRUSTED_PROXIES=172.16.0.0/12
       - AUTH_HEADER_PREFIX=X-User-
     ports:
-      - "3333:3333"
+      - '3333:3333'
 ```
 
 ### Helm Values
@@ -291,9 +311,9 @@ auth:
   header:
     enabled: true
     trustedProxies:
-      - "10.0.0.0/8"
-      - "172.16.0.0/12"
-    headerPrefix: "X-User-"
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+    headerPrefix: 'X-User-'
 ```
 
 ## 🔗 相关文档

@@ -619,3 +619,24 @@
 - [x] Add failing controller tests for SQL action datasource authorization.
 - [x] Enforce datasource manage permission for Bot-enabled SQL actions.
 - [x] Run focused validation.
+
+## Stage 27: Auth Environment Schema Alignment
+
+**Goal:** Keep declared server environment variables aligned with auth and authorization runtime configuration.
+
+**Success Criteria:**
+
+- Every `process.env` key used by server runtime code is declared in `start/env.ts`.
+- OIDC examples use the same variable names as `config/auth.ts`.
+- Trusted browser origins and local auth policy variables pass env validation.
+- Future env drift is covered by a focused unit test.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/config/env_schema.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing env schema drift test.
+- [x] Declare missing auth/OIDC/browser-origin env keys.
+- [x] Align OIDC env examples with runtime config.
+- [x] Run focused validation.
