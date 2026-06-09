@@ -3,7 +3,7 @@ import User from '#models/user';
 import type { AuthConfig, AuthProvider, AuthProviderRegistration } from '#types/auth';
 import { HeaderAuthProvider } from '#providers/header_auth_provider';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
-import { getAuthConfig } from '../../config/auth.js';
+import { getAuthConfig, isOIDCAuthConfigured } from '../../config/auth.js';
 
 type AuthProviderFactoryRegistration = AuthProviderRegistration & {
   createProvider?: () => AuthProvider;
@@ -34,8 +34,8 @@ export function buildAuthProviderRegistry(
     },
     {
       name: 'oidc',
-      enabled: config.oidc.enabled,
-      implemented: false,
+      enabled: isOIDCAuthConfigured(config.oidc),
+      implemented: true,
       priority: 30,
     },
   ];

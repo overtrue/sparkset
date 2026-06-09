@@ -62,9 +62,13 @@ export interface OIDCAuthConfig {
   enabled: boolean;
   issuer?: string;
   authorizationUrl?: string;
+  tokenUrl?: string;
+  jwksUrl?: string;
   clientId?: string;
   clientSecret?: string;
   redirectUri?: string;
+  successRedirectUrl?: string;
+  failureRedirectUrl?: string;
   scopes: string[];
   claimMapping: {
     uid: string;

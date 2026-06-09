@@ -525,7 +525,7 @@
 - Enabled OIDC requires explicit authorization URL, client ID, and redirect URI configuration.
 - The endpoint returns a standards-shaped authorization URL with response type, client ID, redirect URI, scope, state, and nonce.
 - State and nonce are stored in short-lived httpOnly cookies for the future callback verification step.
-- No callback/token exchange is implemented until JWKS, issuer, and claim validation can be tested end to end.
+- Callback/token exchange is implemented later in Stage 33 with JWKS, issuer, audience, expiry, and nonce validation.
 
 **Tests:**
 
@@ -717,7 +717,7 @@
 
 - API auth middleware accepts implemented Header Auth providers before token fallback.
 - Local provider no longer accepts unsigned legacy `auth_token` cookies.
-- Dashboard login status does not advertise OIDC login before callback/token exchange is implemented.
+- Dashboard login status advertises OIDC login only when callback/token exchange prerequisites are fully configured.
 - Existing cookie and bearer token sessions still work.
 
 **Tests:**
@@ -748,4 +748,28 @@
 
 - [x] Add failing missing-origin cookie-session test.
 - [x] Reject missing Origin/Referer for cookie-session unsafe requests.
+- [x] Run focused validation.
+
+## Stage 33: OIDC Callback Session Exchange
+
+**Goal:** Complete the minimal OIDC Authorization Code callback path so configured enterprise SSO can create a browser session safely.
+
+**Success Criteria:**
+
+- OIDC login is advertised only when authorization URL, token URL, JWKS URL, issuer, client ID, client secret, and redirect URI are configured.
+- `GET /auth/oidc/callback` validates `state` against the short-lived httpOnly state cookie before exchanging a code.
+- The callback exchanges the authorization code with the configured token endpoint using client credentials and redirect URI.
+- The callback verifies the ID token signature through JWKS and validates issuer, audience, expiry, and nonce.
+- Successful callbacks upsert an active `provider: 'oidc'` user from configured claims, issue the normal httpOnly session cookie, clear OIDC temporary cookies, and redirect to the configured success URL.
+- Failed callbacks clear OIDC temporary cookies and redirect to the configured failure URL without issuing a session.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/oidc_auth_controller.test.ts tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing OIDC callback tests for state mismatch, token verification failure, and successful session exchange.
+- [x] Implement OIDC token endpoint exchange, JWKS ID token verification, user upsert, session cookie issuance, and callback redirects.
+- [x] Advertise OIDC login only when callback prerequisites are fully configured.
+- [x] Update auth deployment docs and env examples from planned-only to supported minimal callback flow.
 - [x] Run focused validation.

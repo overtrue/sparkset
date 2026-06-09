@@ -36,6 +36,7 @@ router.post('/auth/local/logout', [LocalAuthController, 'logout']);
 router.post('/auth/local/refresh', [LocalAuthController, 'refresh']);
 router.get('/auth/local/status', [LocalAuthController, 'status']);
 router.get('/auth/oidc/url', [OIDCAuthController, 'authorizationUrl']);
+router.get('/auth/oidc/callback', [OIDCAuthController, 'callback']);
 
 // Datasource routes (requires authentication)
 router

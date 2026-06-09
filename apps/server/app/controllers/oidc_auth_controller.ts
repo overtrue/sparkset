@@ -1,12 +1,16 @@
 import type { HttpContext } from '@adonisjs/core/http';
-import { randomBytes } from 'node:crypto';
+import { createPublicKey, randomBytes, type JsonWebKey } from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import User from '#models/user';
+import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
 import type { OIDCAuthConfig } from '#types/auth';
-import { getOIDCAuthConfig } from '../../config/auth.js';
+import { getOIDCAuthConfig, isOIDCAuthConfigured } from '../../config/auth.js';
 
 const OIDC_STATE_COOKIE = 'sparkset_oidc_state';
 const OIDC_NONCE_COOKIE = 'sparkset_oidc_nonce';
 const OIDC_COOKIE_MAX_AGE_SECONDS = 10 * 60;
 const OIDC_CALLBACK_PATH = '/auth/oidc/callback';
+const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const OIDC_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -15,6 +19,38 @@ const OIDC_COOKIE_OPTIONS = {
   path: OIDC_CALLBACK_PATH,
   maxAge: OIDC_COOKIE_MAX_AGE_SECONDS,
 };
+const CLEAR_OIDC_COOKIE_OPTIONS = {
+  path: OIDC_CALLBACK_PATH,
+};
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+  maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+};
+
+interface RequiredOIDCConfiguration {
+  authorizationUrl: string;
+  tokenUrl: string;
+  jwksUrl: string;
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+}
+
+interface OIDCTokenResponse {
+  id_token?: unknown;
+}
+
+interface OIDCClaims extends jwt.JwtPayload {
+  nonce?: string;
+}
+
+interface OIDCJwksResponse {
+  keys?: (JsonWebKey & { kid?: string; alg?: string; use?: string })[];
+}
 
 export default class OIDCAuthController {
   constructor(private readonly config: OIDCAuthConfig = getOIDCAuthConfig()) {}
@@ -26,27 +62,205 @@ export default class OIDCAuthController {
   private requiredConfiguration():
     | {
         ok: true;
-        authorizationUrl: string;
-        clientId: string;
-        redirectUri: string;
+        value: RequiredOIDCConfiguration;
       }
     | { ok: false; missing: string[] } {
-    const { authorizationUrl, clientId, redirectUri } = this.config;
+    const { authorizationUrl, tokenUrl, jwksUrl, issuer, clientId, clientSecret, redirectUri } =
+      this.config;
     const missing: string[] = [];
+    if (!issuer) missing.push('issuer');
     if (!authorizationUrl) missing.push('authorizationUrl');
+    if (!tokenUrl) missing.push('tokenUrl');
+    if (!jwksUrl) missing.push('jwksUrl');
     if (!clientId) missing.push('clientId');
+    if (!clientSecret) missing.push('clientSecret');
     if (!redirectUri) missing.push('redirectUri');
 
-    if (!authorizationUrl || !clientId || !redirectUri) {
+    if (
+      !authorizationUrl ||
+      !tokenUrl ||
+      !jwksUrl ||
+      !issuer ||
+      !clientId ||
+      !clientSecret ||
+      !redirectUri
+    ) {
       return { ok: false, missing };
     }
 
     return {
       ok: true,
-      authorizationUrl,
-      clientId,
-      redirectUri,
+      value: {
+        authorizationUrl,
+        tokenUrl,
+        jwksUrl,
+        issuer,
+        clientId,
+        clientSecret,
+        redirectUri,
+      },
     };
+  }
+
+  private clearOIDCCookies(response: HttpContext['response']): void {
+    response.clearCookie(OIDC_STATE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+    response.clearCookie(OIDC_NONCE_COOKIE, CLEAR_OIDC_COOKIE_OPTIONS);
+  }
+
+  private redirectSuccess(response: HttpContext['response']) {
+    return response.redirect(this.config.successRedirectUrl || '/dashboard');
+  }
+
+  private redirectFailure(response: HttpContext['response']) {
+    this.clearOIDCCookies(response);
+    return response.redirect(this.config.failureRedirectUrl || '/login?error=oidc');
+  }
+
+  private getStringClaim(claims: OIDCClaims, claimName: string): string | null {
+    const value = claims[claimName];
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
+
+  private getListClaim(claims: OIDCClaims, claimName: string): string[] {
+    const value = claims[claimName];
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+    }
+
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  private async exchangeCode(
+    code: string,
+    configuration: RequiredOIDCConfiguration,
+  ): Promise<string> {
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: configuration.redirectUri,
+      client_id: configuration.clientId,
+      client_secret: configuration.clientSecret,
+    });
+
+    const tokenResponse = await fetch(configuration.tokenUrl, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error('OIDC token endpoint rejected the authorization code');
+    }
+
+    const tokenSet = (await tokenResponse.json()) as OIDCTokenResponse;
+    if (typeof tokenSet.id_token !== 'string' || tokenSet.id_token.length === 0) {
+      throw new Error('OIDC token endpoint did not return an ID token');
+    }
+
+    return tokenSet.id_token;
+  }
+
+  private async fetchSigningKey(
+    idToken: string,
+    configuration: RequiredOIDCConfiguration,
+  ): Promise<ReturnType<typeof createPublicKey>> {
+    const decoded = jwt.decode(idToken, { complete: true });
+    if (!decoded || typeof decoded !== 'object' || !('header' in decoded)) {
+      throw new Error('OIDC ID token header is invalid');
+    }
+
+    const { kid, alg } = decoded.header;
+    if (!kid || alg !== 'RS256') {
+      throw new Error('OIDC ID token must use a keyed RS256 signature');
+    }
+
+    const jwksResponse = await fetch(configuration.jwksUrl, {
+      headers: {
+        accept: 'application/json',
+      },
+    });
+    if (!jwksResponse.ok) {
+      throw new Error('OIDC JWKS endpoint is unavailable');
+    }
+
+    const jwks = (await jwksResponse.json()) as OIDCJwksResponse;
+    const jwk = jwks.keys?.find((key) => key.kid === kid);
+    if (!jwk) {
+      throw new Error('OIDC signing key was not found in JWKS');
+    }
+
+    return createPublicKey({ key: jwk, format: 'jwk' });
+  }
+
+  private async verifyIDToken(
+    idToken: string,
+    configuration: RequiredOIDCConfiguration,
+    nonce: string,
+  ): Promise<OIDCClaims> {
+    const signingKey = await this.fetchSigningKey(idToken, configuration);
+    const claims = jwt.verify(idToken, signingKey, {
+      algorithms: ['RS256'],
+      issuer: configuration.issuer,
+      audience: configuration.clientId,
+      nonce,
+    }) as OIDCClaims;
+
+    if (!claims.sub) {
+      throw new Error('OIDC ID token is missing subject');
+    }
+
+    return claims;
+  }
+
+  private async upsertOIDCUser(claims: OIDCClaims): Promise<User> {
+    const { claimMapping } = this.config;
+    const subject = claims.sub;
+    if (!subject) {
+      throw new Error('OIDC subject is required');
+    }
+
+    const email = this.getStringClaim(claims, claimMapping.email);
+    const username =
+      this.getStringClaim(claims, claimMapping.username) || email || `oidc-${subject}`;
+    const displayName = this.getStringClaim(claims, 'name') || username;
+    const roles = this.getListClaim(claims, claimMapping.roles);
+    const permissions = this.getListClaim(claims, claimMapping.permissions);
+    const userData = {
+      uid: `oidc:${subject}`,
+      provider: 'oidc' as const,
+      username,
+      email,
+      displayName,
+      roles,
+      permissions,
+      isActive: true,
+    };
+    const user = await User.firstOrCreate({ uid: userData.uid }, userData);
+
+    if (!user.isActive) {
+      throw new Error('OIDC user is disabled');
+    }
+
+    user.merge({
+      username,
+      email,
+      displayName,
+      roles,
+      permissions,
+    });
+    await user.save();
+
+    return user;
   }
 
   async authorizationUrl(ctx: HttpContext) {
@@ -70,11 +284,11 @@ export default class OIDCAuthController {
 
     const state = this.token();
     const nonce = this.token();
-    const url = new URL(requiredConfiguration.authorizationUrl);
+    const url = new URL(requiredConfiguration.value.authorizationUrl);
 
     url.searchParams.set('response_type', 'code');
-    url.searchParams.set('client_id', requiredConfiguration.clientId);
-    url.searchParams.set('redirect_uri', requiredConfiguration.redirectUri);
+    url.searchParams.set('client_id', requiredConfiguration.value.clientId);
+    url.searchParams.set('redirect_uri', requiredConfiguration.value.redirectUri);
     url.searchParams.set('scope', this.config.scopes.join(' '));
     url.searchParams.set('state', state);
     url.searchParams.set('nonce', nonce);
@@ -86,5 +300,52 @@ export default class OIDCAuthController {
       url: url.toString(),
       expiresInSeconds: OIDC_COOKIE_MAX_AGE_SECONDS,
     });
+  }
+
+  async callback(ctx: HttpContext) {
+    const { request, response } = ctx;
+
+    try {
+      if (!isOIDCAuthConfigured(this.config)) {
+        return this.redirectFailure(response);
+      }
+
+      const requiredConfiguration = this.requiredConfiguration();
+      if (!requiredConfiguration.ok) {
+        return this.redirectFailure(response);
+      }
+
+      const code = request.input('code');
+      const state = request.input('state');
+      const expectedState = request.cookie(OIDC_STATE_COOKIE);
+      const expectedNonce = request.cookie(OIDC_NONCE_COOKIE);
+
+      if (
+        typeof code !== 'string' ||
+        !code ||
+        typeof state !== 'string' ||
+        !state ||
+        typeof expectedState !== 'string' ||
+        !expectedState ||
+        typeof expectedNonce !== 'string' ||
+        !expectedNonce ||
+        state !== expectedState
+      ) {
+        return this.redirectFailure(response);
+      }
+
+      const idToken = await this.exchangeCode(code, requiredConfiguration.value);
+      const claims = await this.verifyIDToken(idToken, requiredConfiguration.value, expectedNonce);
+      const user = await this.upsertOIDCUser(claims);
+      const guard = new AccessTokenGuard(ctx);
+      const { token } = await guard.generateToken(user, `oidc_${Date.now()}`);
+
+      response.cookie(ACCESS_TOKEN_SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+      this.clearOIDCCookies(response);
+      return this.redirectSuccess(response);
+    } catch (error) {
+      ctx.logger?.error({ error }, 'OIDC callback failed');
+      return this.redirectFailure(response);
+    }
   }
 }

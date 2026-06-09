@@ -68,14 +68,20 @@ describe('AuthManager', () => {
     expect(providers.some((p) => p.name === 'header')).toBe(true);
   });
 
-  it('should expose a stable provider registry with OIDC as an unimplemented boundary', () => {
+  it('should expose OIDC as implemented when callback prerequisites are configured', () => {
     const manager = new AuthManager({
       config: createAuthConfig({
         local: { enabled: true },
         oidc: {
           enabled: true,
-          issuer: 'https://identity.example.test',
+          issuer: 'https://identity.example.test/realms/main',
+          authorizationUrl:
+            'https://identity.example.test/realms/main/protocol/openid-connect/auth',
+          tokenUrl: 'https://identity.example.test/realms/main/protocol/openid-connect/token',
+          jwksUrl: 'https://identity.example.test/realms/main/protocol/openid-connect/certs',
           clientId: 'sparkset',
+          clientSecret: 'client-secret',
+          redirectUri: 'https://sparkset.example.test/auth/oidc/callback',
         },
       }),
     });
@@ -98,7 +104,7 @@ describe('AuthManager', () => {
       expect.objectContaining({
         name: 'oidc',
         enabled: true,
-        implemented: false,
+        implemented: true,
         priority: 30,
       }),
     ]);

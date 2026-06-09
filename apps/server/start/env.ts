@@ -48,9 +48,13 @@ export default await Env.create(new URL('../', import.meta.url), {
   AUTH_OIDC_ENABLED: Env.schema.boolean.optional(),
   AUTH_OIDC_ISSUER: Env.schema.string.optional(),
   AUTH_OIDC_AUTHORIZATION_URL: Env.schema.string.optional(),
+  AUTH_OIDC_TOKEN_URL: Env.schema.string.optional(),
+  AUTH_OIDC_JWKS_URL: Env.schema.string.optional(),
   AUTH_OIDC_CLIENT_ID: Env.schema.string.optional(),
   AUTH_OIDC_CLIENT_SECRET: Env.schema.string.optional(),
   AUTH_OIDC_REDIRECT_URI: Env.schema.string.optional(),
+  AUTH_OIDC_SUCCESS_REDIRECT_URL: Env.schema.string.optional(),
+  AUTH_OIDC_FAILURE_REDIRECT_URL: Env.schema.string.optional(),
   AUTH_OIDC_SCOPES: Env.schema.string.optional(),
 
   // Local (optional, dev only)

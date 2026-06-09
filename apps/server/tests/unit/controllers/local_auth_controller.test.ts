@@ -147,7 +147,7 @@ describe('LocalAuthController session cookies', () => {
     });
   });
 
-  it('does not report OIDC login availability before callback exchange is implemented', async () => {
+  it('does not report OIDC login availability when callback prerequisites are missing', async () => {
     vi.stubEnv('AUTH_OIDC_ENABLED', 'true');
     vi.stubEnv(
       'AUTH_OIDC_AUTHORIZATION_URL',
@@ -167,6 +167,40 @@ describe('LocalAuthController session cookies', () => {
       expect.objectContaining({
         authenticated: false,
         oidcEnabled: false,
+      }),
+    );
+  });
+
+  it('reports OIDC login availability when the callback exchange is fully configured', async () => {
+    vi.stubEnv('AUTH_OIDC_ENABLED', 'true');
+    vi.stubEnv('AUTH_OIDC_ISSUER', 'https://identity.example.test/realms/main');
+    vi.stubEnv(
+      'AUTH_OIDC_AUTHORIZATION_URL',
+      'https://identity.example.test/realms/main/protocol/openid-connect/auth',
+    );
+    vi.stubEnv(
+      'AUTH_OIDC_TOKEN_URL',
+      'https://identity.example.test/realms/main/protocol/openid-connect/token',
+    );
+    vi.stubEnv(
+      'AUTH_OIDC_JWKS_URL',
+      'https://identity.example.test/realms/main/protocol/openid-connect/certs',
+    );
+    vi.stubEnv('AUTH_OIDC_CLIENT_ID', 'sparkset');
+    vi.stubEnv('AUTH_OIDC_CLIENT_SECRET', 'secret');
+    vi.stubEnv('AUTH_OIDC_REDIRECT_URI', 'https://sparkset.example.test/auth/oidc/callback');
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().status(
+      createMockContext({
+        response,
+      }),
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        authenticated: false,
+        oidcEnabled: true,
       }),
     );
   });

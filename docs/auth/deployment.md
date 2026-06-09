@@ -95,12 +95,13 @@ server {
 }
 ```
 
-### 2. 企业部署（OIDC，规划中）
+### 2. 企业部署（OIDC）
 
 **场景**：Keycloak/Authentik/Azure AD SSO
 
-> 当前版本只保留 OIDC Provider 配置边界和授权 URL 生成入口，尚未实现 callback、code exchange、JWKS 签名校验、issuer/audience/nonce 校验、用户同步和 session 签发闭环。
-> 因此不要把 OIDC 作为生产登录方式启用；生产部署请优先使用 Header Auth，由网关或反向代理完成 SSO/OIDC 并注入可信用户头。
+当前版本支持最小 OIDC Authorization Code Flow：生成授权 URL、校验 state/nonce、调用 token endpoint、通过 JWKS 校验 RS256 ID Token、校验 issuer/audience/expiry，并同步用户后签发 Sparkset httpOnly session cookie。
+
+生产环境仍建议优先使用 Header Auth 加可信网关；如果直接启用 OIDC，请确保 IdP 只下发最小角色/权限 claim，并配置 HTTPS 回调地址。
 
 **环境变量**：
 
@@ -111,22 +112,32 @@ AUTH_OIDC_ENABLED=true
 # OIDC 配置
 AUTH_OIDC_ISSUER=https://id.example.com/realms/main
 AUTH_OIDC_AUTHORIZATION_URL=https://id.example.com/realms/main/protocol/openid-connect/auth
+AUTH_OIDC_TOKEN_URL=https://id.example.com/realms/main/protocol/openid-connect/token
+AUTH_OIDC_JWKS_URL=https://id.example.com/realms/main/protocol/openid-connect/certs
 AUTH_OIDC_CLIENT_ID=sparkset
 AUTH_OIDC_CLIENT_SECRET=your_secret
 
 # 回调地址
 AUTH_OIDC_REDIRECT_URI=http://sparkset.example.com/auth/oidc/callback
+AUTH_OIDC_SUCCESS_REDIRECT_URL=https://sparkset.example.com/dashboard
+AUTH_OIDC_FAILURE_REDIRECT_URL=https://sparkset.example.com/login?error=oidc
 AUTH_OIDC_SCOPES=openid,profile,email
 ```
 
-**后续实现清单**：
+**IdP claim 要求**：
 
-1. 在 IdP 中创建客户端并配置回调 URL
-2. 实现 `/auth/oidc/callback`
-3. 完成 code exchange、JWKS 拉取和 ID Token 校验
-4. 校验 issuer、audience、state、nonce 和 token expiry
-5. 同步用户、角色和权限 claim
-6. 签发 Sparkset httpOnly session cookie
+1. `sub`：稳定用户 ID，会映射为 `uid=oidc:{sub}`
+2. `preferred_username`：用户名
+3. `email`：邮箱，可为空
+4. `roles`：字符串数组或逗号分隔字符串
+5. `permissions`：字符串数组或逗号分隔字符串
+
+**仍需企业化增强**：
+
+1. JWKS 缓存和 key rotation 容错
+2. state/nonce 服务端存储或签名化，支持多标签页登录
+3. OIDC 用户首次登录默认角色模板
+4. 登录审计和失败原因检索
 
 ### 3. 开发/演示环境
 
@@ -160,11 +171,15 @@ AUTH_LOCAL_ENABLED=true
 AUTH_HEADER_ENABLED=true
 AUTH_HEADER_TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 
-# 或者（规划中，当前不要作为生产登录方式启用）
+# 或者（OIDC）
 # AUTH_OIDC_ENABLED=true
 # AUTH_OIDC_ISSUER=...
+# AUTH_OIDC_AUTHORIZATION_URL=...
+# AUTH_OIDC_TOKEN_URL=...
+# AUTH_OIDC_JWKS_URL=...
 # AUTH_OIDC_CLIENT_ID=...
 # AUTH_OIDC_CLIENT_SECRET=...
+# AUTH_OIDC_REDIRECT_URI=...
 
 # 或者（仅开发）
 # AUTH_LOCAL_ENABLED=true
@@ -289,7 +304,7 @@ UPDATE datasources SET creator_id = NULL, updater_id = NULL;
 ## 🛡️ 安全建议
 
 1. **内网部署**：严格限制 trusted_proxies，仅允许内网网段
-2. **OIDC 部署**：当前仅规划中，完整 callback/token 校验实现前不要用于生产登录
+2. **OIDC 部署**：使用 HTTPS 回调地址，限制 IdP 下发的角色和权限 claim
 3. **Local Auth**：仅限开发环境，生产环境必须禁用
 4. **Header Auth**：确保上游网关已完成身份验证
 

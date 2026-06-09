@@ -60,9 +60,23 @@ export function getOIDCAuthConfig(): OIDCAuthConfig {
     enabled: process.env.AUTH_OIDC_ENABLED === 'true',
     issuer: process.env.AUTH_OIDC_ISSUER,
     authorizationUrl: process.env.AUTH_OIDC_AUTHORIZATION_URL,
+    tokenUrl: process.env.AUTH_OIDC_TOKEN_URL,
+    jwksUrl: process.env.AUTH_OIDC_JWKS_URL,
     clientId: process.env.AUTH_OIDC_CLIENT_ID,
     clientSecret: process.env.AUTH_OIDC_CLIENT_SECRET,
     redirectUri: process.env.AUTH_OIDC_REDIRECT_URI,
+    successRedirectUrl:
+      process.env.AUTH_OIDC_SUCCESS_REDIRECT_URL ||
+      process.env.DASHBOARD_URL ||
+      process.env.FRONTEND_URL,
+    failureRedirectUrl:
+      process.env.AUTH_OIDC_FAILURE_REDIRECT_URL ||
+      (process.env.DASHBOARD_URL
+        ? `${process.env.DASHBOARD_URL.replace(/\/$/, '')}/login?error=oidc`
+        : undefined) ||
+      (process.env.FRONTEND_URL
+        ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/login?error=oidc`
+        : undefined),
     scopes: splitEnvList(process.env.AUTH_OIDC_SCOPES, ['openid', 'profile', 'email']),
     claimMapping: {
       uid: 'sub',
@@ -72,6 +86,19 @@ export function getOIDCAuthConfig(): OIDCAuthConfig {
       permissions: 'permissions',
     },
   };
+}
+
+export function isOIDCAuthConfigured(config: OIDCAuthConfig = getOIDCAuthConfig()): boolean {
+  return Boolean(
+    config.enabled &&
+    config.issuer &&
+    config.authorizationUrl &&
+    config.tokenUrl &&
+    config.jwksUrl &&
+    config.clientId &&
+    config.clientSecret &&
+    config.redirectUri,
+  );
 }
 
 export function getAuthConfig(): AuthConfig {
