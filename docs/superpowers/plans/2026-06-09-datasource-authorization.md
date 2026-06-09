@@ -101,9 +101,13 @@
 - [x] Wire chart authorization checks through the controller and shared derived-resource authorization service.
 - [x] Run chart focused tests and typecheck.
 - [x] Commit and push chart batch: `feat(authz): protect chart data access`.
-- [ ] Add failing tests for dashboard/bot derived-resource visibility.
-- [ ] Wire dashboard and bot authorization checks through the relevant controllers/services.
-- [ ] Run remaining derived-resource focused tests and typecheck.
+- [x] Add failing tests for dashboard derived-resource visibility.
+- [x] Wire dashboard and widget authorization checks through the shared derived-resource authorization service.
+- [x] Run dashboard/widget focused tests and typecheck.
+- [x] Commit and push dashboard/widget batch: `feat(authz): protect dashboard data access`.
+- [ ] Add failing tests for bot derived-resource visibility.
+- [ ] Wire bot authorization checks through the relevant controllers/services.
+- [ ] Run remaining bot focused tests and typecheck.
 - [ ] Commit and push: `feat(authz): protect query and derived resources`.
 
 ## Stage 4: Dashboard Access Management UI
