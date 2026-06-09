@@ -23,6 +23,7 @@ const DashboardsController = () => import('#controllers/dashboards_controller');
 const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_controller');
 const BotsController = () => import('#controllers/bots_controller');
 const WebhooksController = () => import('#controllers/webhooks_controller');
+const AuthSubjectsController = () => import('#controllers/auth_subjects_controller');
 
 // Public routes
 router.get('/health', [HealthController, 'handle']);
@@ -46,6 +47,7 @@ router
       DatasourcesController,
       'generateSemanticDescriptions',
     ]);
+    router.get('/:datasourceId/grant-subjects', [AuthSubjectsController, 'index']);
     router.get('/:id/grants', [DatasourcesController, 'grants']);
     router.put('/:id/grants', [DatasourcesController, 'grant']);
     router.delete('/:id/grants/:subjectType/:subjectId', [DatasourcesController, 'revokeGrant']);

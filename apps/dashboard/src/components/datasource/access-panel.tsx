@@ -1,23 +1,49 @@
 'use client';
 
-import { RiAddLine, RiDeleteBinLine, RiShieldUserLine } from '@remixicon/react';
+import {
+  RiAddLine,
+  RiArrowDownSLine,
+  RiCheckLine,
+  RiDeleteBinLine,
+  RiEdit2Line,
+  RiShieldUserLine,
+} from '@remixicon/react';
+import type { FormEvent } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useTranslations } from '@/i18n/use-translations';
 import {
+  useDatasourceGrantSubjects,
   useDeleteDatasourceGrant,
   useDatasourceGrants,
   useUpsertDatasourceGrant,
 } from '@/lib/api/datasources-hooks';
+import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/utils/date';
-import type { DatasourceGrantDTO, DatasourcePermission, GrantSubjectType } from '@/types/api';
+import type {
+  DatasourceGrantDTO,
+  DatasourcePermission,
+  GrantSubjectRoleDTO,
+  GrantSubjectType,
+  GrantSubjectUserDTO,
+} from '@/types/api';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../ui/command';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Skeleton } from '../ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
@@ -37,7 +63,21 @@ const PERMISSION_OPTIONS: { value: DatasourcePermission; labelKey: string }[] = 
 
 const defaultPermissions: DatasourcePermission[] = ['datasource:view', 'datasource:query'];
 
+const permissionLabelByValue = PERMISSION_OPTIONS.reduce(
+  (labels, option) => {
+    labels[option.value] = option.labelKey;
+    return labels;
+  },
+  {} as Record<DatasourcePermission, string>,
+);
+
 const grantKey = (grant: DatasourceGrantDTO) => `${grant.subjectType}:${grant.subjectId}`;
+
+const userSubjectId = (user: GrantSubjectUserDTO) => String(user.id);
+
+const userDisplayName = (user: GrantSubjectUserDTO) => {
+  return user.displayName?.trim() || user.username || `#${user.id}`;
+};
 
 export function AccessPanel({ datasourceId }: AccessPanelProps) {
   const t = useTranslations();
@@ -48,9 +88,22 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
   const [subjectId, setSubjectId] = useState('');
   const [permissions, setPermissions] = useState<DatasourcePermission[]>(defaultPermissions);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [grantPendingDelete, setGrantPendingDelete] = useState<DatasourceGrantDTO | null>(null);
 
   const grants = useMemo(() => data?.items ?? [], [data?.items]);
   const canManage = Boolean(data?.canManage);
+  const { data: subjectsData, isLoading: subjectsLoading } = useDatasourceGrantSubjects(
+    canManage ? datasourceId : null,
+  );
+  const selectedGrant = useMemo(() => {
+    const normalizedSubjectId = subjectId.trim();
+    if (!normalizedSubjectId) return null;
+    return (
+      grants.find(
+        (grant) => grant.subjectType === subjectType && grant.subjectId === normalizedSubjectId,
+      ) ?? null
+    );
+  }, [grants, subjectId, subjectType]);
   const canSubmit = canManage && subjectId.trim().length > 0 && permissions.length > 0 && !saving;
 
   const togglePermission = useCallback((permission: DatasourcePermission, checked: boolean) => {
@@ -79,6 +132,20 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
       toast.error((err as Error)?.message ?? t('Failed to save grant'));
     }
   }, [canSubmit, mutate, permissions, subjectId, subjectType, t, upsertGrant]);
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void handleSave();
+    },
+    [handleSave],
+  );
+
+  const handleEdit = useCallback((grant: DatasourceGrantDTO) => {
+    setSubjectType(grant.subjectType);
+    setSubjectId(grant.subjectId);
+    setPermissions(grant.permissions);
+  }, []);
 
   const handleDelete = useCallback(
     async (grant: DatasourceGrantDTO) => {
@@ -131,14 +198,15 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
           </Alert>
         ) : null}
 
-        <div className="grid gap-4 border-b pb-5">
-          <div className="grid gap-3 md:grid-cols-[160px_minmax(180px,1fr)]">
+        <form className="grid gap-4 border-b pb-5" onSubmit={handleSubmit}>
+          <div className="grid gap-3 lg:grid-cols-[160px_minmax(220px,1fr)]">
             <div className="grid gap-2">
               <Label htmlFor="grant-subject-type">{t('Subject Type')}</Label>
               <Select
                 value={subjectType}
                 onValueChange={(value) => {
                   setSubjectType(value as GrantSubjectType);
+                  setSubjectId('');
                 }}
                 disabled={!canManage || saving}
               >
@@ -152,19 +220,42 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="grant-subject-id">{t('Subject ID')}</Label>
-              <Input
-                id="grant-subject-id"
-                value={subjectId}
-                onChange={(event) => {
-                  setSubjectId(event.target.value);
-                }}
-                placeholder={subjectType === 'role' ? t('eg analyst') : t('eg 1001')}
-                autoComplete="off"
+              <Label>{t('Choose subject')}</Label>
+              <SubjectSelector
+                subjectType={subjectType}
+                subjectId={subjectId}
+                users={subjectsData?.users ?? []}
+                roles={subjectsData?.roles ?? []}
+                loading={subjectsLoading}
                 disabled={!canManage || saving}
+                onSubjectIdChange={setSubjectId}
               />
             </div>
           </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="grant-subject-id">{t('Manual Subject ID')}</Label>
+            <Input
+              id="grant-subject-id"
+              value={subjectId}
+              onChange={(event) => {
+                setSubjectId(event.target.value);
+              }}
+              placeholder={subjectType === 'role' ? t('eg analyst') : t('eg 1001')}
+              autoComplete="off"
+              disabled={!canManage || saving}
+            />
+          </div>
+
+          {selectedGrant ? (
+            <Alert>
+              <RiEdit2Line className="h-4 w-4" aria-hidden="true" />
+              <AlertTitle>{t('Existing grant selected')}</AlertTitle>
+              <AlertDescription>
+                {t('Saving will update the existing grant for this subject')}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <div className="grid gap-2">
             <p className="text-sm font-medium leading-none">{t('Permissions')}</p>
@@ -194,19 +285,16 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
           </div>
 
           <div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={!canSubmit}
-              onClick={() => {
-                void handleSave();
-              }}
-            >
-              <RiAddLine className="h-4 w-4" aria-hidden="true" />
-              {saving ? t('Saving…') : t('Save Grant')}
+            <Button type="submit" size="sm" disabled={!canSubmit}>
+              {selectedGrant ? (
+                <RiEdit2Line className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <RiAddLine className="h-4 w-4" aria-hidden="true" />
+              )}
+              {saving ? t('Saving…') : selectedGrant ? t('Update Grant') : t('Save Grant')}
             </Button>
           </div>
-        </div>
+        </form>
 
         {isLoading ? (
           <div className="space-y-2">
@@ -219,59 +307,216 @@ export function AccessPanel({ datasourceId }: AccessPanelProps) {
             {t('No datasource grants')}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('Subject')}</TableHead>
-                <TableHead>{t('Permissions')}</TableHead>
-                <TableHead>{t('Updated')}</TableHead>
-                <TableHead className="w-16 text-right">{t('Actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grants.map((grant) => (
-                <TableRow key={grantKey(grant)}>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium">
-                        {grant.subjectType === 'role' ? t('Role') : t('User')}
-                      </span>
-                      <span className="text-muted-foreground">{grant.subjectId}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {grant.permissions.map((permission) => (
-                        <Badge key={permission} variant="outline">
-                          {t(permission)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateTime(grant.updatedAt ?? grant.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      disabled={!canManage || deletingKey === grantKey(grant)}
-                      aria-label={t('Remove grant')}
-                      onClick={() => {
-                        void handleDelete(grant);
-                      }}
-                    >
-                      <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[720px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('Subject')}</TableHead>
+                  <TableHead>{t('Permissions')}</TableHead>
+                  <TableHead>{t('Updated')}</TableHead>
+                  <TableHead className="w-24 text-right">{t('Actions')}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {grants.map((grant) => {
+                  const rowKey = grantKey(grant);
+                  return (
+                    <TableRow key={rowKey}>
+                      <TableCell>
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <span className="font-medium">
+                            {grant.subjectType === 'role' ? t('Role') : t('User')}
+                          </span>
+                          <span className="break-all text-muted-foreground">{grant.subjectId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1.5">
+                          {grant.permissions.map((permission) => (
+                            <Badge key={permission} variant="outline">
+                              {t(permissionLabelByValue[permission] ?? permission)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDateTime(grant.updatedAt ?? grant.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            disabled={!canManage || saving}
+                            aria-label={t('Edit grant')}
+                            onClick={() => {
+                              handleEdit(grant);
+                            }}
+                          >
+                            <RiEdit2Line className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            disabled={!canManage || deletingKey === rowKey}
+                            aria-label={t('Remove grant')}
+                            onClick={() => {
+                              setGrantPendingDelete(grant);
+                            }}
+                          >
+                            <RiDeleteBinLine className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={Boolean(grantPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setGrantPendingDelete(null);
+        }}
+        title={t('Confirm Remove Grant')}
+        description={
+          grantPendingDelete
+            ? t(`Remove grant for '{subject}'? This cannot be undone`, {
+                subject: `${grantPendingDelete.subjectType}:${grantPendingDelete.subjectId}`,
+              })
+            : undefined
+        }
+        confirmText={t('Remove')}
+        loading={grantPendingDelete ? deletingKey === grantKey(grantPendingDelete) : false}
+        onConfirm={async () => {
+          if (!grantPendingDelete) return;
+          await handleDelete(grantPendingDelete);
+          setGrantPendingDelete(null);
+        }}
+      />
     </Card>
+  );
+}
+
+interface SubjectSelectorProps {
+  subjectType: GrantSubjectType;
+  subjectId: string;
+  users: GrantSubjectUserDTO[];
+  roles: GrantSubjectRoleDTO[];
+  loading: boolean;
+  disabled: boolean;
+  onSubjectIdChange: (subjectId: string) => void;
+}
+
+function SubjectSelector({
+  subjectType,
+  subjectId,
+  users,
+  roles,
+  loading,
+  disabled,
+  onSubjectIdChange,
+}: SubjectSelectorProps) {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+  const selectedRole = subjectType === 'role' ? roles.find((role) => role.id === subjectId) : null;
+  const selectedUser =
+    subjectType === 'user' ? users.find((user) => userSubjectId(user) === subjectId) : null;
+  const displayValue =
+    selectedRole?.name ?? (selectedUser ? userDisplayName(selectedUser) : subjectId.trim());
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-between font-normal"
+          disabled={disabled}
+          role="combobox"
+          aria-expanded={open}
+        >
+          <span className="min-w-0 truncate">
+            {displayValue || (loading ? t('Loading subjects…') : t('Choose subject'))}
+          </span>
+          <RiArrowDownSLine className="h-4 w-4 opacity-50" aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] max-w-[calc(100vw-2rem)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={t('Search subjects…')} />
+          <CommandList>
+            <CommandEmpty>{loading ? t('Loading subjects…') : t('No subjects found')}</CommandEmpty>
+            <CommandGroup>
+              {subjectType === 'role'
+                ? roles.map((role) => (
+                    <CommandItem
+                      key={role.id}
+                      value={`${role.id} ${role.name}`}
+                      onSelect={() => {
+                        onSubjectIdChange(role.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <div className="flex w-full min-w-0 items-center gap-2">
+                        <RiCheckLine
+                          className={cn(
+                            'h-4 w-4 shrink-0',
+                            subjectId === role.id ? 'opacity-100' : 'opacity-0',
+                          )}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{role.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {role.userCount} {t('users')}
+                          </div>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))
+                : users.map((user) => {
+                    const value = userSubjectId(user);
+                    const name = userDisplayName(user);
+                    return (
+                      <CommandItem
+                        key={user.id}
+                        value={`${user.id} ${name} ${user.username} ${user.email ?? ''}`}
+                        onSelect={() => {
+                          onSubjectIdChange(value);
+                          setOpen(false);
+                        }}
+                      >
+                        <div className="flex w-full min-w-0 items-center gap-2">
+                          <RiCheckLine
+                            className={cn(
+                              'h-4 w-4 shrink-0',
+                              subjectId === value ? 'opacity-100' : 'opacity-0',
+                            )}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium">{name}</div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {user.username} · {user.provider}
+                              {user.email ? ` · ${user.email}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

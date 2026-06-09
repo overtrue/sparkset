@@ -184,3 +184,27 @@
 - [x] Fix datasource list missing translation keys found during browser verification.
 - [x] Commit any validation fixes.
 - [x] Push final branch.
+
+## Stage 7: Grant Subject Directory
+
+**Goal:** Make datasource grants selectable from known users and roles instead of requiring operators to type raw subject IDs.
+
+**Success Criteria:**
+
+- Authenticated clients can load a compact authorization subject directory.
+- Directory includes active users and unique roles derived from user records.
+- Datasource access panel lets grant managers choose a role/user from a searchable selector.
+- Existing manual subject ID fallback remains available for unusual external identities.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/auth_subjects_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- Dashboard lint/build and browser verification for datasource access panel.
+
+- [x] Add failing server tests for user/role directory responses.
+- [x] Implement authorization subjects controller and route.
+- [x] Add dashboard API hook/types for grant subjects.
+- [x] Refactor access panel subject input into selector with manual fallback.
+- [x] Run automated and browser verification.
+- [x] Commit and push: `feat(authz): add grant subject directory`.

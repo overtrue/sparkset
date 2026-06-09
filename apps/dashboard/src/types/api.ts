@@ -116,6 +116,26 @@ export interface DatasourceGrantsResponse {
   canManage: boolean;
 }
 
+export interface GrantSubjectUserDTO {
+  id: number;
+  username: string;
+  email: string | null;
+  displayName: string | null;
+  provider: string;
+  roles: string[];
+}
+
+export interface GrantSubjectRoleDTO {
+  id: string;
+  name: string;
+  userCount: number;
+}
+
+export interface DatasourceGrantSubjectsResponse {
+  users: GrantSubjectUserDTO[];
+  roles: GrantSubjectRoleDTO[];
+}
+
 export interface UpsertDatasourceGrantDto {
   subjectType: GrantSubjectType;
   subjectId: string;

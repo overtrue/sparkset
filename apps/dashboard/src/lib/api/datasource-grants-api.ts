@@ -2,6 +2,7 @@ import { apiDelete, apiGet, apiPut } from '@/lib/fetch';
 import type {
   DatasourceGrantDTO,
   DatasourceGrantsResponse,
+  DatasourceGrantSubjectsResponse,
   GrantSubjectType,
   UpsertDatasourceGrantDto,
 } from '@/types/api';
@@ -10,6 +11,12 @@ export async function fetchDatasourceGrants(
   datasourceId: number,
 ): Promise<DatasourceGrantsResponse> {
   return apiGet<DatasourceGrantsResponse>(`/datasources/${datasourceId}/grants`);
+}
+
+export async function fetchDatasourceGrantSubjects(
+  datasourceId: number,
+): Promise<DatasourceGrantSubjectsResponse> {
+  return apiGet<DatasourceGrantSubjectsResponse>(`/datasources/${datasourceId}/grant-subjects`);
 }
 
 export async function upsertDatasourceGrant(

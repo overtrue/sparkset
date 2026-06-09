@@ -18,6 +18,7 @@ import {
 } from './datasources-api';
 import {
   deleteDatasourceGrant,
+  fetchDatasourceGrantSubjects,
   fetchDatasourceGrants,
   upsertDatasourceGrant,
 } from './datasource-grants-api';
@@ -33,6 +34,12 @@ export function useDatasource(id: number | null) {
 
 export function useDatasourceGrants(id: number | null) {
   return useSWR(id ? `/datasources/${id}/grants` : null, () => fetchDatasourceGrants(id!));
+}
+
+export function useDatasourceGrantSubjects(id: number | null) {
+  return useSWR(id ? `/datasources/${id}/grant-subjects` : null, () =>
+    fetchDatasourceGrantSubjects(id!),
+  );
 }
 
 // Mutations
