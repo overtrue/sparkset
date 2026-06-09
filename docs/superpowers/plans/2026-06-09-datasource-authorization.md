@@ -556,3 +556,22 @@
 - [x] Add failing controller test for disabled local registration.
 - [x] Enforce local registration config in `LocalAuthController`.
 - [x] Run focused validation.
+
+## Stage 24: Local Authentication Enabled Policy Enforcement
+
+**Goal:** Ensure direct HTTP local auth routes follow the `AUTH_LOCAL_ENABLED` provider policy.
+
+**Success Criteria:**
+
+- Disabled local auth prevents `/auth/local/login` from querying users or issuing cookies.
+- Disabled local auth prevents `/auth/local/register` from querying or creating users.
+- Existing local login and registration behavior remains unchanged when local auth is enabled.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing controller tests for disabled local login and registration.
+- [x] Enforce local provider `enabled()` in `LocalAuthController`.
+- [x] Run focused validation.

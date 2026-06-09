@@ -42,6 +42,13 @@ export default class LocalAuthController {
     response.clearCookie(ACCESS_TOKEN_SESSION_COOKIE, CLEAR_SESSION_COOKIE_OPTIONS);
   }
 
+  private localAuthDisabled(response: HttpContext['response']) {
+    return response.forbidden({
+      error: 'LOCAL_AUTH_DISABLED',
+      message: '本地账号密码认证已禁用',
+    });
+  }
+
   private async recordLoginFailure(
     ctx: HttpContext,
     input: {
@@ -125,6 +132,10 @@ export default class LocalAuthController {
     try {
       const originRejection = rejectUntrustedBrowserOrigin(ctx);
       if (originRejection) return originRejection;
+
+      if (!this.authProvider.enabled()) {
+        return this.localAuthDisabled(response);
+      }
 
       const { username, password } = request.body();
 
@@ -242,6 +253,10 @@ export default class LocalAuthController {
     try {
       const originRejection = rejectUntrustedBrowserOrigin(ctx);
       if (originRejection) return originRejection;
+
+      if (!this.authProvider.enabled()) {
+        return this.localAuthDisabled(response);
+      }
 
       const config = this.authProvider.getConfig();
       if (!config.allowRegistration) {

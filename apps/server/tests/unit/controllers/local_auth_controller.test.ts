@@ -113,6 +113,7 @@ const createMockContext = ({
 describe('LocalAuthController session cookies', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubEnv('AUTH_LOCAL_ENABLED', 'true');
     bcryptMock.compare.mockReset();
     bcryptMock.hash.mockReset();
     vi.spyOn(AuditLogService.prototype, 'recordHttp').mockResolvedValue(undefined);
@@ -198,6 +199,28 @@ describe('LocalAuthController session cookies', () => {
       }),
     );
     expect(response.statusCode).toBe(403);
+    expect(response.cookie).not.toHaveBeenCalled();
+  });
+
+  it('rejects local login when local authentication is disabled by configuration', async () => {
+    vi.stubEnv('AUTH_LOCAL_ENABLED', 'false');
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(null) as never);
+    const response = createMockResponse();
+
+    await new LocalAuthController().login(
+      createMockContext({
+        response,
+        body: { username: 'analyst', password: 'secret123' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(response.payload).toEqual(
+      expect.objectContaining({
+        error: 'LOCAL_AUTH_DISABLED',
+      }),
+    );
+    expect(User.query).not.toHaveBeenCalled();
     expect(response.cookie).not.toHaveBeenCalled();
   });
 
@@ -516,6 +539,33 @@ describe('LocalAuthController session cookies', () => {
         error: 'REGISTRATION_DISABLED',
       }),
     );
+    expect(User.create).not.toHaveBeenCalled();
+    expect(response.cookie).not.toHaveBeenCalled();
+  });
+
+  it('rejects local registration when local authentication is disabled by configuration', async () => {
+    vi.stubEnv('AUTH_LOCAL_ENABLED', 'false');
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(null) as never);
+    vi.spyOn(User, 'create').mockResolvedValue({ id: 99 } as never);
+    const response = createMockResponse();
+
+    await new LocalAuthController().register(
+      createMockContext({
+        response,
+        body: {
+          username: 'newuser',
+          password: 'secret123',
+        },
+      }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(response.payload).toEqual(
+      expect.objectContaining({
+        error: 'LOCAL_AUTH_DISABLED',
+      }),
+    );
+    expect(User.query).not.toHaveBeenCalled();
     expect(User.create).not.toHaveBeenCalled();
     expect(response.cookie).not.toHaveBeenCalled();
   });
