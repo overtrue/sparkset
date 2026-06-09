@@ -29,7 +29,10 @@ export class DatasourceService {
     return this.repo.list();
   }
 
-  async listAuthorized(user: AuthorizationUser): Promise<DataSource[]> {
+  async listAuthorized(
+    user: AuthorizationUser,
+    action: DatasourcePermission = 'datasource:view',
+  ): Promise<DataSource[]> {
     const list = await this.repo.list();
     if (!this.authorization) {
       return list;
@@ -37,7 +40,7 @@ export class DatasourceService {
 
     const result: DataSource[] = [];
     for (const datasource of list) {
-      const allowed = await this.authorization.can(user, 'datasource:view', {
+      const allowed = await this.authorization.can(user, action, {
         type: 'datasource',
         id: datasource.id,
       });

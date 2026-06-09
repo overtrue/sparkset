@@ -93,11 +93,13 @@
 - `pnpm --filter @sparkset/server test -- tests/unit/controllers/charts_controller.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-- [ ] Add failing tests for unauthorized query datasource selection.
-- [ ] Add failing tests for dataset preview and create permissions.
+- [x] Add failing tests for unauthorized query datasource selection.
+- [x] Add failing tests for dataset preview and create permissions.
+- [x] Run focused query/dataset tests and server typecheck.
+- [x] Commit and push query/dataset batch: `feat(authz): protect query and dataset access`.
 - [ ] Add failing tests for chart/dashboard/bot derived-resource visibility.
 - [ ] Wire authorization checks through the relevant controllers/services.
-- [ ] Run focused tests and typecheck.
+- [ ] Run derived-resource focused tests and typecheck.
 - [ ] Commit and push: `feat(authz): protect query and derived resources`.
 
 ## Stage 4: Dashboard Access Management UI

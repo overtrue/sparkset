@@ -67,10 +67,14 @@ interface Logger {
 const createMockContext = ({
   body,
   userId,
+  roles,
+  permissions,
   response,
 }: {
   body: Record<string, unknown>;
   userId?: number;
+  roles?: string[];
+  permissions?: string[];
   response: MockResponse;
 }): HttpContext & { logger: Logger } => {
   return {
@@ -78,7 +82,16 @@ const createMockContext = ({
       body: () => body,
     },
     response,
-    auth: userId ? { user: { id: userId } } : undefined,
+    auth: userId
+      ? {
+          user: {
+            id: userId,
+            roles: roles ?? [],
+            permissions: permissions ?? [],
+            isActive: true,
+          },
+        }
+      : undefined,
     logger: {
       error: vi.fn(),
       info: vi.fn(),
@@ -287,6 +300,42 @@ describe('QueriesController', () => {
     expect(response.payload?.code).toBe(QUERY_ERROR_CODES.RATE_LIMIT);
     expect(response.payload?.retryAfter).toBe(30);
     expect(response.headers['Retry-After']).toBe('30');
+  });
+
+  it('passes the authenticated user to the query service', async () => {
+    queryService.run.mockResolvedValue({
+      sql: 'SELECT 1',
+      rows: [{ value: 1 }],
+      summary: 'ok',
+    });
+    conversationService.create.mockResolvedValue({ id: 903 });
+    const response = createMockResponse();
+    const controller = createController();
+    const ctx = createMockContext({
+      body: {
+        question: 'show me one',
+        datasource: 3,
+      },
+      userId: 7,
+      roles: ['analyst'],
+      permissions: ['read:datasource'],
+      response,
+    });
+
+    await controller.run(ctx);
+
+    expect(queryService.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        question: 'show me one',
+        datasource: 3,
+      }),
+      {
+        id: 7,
+        roles: ['analyst'],
+        permissions: ['read:datasource'],
+        isActive: true,
+      },
+    );
   });
 
   it('maps database service errors to database payload', async () => {

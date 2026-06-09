@@ -9,6 +9,7 @@ import {
 import { ConversationService } from '../services/conversation_service';
 import { QueryService } from '../services/query_service';
 import { queryRequestSchema } from '../validators/query';
+import { getAuthenticatedUser } from '../utils/auth_context.js';
 import {
   buildInternalQueryErrorResponse,
   buildQueryErrorResponsePayload,
@@ -95,7 +96,7 @@ export default class QueriesController {
       }
 
       let conversationId = existingConversation?.id ?? 0;
-      const result = await this.service.run(parsed);
+      const result = await this.service.run(parsed, getAuthenticatedUser(ctx) ?? undefined);
 
       try {
         if (!conversationId) {
