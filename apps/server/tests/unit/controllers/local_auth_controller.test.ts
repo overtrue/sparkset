@@ -138,8 +138,33 @@ describe('LocalAuthController session cookies', () => {
       authenticated: false,
       enabled: true,
       allowRegistration: false,
+      oidcEnabled: false,
       message: '未认证',
     });
+  });
+
+  it('reports OIDC availability in unauthenticated status responses', async () => {
+    vi.stubEnv('AUTH_OIDC_ENABLED', 'true');
+    vi.stubEnv(
+      'AUTH_OIDC_AUTHORIZATION_URL',
+      'https://identity.example.test/realms/main/protocol/openid-connect/auth',
+    );
+    vi.stubEnv('AUTH_OIDC_CLIENT_ID', 'sparkset');
+    vi.stubEnv('AUTH_OIDC_REDIRECT_URI', 'https://sparkset.example.test/auth/oidc/callback');
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().status(
+      createMockContext({
+        response,
+      }),
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        authenticated: false,
+        oidcEnabled: true,
+      }),
+    );
   });
 
   it('sets an httpOnly session cookie without returning token after a successful local login', async () => {

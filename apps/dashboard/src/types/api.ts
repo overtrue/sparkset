@@ -550,6 +550,7 @@ export interface AuthResponse {
   user?: AuthUser;
   enabled?: boolean;
   allowRegistration?: boolean;
+  oidcEnabled?: boolean;
   error?: string;
   message?: string;
 }

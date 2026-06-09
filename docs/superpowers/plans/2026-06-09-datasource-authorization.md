@@ -640,3 +640,27 @@
 - [x] Declare missing auth/OIDC/browser-origin env keys.
 - [x] Align OIDC env examples with runtime config.
 - [x] Run focused validation.
+
+## Stage 28: OIDC Login Entry Visibility
+
+**Goal:** Let the dashboard login page discover configured OIDC login capability and present an SSO entry point.
+
+**Success Criteria:**
+
+- `/auth/local/status` reports whether OIDC login is enabled and fully configured.
+- AuthContext exposes OIDC availability without leaking OIDC secrets.
+- Login page shows an SSO button only when OIDC is available.
+- Clicking the SSO button requests `/auth/oidc/url` and redirects to the returned authorization URL.
+- Default local/header login behavior remains unchanged when OIDC is unavailable.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+- `pnpm --filter @sparkset/dashboard build`
+
+- [x] Add failing status test for OIDC availability.
+- [x] Return OIDC availability from auth status.
+- [x] Wire dashboard AuthContext and login page SSO entry.
+- [x] Run focused validation and browser verification.

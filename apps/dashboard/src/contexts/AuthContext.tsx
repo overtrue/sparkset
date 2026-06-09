@@ -35,6 +35,9 @@ interface AuthContextType {
     enabled: boolean;
     allowRegistration: boolean;
   };
+  oidcAuth: {
+    enabled: boolean;
+  };
   checkAuth: () => Promise<void>;
   login: (username: string, password: string) => Promise<boolean>;
   register: (
@@ -63,6 +66,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     enabled: false,
     allowRegistration: false,
   });
+  const [oidcAuth, setOidcAuth] = useState({
+    enabled: false,
+  });
   const lastSessionExpiredNoticeAtRef = useRef(0);
 
   const clearAuthState = useCallback(() => {
@@ -81,6 +87,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLocalAuth({
         enabled: Boolean(response.enabled),
         allowRegistration: Boolean(response.allowRegistration),
+      });
+      setOidcAuth({
+        enabled: Boolean(response.oidcEnabled),
       });
 
       if (response.authenticated && response.user) {
@@ -229,6 +238,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     authenticated,
     localAuth,
+    oidcAuth,
     checkAuth,
     login,
     register,

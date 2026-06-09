@@ -2,6 +2,7 @@ import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
 import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
+import { getOIDCAuthConfig } from '../../config/auth.js';
 import { rejectUntrustedBrowserOrigin } from '../security/trusted_origins.js';
 import { AuditLogService } from '../services/audit_log_service.js';
 import { LocalLoginAttemptLimiter } from '../services/local_login_attempt_limiter.js';
@@ -51,9 +52,16 @@ export default class LocalAuthController {
 
   private localAuthCapabilities() {
     const config = this.authProvider.getConfig();
+    const oidcConfig = getOIDCAuthConfig();
     return {
       enabled: this.authProvider.enabled(),
       allowRegistration: config.allowRegistration,
+      oidcEnabled: Boolean(
+        oidcConfig.enabled &&
+        oidcConfig.authorizationUrl &&
+        oidcConfig.clientId &&
+        oidcConfig.redirectUri,
+      ),
     };
   }
 
