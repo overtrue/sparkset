@@ -1,7 +1,19 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
-import { AccessTokenGuard } from '#guards/access_token_guard';
+import { ACCESS_TOKEN_SESSION_COOKIE, AccessTokenGuard } from '#guards/access_token_guard';
+
+const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+  maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+};
+const CLEAR_SESSION_COOKIE_OPTIONS = {
+  path: '/',
+};
 
 /**
  * Local Auth Controller
@@ -16,22 +28,21 @@ export default class LocalAuthController {
     this.authProvider = new LocalAuthProvider();
   }
 
+  private setSessionCookie(response: HttpContext['response'], token: string): void {
+    response.cookie(ACCESS_TOKEN_SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+  }
+
+  private clearSessionCookie(response: HttpContext['response']): void {
+    response.clearCookie(ACCESS_TOKEN_SESSION_COOKIE, CLEAR_SESSION_COOKIE_OPTIONS);
+  }
+
   /**
    * 检查认证状态
-   * 支持从 Authorization header 或 localStorage token 验证
+   * 支持从 Authorization header、x-access-token 或 httpOnly session cookie 验证
    */
   async status(ctx: HttpContext) {
-    const { request } = ctx;
-    // 尝试从 Authorization header 获取 token
-    const authHeader = request.header('authorization');
-    let token: string | null = null;
-
-    if (authHeader && typeof authHeader === 'string') {
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      if (match) {
-        token = match[1];
-      }
-    }
+    const guard = new AccessTokenGuard(ctx);
+    const token = guard.getRequestToken();
 
     if (!token) {
       return {
@@ -42,7 +53,6 @@ export default class LocalAuthController {
     }
 
     // 使用 Access Token Guard 验证 token
-    const guard = new AccessTokenGuard(ctx);
     try {
       const user = await guard.authenticate();
 
@@ -120,10 +130,10 @@ export default class LocalAuthController {
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `login_${Date.now()}`);
+      this.setSessionCookie(response, token);
 
       ctx.logger.info({ username: user.username }, 'Local login success');
 
-      // 当前 dashboard 仍消费 bearer token；后续 httpOnly cookie 迁移需与客户端认证状态一起切换。
       return {
         authenticated: true,
         token,
@@ -214,6 +224,7 @@ export default class LocalAuthController {
       // 使用 Access Token Guard 生成令牌
       const guard = new AccessTokenGuard(ctx);
       const { token } = await guard.generateToken(user, `register_${Date.now()}`);
+      this.setSessionCookie(response, token);
 
       return {
         authenticated: true,
@@ -241,24 +252,17 @@ export default class LocalAuthController {
    * 登出 - 撤销 Access Token
    */
   async logout(ctx: HttpContext) {
-    const { request, response } = ctx;
+    const { response } = ctx;
     try {
-      // 从 Authorization header 获取 token
-      const authHeader = request.header('authorization');
-      let token: string | null = null;
-
-      if (authHeader && typeof authHeader === 'string') {
-        const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        if (match) {
-          token = match[1];
-        }
-      }
+      const guard = new AccessTokenGuard(ctx);
+      const token = guard.getRequestToken();
 
       if (token) {
         // 撤销令牌
-        const guard = new AccessTokenGuard(ctx);
         await guard.revokeToken(token);
       }
+
+      this.clearSessionCookie(response);
 
       return {
         success: true,
@@ -277,20 +281,13 @@ export default class LocalAuthController {
    * 刷新令牌 - 生成新的 Access Token
    */
   async refresh(ctx: HttpContext) {
-    const { request, response } = ctx;
+    const { response } = ctx;
     try {
-      // 从 Authorization header 获取旧 token
-      const authHeader = request.header('authorization');
-      let oldToken: string | null = null;
-
-      if (authHeader && typeof authHeader === 'string') {
-        const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        if (match) {
-          oldToken = match[1];
-        }
-      }
+      const guard = new AccessTokenGuard(ctx);
+      const oldToken = guard.getRequestToken();
 
       if (!oldToken) {
+        this.clearSessionCookie(response);
         return response.unauthorized({
           error: 'NO_TOKEN',
           message: '缺少访问令牌',
@@ -298,7 +295,6 @@ export default class LocalAuthController {
       }
 
       // 验证旧令牌并获取用户
-      const guard = new AccessTokenGuard(ctx);
       const user = await guard.authenticate();
 
       // 撤销旧令牌
@@ -306,6 +302,7 @@ export default class LocalAuthController {
 
       // 生成新令牌
       const { token } = await guard.generateToken(user, `refresh_${Date.now()}`);
+      this.setSessionCookie(response, token);
 
       return {
         success: true,
@@ -322,6 +319,7 @@ export default class LocalAuthController {
       };
     } catch (error) {
       ctx.logger.error({ error }, 'Refresh token error');
+      this.clearSessionCookie(response);
       return response.unauthorized({
         error: 'INVALID_TOKEN',
         message: '令牌无效，需要重新登录',

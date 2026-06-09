@@ -14,14 +14,16 @@ export interface AccessTokenGuardConfig {
   tokenLength: number; // 令牌长度
   tokenExpiry: string | null; // 默认过期时间，null 表示永不过期
   tokenHashAlgo: 'sha256'; // 令牌哈希算法
+  sessionCookieName: string; // 浏览器会话 cookie 名称
 }
 
 /**
  * Access Token Guard
  *
- * 使用数据库存储的访问令牌进行 API 认证
- * 客户端将令牌存储在 localStorage 中
+ * 使用数据库存储的访问令牌进行认证。
+ * API 客户端可使用 Bearer token，浏览器客户端使用 httpOnly session cookie。
  */
+export const ACCESS_TOKEN_SESSION_COOKIE = 'sparkset_session';
 const GUARD_KNOWN_EVENTS = Symbol.for('GUARD_KNOWN_EVENTS');
 
 // @ts-expect-error - GUARD_KNOWN_EVENTS symbol property exists but TypeScript can't verify it
@@ -42,6 +44,7 @@ export class AccessTokenGuard implements GuardContract<User> {
       tokenLength: config?.tokenLength || 64,
       tokenExpiry: config?.tokenExpiry || null,
       tokenHashAlgo: config?.tokenHashAlgo || 'sha256',
+      sessionCookieName: config?.sessionCookieName || ACCESS_TOKEN_SESSION_COOKIE,
     };
   }
 
@@ -108,8 +111,8 @@ export class AccessTokenGuard implements GuardContract<User> {
     // 标记认证已尝试
     this._authenticationAttempted = true;
 
-    // 从请求头获取令牌
-    const token = this.extractTokenFromRequest();
+    // 从 header 或 cookie 获取令牌
+    const token = this.getRequestToken();
     if (!token) {
       throw new AuthenticationException('No access token provided');
     }
@@ -146,7 +149,7 @@ export class AccessTokenGuard implements GuardContract<User> {
   /**
    * 从请求中提取令牌
    */
-  private extractTokenFromRequest(): string | null {
+  getRequestToken(): string | null {
     const authHeader = this.ctx.request.header('authorization');
 
     if (authHeader && typeof authHeader === 'string') {
@@ -161,6 +164,11 @@ export class AccessTokenGuard implements GuardContract<User> {
     const tokenHeader = this.ctx.request.header('x-access-token');
     if (tokenHeader && typeof tokenHeader === 'string') {
       return tokenHeader;
+    }
+
+    const cookieToken = this.ctx.request.cookie(this.config.sessionCookieName);
+    if (cookieToken && typeof cookieToken === 'string') {
+      return cookieToken;
     }
 
     return null;
@@ -300,5 +308,6 @@ export function createAccessTokenGuard(ctx: HttpContext): AccessTokenGuard {
     tokenLength: 64,
     tokenExpiry: '7d', // 默认 7 天过期
     tokenHashAlgo: 'sha256',
+    sessionCookieName: ACCESS_TOKEN_SESSION_COOKIE,
   });
 }

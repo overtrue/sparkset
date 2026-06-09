@@ -37,7 +37,12 @@ export default async function RootLayout({ children }: Props) {
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning className={inter.variable}>
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={inter.variable}
+      data-scroll-behavior="smooth"
+    >
       <body>
         <TranslationsProvider translations={dictionary}>
           <ThemeProvider>

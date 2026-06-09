@@ -7,7 +7,7 @@ import User from './user.js';
  * Access Token 模型
  *
  * 用于 API 认证的访问令牌
- * 令牌存储在数据库中，客户端存储在 localStorage
+ * 令牌哈希存储在数据库中，浏览器客户端通过 httpOnly session cookie 持有明文令牌。
  */
 export default class AccessToken extends BaseModel {
   static table = 'access_tokens';
