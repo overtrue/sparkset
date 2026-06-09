@@ -1,8 +1,45 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
-import { AuthProvider } from '#types/auth';
+import type { AuthConfig, AuthProvider, AuthProviderRegistration } from '#types/auth';
 import { HeaderAuthProvider } from '#providers/header_auth_provider';
 import { LocalAuthProvider } from '#providers/local_auth_provider';
+import { getAuthConfig } from '../../config/auth.js';
+
+type AuthProviderFactoryRegistration = AuthProviderRegistration & {
+  createProvider?: () => AuthProvider;
+};
+
+export interface AuthManagerOptions {
+  config?: AuthConfig;
+  providers?: AuthProvider[];
+}
+
+export function buildAuthProviderRegistry(
+  config: AuthConfig = getAuthConfig(),
+): AuthProviderFactoryRegistration[] {
+  return [
+    {
+      name: 'header',
+      enabled: config.header.enabled,
+      implemented: true,
+      priority: 10,
+      createProvider: () => new HeaderAuthProvider(config.header),
+    },
+    {
+      name: 'local',
+      enabled: config.local.enabled,
+      implemented: true,
+      priority: 20,
+      createProvider: () => new LocalAuthProvider(config.local),
+    },
+    {
+      name: 'oidc',
+      enabled: config.oidc.enabled,
+      implemented: false,
+      priority: 30,
+    },
+  ];
+}
 
 /**
  * AuthManager - 认证调度器
@@ -12,25 +49,32 @@ import { LocalAuthProvider } from '#providers/local_auth_provider';
  */
 export class AuthManager {
   private providers: AuthProvider[] = [];
+  private registry: AuthProviderRegistration[] = [];
 
-  constructor() {
-    this.registerProviders();
+  constructor(options: AuthManagerOptions = {}) {
+    if (options.providers) {
+      this.providers = [...options.providers];
+      return;
+    }
+
+    this.registerProviders(options.config ?? getAuthConfig());
   }
 
   /**
    * 注册所有认证提供者
    */
-  private registerProviders(): void {
-    // Header Provider（内网推荐，优先级最高）
-    this.providers.push(new HeaderAuthProvider());
-
-    // Local Provider（开发/演示）
-    this.providers.push(new LocalAuthProvider());
-
-    // TODO: OIDC Provider（企业部署）
-    // if (config.oidc.enabled) {
-    //   this.providers.push(new OIDCAuthProvider())
-    // }
+  private registerProviders(config: AuthConfig): void {
+    const registry = buildAuthProviderRegistry(config);
+    this.registry = registry.map((entry) => ({
+      name: entry.name,
+      enabled: entry.enabled,
+      implemented: entry.implemented,
+      priority: entry.priority,
+    }));
+    this.providers = registry.flatMap((entry) => {
+      if (!entry.implemented || !entry.createProvider) return [];
+      return [entry.createProvider()];
+    });
   }
 
   /**
@@ -51,7 +95,7 @@ export class AuthManager {
         // 尝试认证
         const user = await provider.authenticate(ctx);
         if (user) {
-          console.log(`✅ Auth success via ${provider.name}: ${user.username}`);
+          console.log(`Auth success via ${provider.name}: ${user.username}`);
           return user;
         }
       } catch (error) {
@@ -62,7 +106,7 @@ export class AuthManager {
     }
 
     // 所有提供者都失败
-    console.log('❌ All auth providers failed');
+    console.log('All auth providers failed');
     return null;
   }
 
@@ -70,7 +114,14 @@ export class AuthManager {
    * 获取所有已注册的提供者
    */
   getProviders(): AuthProvider[] {
-    return this.providers;
+    return [...this.providers];
+  }
+
+  /**
+   * 获取 provider 注册表，包含尚未实现但已定义的标准接入边界
+   */
+  getProviderRegistry(): AuthProviderRegistration[] {
+    return [...this.registry];
   }
 
   /**

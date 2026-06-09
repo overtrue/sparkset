@@ -5,6 +5,8 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
 
+export type AuthProviderName = 'header' | 'local' | 'oidc';
+
 /**
  * AuthProvider 接口 - 所有认证提供者必须实现
  */
@@ -78,4 +80,11 @@ export interface AuthConfig {
   header: HeaderAuthConfig;
   local: LocalAuthConfig;
   oidc: OIDCAuthConfig;
+}
+
+export interface AuthProviderRegistration {
+  name: AuthProviderName;
+  enabled: boolean;
+  implemented: boolean;
+  priority: number;
 }

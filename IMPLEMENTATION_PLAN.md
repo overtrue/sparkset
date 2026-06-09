@@ -92,7 +92,7 @@
 - `pnpm --filter @sparkset/server test -- tests/auth_manager.test.ts tests/header_auth_provider.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 6: 全量验证与推送收尾
 

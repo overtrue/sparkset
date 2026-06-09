@@ -1,8 +1,10 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
-import { AuthProvider } from '#types/auth';
-import { LocalAuthConfig } from '#types/auth';
+import type { AuthProvider, LocalAuthConfig } from '#types/auth';
+import { getLocalAuthConfig } from '../../config/auth.js';
 import bcrypt from 'bcrypt';
+
+type LocalAuthConfigResolver = () => LocalAuthConfig;
 
 /**
  * Local Authentication Provider
@@ -28,9 +30,14 @@ import bcrypt from 'bcrypt';
  */
 export class LocalAuthProvider implements AuthProvider {
   name = 'local';
+  private resolveConfig: LocalAuthConfigResolver;
+
+  constructor(config: LocalAuthConfig | LocalAuthConfigResolver = getLocalAuthConfig) {
+    this.resolveConfig = typeof config === 'function' ? config : () => config;
+  }
 
   enabled(): boolean {
-    return process.env.AUTH_LOCAL_ENABLED === 'true';
+    return this.getConfig().enabled;
   }
 
   canHandle(ctx: HttpContext): boolean {
@@ -194,21 +201,7 @@ export class LocalAuthProvider implements AuthProvider {
   /**
    * 获取配置
    */
-  private getConfig(): LocalAuthConfig {
-    const enabled = process.env.AUTH_LOCAL_ENABLED === 'true';
-    const allowRegistration = process.env.AUTH_LOCAL_ALLOW_REGISTRATION !== 'false';
-    const defaultRoles = process.env.AUTH_LOCAL_DEFAULT_ROLES
-      ? process.env.AUTH_LOCAL_DEFAULT_ROLES.split(',')
-      : ['viewer'];
-    const defaultPermissions = process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS
-      ? process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS.split(',')
-      : ['read:datasource', 'read:action', 'read:conversation'];
-
-    return {
-      enabled,
-      allowRegistration,
-      defaultRoles,
-      defaultPermissions,
-    };
+  getConfig(): LocalAuthConfig {
+    return this.resolveConfig();
   }
 }

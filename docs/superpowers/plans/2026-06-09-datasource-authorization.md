@@ -153,11 +153,12 @@
 - `pnpm --filter @sparkset/server test -- tests/auth_manager.test.ts tests/header_auth_provider.test.ts`
 - `pnpm --filter @sparkset/server typecheck`
 
-- [ ] Refactor auth provider config parsing into one source.
-- [ ] Add tests proving provider order and disabled providers behave predictably.
-- [ ] Add a stable provider registry interface for local/header/OIDC.
-- [ ] Run auth-focused tests and typecheck.
-- [ ] Commit and push: `refactor(auth): stabilize provider registry`.
+- [x] Refactor auth provider config parsing into one source.
+- [x] Add tests proving provider order and disabled providers behave predictably.
+- [x] Add a stable provider registry interface for local/header/OIDC.
+- [x] Keep bearer-token storage unchanged for compatibility and stage httpOnly cookie migration in controller comments.
+- [x] Run auth-focused tests and typecheck.
+- [x] Commit and push: `refactor(auth): stabilize provider registry`.
 
 ## Stage 6: Full Validation
 

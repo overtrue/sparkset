@@ -123,10 +123,10 @@ export default class LocalAuthController {
 
       ctx.logger.info({ username: user.username }, 'Local login success');
 
-      // 返回令牌给客户端（客户端存储在 localStorage）
+      // 当前 dashboard 仍消费 bearer token；后续 httpOnly cookie 迁移需与客户端认证状态一起切换。
       return {
         authenticated: true,
-        token, // 重要：返回给客户端存储在 localStorage
+        token,
         user: {
           id: user.id,
           username: user.username,
@@ -194,7 +194,7 @@ export default class LocalAuthController {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // 获取配置
-      const config = this.authProvider['getConfig']();
+      const config = this.authProvider.getConfig();
 
       // 创建用户
       const user = await User.create({
@@ -217,7 +217,7 @@ export default class LocalAuthController {
 
       return {
         authenticated: true,
-        token, // 重要：返回给客户端存储在 localStorage
+        token,
         user: {
           id: user.id,
           username: user.username,
@@ -309,7 +309,7 @@ export default class LocalAuthController {
 
       return {
         success: true,
-        token, // 新令牌
+        token,
         user: {
           id: user.id,
           username: user.username,

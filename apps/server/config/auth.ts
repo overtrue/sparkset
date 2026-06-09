@@ -2,18 +2,27 @@
  * 认证配置文件
  */
 
-import { AuthConfig, HeaderAuthConfig, LocalAuthConfig, OIDCAuthConfig } from '#types/auth';
+import type { AuthConfig, HeaderAuthConfig, LocalAuthConfig, OIDCAuthConfig } from '#types/auth';
+
+function splitEnvList(value: string | undefined, fallback: string[]): string[] {
+  if (!value) return fallback;
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export function getHeaderAuthConfig(): HeaderAuthConfig {
   return {
     enabled: process.env.AUTH_HEADER_ENABLED === 'true',
-    trustedProxies: process.env.AUTH_HEADER_TRUSTED_PROXIES
-      ? process.env.AUTH_HEADER_TRUSTED_PROXIES.split(',').map((s) => s.trim())
-      : ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'],
+    trustedProxies: splitEnvList(process.env.AUTH_HEADER_TRUSTED_PROXIES, [
+      '127.0.0.1',
+      '10.0.0.0/8',
+      '172.16.0.0/12',
+      '192.168.0.0/16',
+    ]),
     headerPrefix: process.env.AUTH_HEADER_PREFIX || 'X-User-',
-    requiredHeaders: process.env.AUTH_HEADER_REQUIRED
-      ? process.env.AUTH_HEADER_REQUIRED.split(',').map((s) => s.trim())
-      : ['Id'],
+    requiredHeaders: splitEnvList(process.env.AUTH_HEADER_REQUIRED, ['Id']),
   };
 }
 
@@ -24,12 +33,12 @@ export function getLocalAuthConfig(): LocalAuthConfig {
   return {
     enabled,
     allowRegistration: process.env.AUTH_LOCAL_ALLOW_REGISTRATION !== 'false',
-    defaultRoles: process.env.AUTH_LOCAL_DEFAULT_ROLES
-      ? process.env.AUTH_LOCAL_DEFAULT_ROLES.split(',')
-      : ['viewer'],
-    defaultPermissions: process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS
-      ? process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS.split(',')
-      : ['read:datasource', 'read:action', 'read:conversation'],
+    defaultRoles: splitEnvList(process.env.AUTH_LOCAL_DEFAULT_ROLES, ['viewer']),
+    defaultPermissions: splitEnvList(process.env.AUTH_LOCAL_DEFAULT_PERMISSIONS, [
+      'read:datasource',
+      'read:action',
+      'read:conversation',
+    ]),
     devUsers: [
       {
         username: 'admin',

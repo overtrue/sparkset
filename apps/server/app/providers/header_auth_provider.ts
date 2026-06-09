@@ -1,6 +1,9 @@
 import { HttpContext } from '@adonisjs/core/http';
 import User from '#models/user';
-import { AuthProvider, HeaderAuthConfig } from '#types/auth';
+import type { AuthProvider, HeaderAuthConfig } from '#types/auth';
+import { getHeaderAuthConfig } from '../../config/auth.js';
+
+type HeaderAuthConfigResolver = () => HeaderAuthConfig;
 
 /**
  * Header Authentication Provider
@@ -23,11 +26,14 @@ import { AuthProvider, HeaderAuthConfig } from '#types/auth';
  */
 export class HeaderAuthProvider implements AuthProvider {
   name = 'header';
+  private resolveConfig: HeaderAuthConfigResolver;
+
+  constructor(config: HeaderAuthConfig | HeaderAuthConfigResolver = getHeaderAuthConfig) {
+    this.resolveConfig = typeof config === 'function' ? config : () => config;
+  }
 
   enabled(): boolean {
-    // 从环境变量或配置读取
-    const enabled = process.env.AUTH_HEADER_ENABLED === 'true';
-    return enabled;
+    return this.getConfig().enabled;
   }
 
   canHandle(ctx: HttpContext): boolean {
@@ -156,23 +162,8 @@ export class HeaderAuthProvider implements AuthProvider {
   /**
    * 获取配置
    */
-  private getConfig(): HeaderAuthConfig {
-    // 从环境变量读取配置
-    const enabled = process.env.AUTH_HEADER_ENABLED === 'true';
-    const trustedProxies = process.env.AUTH_HEADER_TRUSTED_PROXIES
-      ? process.env.AUTH_HEADER_TRUSTED_PROXIES.split(',')
-      : ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'];
-    const headerPrefix = process.env.AUTH_HEADER_PREFIX || 'X-User-';
-    const requiredHeaders = process.env.AUTH_HEADER_REQUIRED
-      ? process.env.AUTH_HEADER_REQUIRED.split(',')
-      : ['Id'];
-
-    return {
-      enabled,
-      trustedProxies,
-      headerPrefix,
-      requiredHeaders,
-    };
+  getConfig(): HeaderAuthConfig {
+    return this.resolveConfig();
   }
 
   /**
