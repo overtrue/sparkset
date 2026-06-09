@@ -46,7 +46,7 @@
 - [x] Implement authorization types and service.
 - [x] Add grant repository/model/migration.
 - [x] Run focused tests and typecheck.
-- [ ] Commit and push: `feat(authz): add datasource authorization core`.
+- [x] Commit and push: `feat(authz): add datasource authorization core`.
 
 ## Stage 2: Datasource API Enforcement
 
@@ -72,7 +72,7 @@
 - [x] Wire `AuthorizationService` into datasource controller/service.
 - [x] Add `/datasources/:id/grants` management endpoints.
 - [x] Run focused tests and typecheck.
-- [ ] Commit and push: `feat(authz): enforce datasource permissions`.
+- [x] Commit and push: `feat(authz): enforce datasource permissions`.
 
 ## Stage 3: Query And Derived Resource Enforcement
 
@@ -130,12 +130,12 @@
 - Message parity check for `en.json` and `zh-CN.json`.
 - Browser verification for datasource detail access tab.
 
-- [ ] Add API client and hooks for datasource grants.
-- [ ] Add access panel component.
-- [ ] Mount access panel in datasource detail page.
-- [ ] Add i18n keys and run parity check.
-- [ ] Run dashboard lint/build and browser verification.
-- [ ] Commit and push: `feat(dashboard): add datasource access management`.
+- [x] Add API client and hooks for datasource grants.
+- [x] Add access panel component.
+- [x] Mount access panel in datasource detail page.
+- [x] Add i18n keys and run parity check.
+- [x] Run dashboard lint/build and browser verification.
+- [x] Commit and push: `feat(dashboard): add datasource access management`.
 
 ## Stage 5: Authentication Provider Hardening
 

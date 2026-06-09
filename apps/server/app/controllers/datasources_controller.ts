@@ -353,11 +353,12 @@ export default class DatasourcesController {
     if (!datasource) {
       return response.notFound({ message: 'Datasource not found' });
     }
-    if (!(await this.canAccess(ctx, id, 'datasource:grant'))) {
-      return this.forbidden(response, 'datasource:grant');
+    if (!(await this.canAccess(ctx, id, 'datasource:view'))) {
+      return this.forbidden(response, 'datasource:view');
     }
 
-    return response.ok({ items: await this.service.listGrants(id) });
+    const canManage = await this.canAccess(ctx, id, 'datasource:grant');
+    return response.ok({ items: await this.service.listGrants(id), canManage });
   }
 
   async grant(ctx: HttpContext) {

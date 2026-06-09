@@ -90,6 +90,38 @@ export interface DatasourceDetailDTO extends Datasource {
   tables: TableSchemaDTO[];
 }
 
+export type DatasourcePermission =
+  | 'datasource:view'
+  | 'datasource:query'
+  | 'datasource:sync_schema'
+  | 'datasource:manage'
+  | 'datasource:manage_credentials'
+  | 'datasource:grant';
+
+export type GrantSubjectType = 'user' | 'role';
+
+export interface DatasourceGrantDTO {
+  id?: number;
+  datasourceId: number;
+  subjectType: GrantSubjectType;
+  subjectId: string;
+  permissions: DatasourcePermission[];
+  createdBy?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface DatasourceGrantsResponse {
+  items: DatasourceGrantDTO[];
+  canManage: boolean;
+}
+
+export interface UpsertDatasourceGrantDto {
+  subjectType: GrantSubjectType;
+  subjectId: string;
+  permissions: DatasourcePermission[];
+}
+
 // ============================================================================
 // Dataset Types
 // ============================================================================

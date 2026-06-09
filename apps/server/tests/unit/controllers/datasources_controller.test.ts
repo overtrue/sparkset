@@ -14,6 +14,7 @@ interface DatasourceServiceMock {
   update: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
   setDefault: ReturnType<typeof vi.fn>;
+  listGrants: ReturnType<typeof vi.fn>;
 }
 
 interface SchemaServiceMock {
@@ -140,6 +141,7 @@ describe('DatasourcesController authorization', () => {
       update: vi.fn(),
       remove: vi.fn(),
       setDefault: vi.fn(),
+      listGrants: vi.fn(),
     };
     schemaService = {
       sync: vi.fn(),
@@ -223,5 +225,52 @@ describe('DatasourcesController authorization', () => {
       { type: 'datasource', id: 5 },
     );
     expect(response.statusCode).toBe(403);
+  });
+
+  it('allows read-only grant listing for datasource viewers', async () => {
+    const response = createMockResponse();
+    datasourceService.get.mockResolvedValue(datasource({ id: 5 }));
+    datasourceService.listGrants.mockResolvedValue([
+      {
+        id: 1,
+        datasourceId: 5,
+        subjectType: 'role',
+        subjectId: 'analyst',
+        permissions: ['datasource:view'],
+      },
+    ]);
+    authorizationService.can.mockImplementation((_user, action) => action === 'datasource:view');
+    const controller = createController();
+
+    await controller.grants(
+      createMockContext({
+        response,
+        params: { id: '5' },
+        user: { id: 7 },
+      }),
+    );
+
+    expect(authorizationService.can).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:view',
+      { type: 'datasource', id: 5 },
+    );
+    expect(authorizationService.can).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+      'datasource:grant',
+      { type: 'datasource', id: 5 },
+    );
+    expect(response.payload).toEqual({
+      items: [
+        {
+          id: 1,
+          datasourceId: 5,
+          subjectType: 'role',
+          subjectId: 'analyst',
+          permissions: ['datasource:view'],
+        },
+      ],
+      canManage: false,
+    });
   });
 });

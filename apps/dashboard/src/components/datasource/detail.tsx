@@ -27,6 +27,7 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { AccessPanel } from './access-panel';
 import { SchemaEditor } from './schema-editor';
 
 type DatasourceForm = CreateDatasourceDto & { isDefault?: boolean };
@@ -195,27 +196,27 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label className="text-muted-foreground">{t('Name')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Name')}</p>
               <p className="text-sm font-medium">{datasource.name}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">{t('Type')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Type')}</p>
               <p className="text-sm font-medium uppercase">{datasource.type}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">{t('Host')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Host')}</p>
               <p className="text-sm font-medium">{`${datasource.host}:${datasource.port}`}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">{t('Database')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Database')}</p>
               <p className="text-sm font-medium">{datasource.database}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">{t('Username')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Username')}</p>
               <p className="text-sm font-medium">{datasource.username}</p>
             </div>
             <div>
-              <Label className="text-muted-foreground">{t('Last Synced')}</Label>
+              <p className="text-sm text-muted-foreground">{t('Last Synced')}</p>
               <p className="text-sm font-medium text-muted-foreground">
                 {formatDateTime(datasource.lastSyncAt)}
               </p>
@@ -223,6 +224,8 @@ export default function DatasourceDetail({ initial }: { initial: DatasourceDetai
           </div>
         </CardContent>
       </Card>
+
+      <AccessPanel datasourceId={datasource.id} />
 
       <SchemaEditor
         datasource={datasource}

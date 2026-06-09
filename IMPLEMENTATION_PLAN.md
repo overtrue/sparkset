@@ -69,11 +69,14 @@
 
 **Tests**:
 
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/datasources_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
 - `pnpm --filter @sparkset/dashboard lint`
 - `pnpm --filter @sparkset/dashboard build`
+- messages JSON key parity check
 - Browser 验证数据源详情访问管理
 
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 5: 账号 Provider 稳定化
 

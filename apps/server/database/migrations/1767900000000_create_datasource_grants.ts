@@ -19,11 +19,10 @@ export default class extends BaseSchema {
 
     const hasGrantsTable = await this.schema.hasTable(this.grantsTable);
     if (!hasGrantsTable) {
-      this.schema.createTable(this.grantsTable, (table) => {
+      await this.schema.createTable(this.grantsTable, (table) => {
         table.increments('id').primary();
         table
           .integer('datasource_id')
-          .unsigned()
           .notNullable()
           .references('id')
           .inTable('datasources')
@@ -42,6 +41,29 @@ export default class extends BaseSchema {
         table.index(['datasource_id'], 'datasource_grants_datasource_id_idx');
         table.index(['subject_type', 'subject_id'], 'datasource_grants_subject_idx');
       });
+    } else {
+      await this.db.rawQuery(
+        `ALTER TABLE \`${this.grantsTable}\` MODIFY \`datasource_id\` INT NOT NULL`,
+      );
+    }
+
+    const [constraints] = await this.db.rawQuery(
+      `
+        SELECT CONSTRAINT_NAME
+        FROM information_schema.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = 'datasource_id'
+          AND REFERENCED_TABLE_NAME = 'datasources'
+      `,
+      [this.grantsTable],
+    );
+    if (!Array.isArray(constraints) || constraints.length === 0) {
+      await this.db.rawQuery(
+        `ALTER TABLE \`${this.grantsTable}\`
+          ADD CONSTRAINT \`datasource_grants_datasource_id_foreign\`
+          FOREIGN KEY (\`datasource_id\`) REFERENCES \`${this.datasourcesTable}\`(\`id\`) ON DELETE CASCADE`,
+      );
     }
   }
 

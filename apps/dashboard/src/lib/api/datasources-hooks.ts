@@ -1,6 +1,11 @@
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
-import type { CreateDatasourceDto, TestConnectionDto } from '@/types/api';
+import type {
+  CreateDatasourceDto,
+  GrantSubjectType,
+  TestConnectionDto,
+  UpsertDatasourceGrantDto,
+} from '@/types/api';
 import {
   fetchDatasources,
   fetchDatasourceById,
@@ -11,6 +16,11 @@ import {
   syncDatasource,
   setDefaultDatasource,
 } from './datasources-api';
+import {
+  deleteDatasourceGrant,
+  fetchDatasourceGrants,
+  upsertDatasourceGrant,
+} from './datasource-grants-api';
 
 // SWR Hooks - only for client components
 export function useDatasources() {
@@ -19,6 +29,10 @@ export function useDatasources() {
 
 export function useDatasource(id: number | null) {
   return useSWR(id ? `/datasources/${id}` : null, () => fetchDatasourceById(id!));
+}
+
+export function useDatasourceGrants(id: number | null) {
+  return useSWR(id ? `/datasources/${id}/grants` : null, () => fetchDatasourceGrants(id!));
 }
 
 // Mutations
@@ -62,4 +76,22 @@ export function useSetDefaultDatasource() {
   return useSWRMutation('/datasources/set-default', async (_, { arg }: { arg: number }) => {
     return setDefaultDatasource(arg);
   });
+}
+
+export function useUpsertDatasourceGrant(datasourceId: number | null) {
+  return useSWRMutation(
+    datasourceId ? `/datasources/${datasourceId}/grants` : null,
+    async (_, { arg }: { arg: UpsertDatasourceGrantDto }) => {
+      return upsertDatasourceGrant(datasourceId!, arg);
+    },
+  );
+}
+
+export function useDeleteDatasourceGrant(datasourceId: number | null) {
+  return useSWRMutation(
+    datasourceId ? `/datasources/${datasourceId}/grants` : null,
+    async (_, { arg }: { arg: { subjectType: GrantSubjectType; subjectId: string } }) => {
+      return deleteDatasourceGrant(datasourceId!, arg.subjectType, arg.subjectId);
+    },
+  );
 }
