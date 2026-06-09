@@ -537,3 +537,22 @@
 - [x] Extend OIDC auth config with authorization URL and redirect URI.
 - [x] Implement OIDC auth URL controller and route.
 - [x] Run focused validation.
+
+## Stage 23: Local Registration Configuration Enforcement
+
+**Goal:** Ensure the HTTP local registration endpoint follows the same `allowRegistration` policy as the local auth provider.
+
+**Success Criteria:**
+
+- `AUTH_LOCAL_ALLOW_REGISTRATION=false` prevents `/auth/local/register` from creating users.
+- Disabled registration returns a clear 403 response.
+- Existing successful registration behavior remains unchanged when registration is enabled.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing controller test for disabled local registration.
+- [x] Enforce local registration config in `LocalAuthController`.
+- [x] Run focused validation.

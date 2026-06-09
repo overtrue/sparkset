@@ -243,6 +243,14 @@ export default class LocalAuthController {
       const originRejection = rejectUntrustedBrowserOrigin(ctx);
       if (originRejection) return originRejection;
 
+      const config = this.authProvider.getConfig();
+      if (!config.allowRegistration) {
+        return response.forbidden({
+          error: 'REGISTRATION_DISABLED',
+          message: '注册功能已禁用',
+        });
+      }
+
       const { username, password, email, displayName } = request.body();
 
       // 验证输入
@@ -283,9 +291,6 @@ export default class LocalAuthController {
       // 哈希密码
       const bcrypt = await import('bcrypt');
       const passwordHash = await bcrypt.hash(password, 10);
-
-      // 获取配置
-      const config = this.authProvider.getConfig();
 
       // 创建用户
       const user = await User.create({

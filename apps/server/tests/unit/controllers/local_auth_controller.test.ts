@@ -478,6 +478,48 @@ describe('LocalAuthController session cookies', () => {
     );
   });
 
+  it('rejects local registration when registration is disabled by configuration', async () => {
+    vi.stubEnv('AUTH_LOCAL_ALLOW_REGISTRATION', 'false');
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(null) as never);
+    vi.spyOn(User, 'create').mockResolvedValue({
+      id: 99,
+      username: 'newuser',
+      email: 'newuser@example.com',
+      displayName: 'newuser',
+      roles: ['viewer'],
+      permissions: [],
+      provider: 'local',
+      passwordHash: 'hashed-password',
+      isActive: true,
+    } as never);
+    bcryptMock.hash.mockResolvedValue('hashed-password');
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_register_token',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+    const response = createMockResponse();
+
+    await new LocalAuthController().register(
+      createMockContext({
+        response,
+        body: {
+          username: 'newuser',
+          password: 'secret123',
+          email: 'newuser@example.com',
+        },
+      }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(response.payload).toEqual(
+      expect.objectContaining({
+        error: 'REGISTRATION_DISABLED',
+      }),
+    );
+    expect(User.create).not.toHaveBeenCalled();
+    expect(response.cookie).not.toHaveBeenCalled();
+  });
+
   it('revokes the cookie token and clears the session cookie on logout', async () => {
     vi.spyOn(AccessTokenGuard.prototype, 'revokeToken').mockResolvedValue(undefined);
     const response = createMockResponse();
