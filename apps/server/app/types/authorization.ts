@@ -15,6 +15,7 @@ export const GLOBAL_AUTHORIZATION_ACTIONS = [
   'action:view',
   'action:execute',
   'action:manage',
+  'audit_log:view',
 ] as const;
 
 export type DatasourcePermission = (typeof DATASOURCE_PERMISSIONS)[number];

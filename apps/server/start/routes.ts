@@ -25,6 +25,7 @@ const DashboardWidgetsController = () => import('#controllers/dashboard_widgets_
 const BotsController = () => import('#controllers/bots_controller');
 const WebhooksController = () => import('#controllers/webhooks_controller');
 const AuthSubjectsController = () => import('#controllers/auth_subjects_controller');
+const AuditLogsController = () => import('#controllers/audit_logs_controller');
 
 // Public routes
 router.get('/health', [HealthController, 'handle']);
@@ -37,6 +38,8 @@ router.post('/auth/local/refresh', [LocalAuthController, 'refresh']);
 router.get('/auth/local/status', [LocalAuthController, 'status']);
 router.get('/auth/oidc/url', [OIDCAuthController, 'authorizationUrl']);
 router.get('/auth/oidc/callback', [OIDCAuthController, 'callback']);
+
+router.get('/audit-logs', [AuditLogsController, 'index']).middleware([apiAuthMiddleware]);
 
 // Datasource routes (requires authentication)
 router

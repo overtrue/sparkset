@@ -104,6 +104,9 @@ export class AuthorizationService {
       if (permission === 'action:*') {
         return action.startsWith('action:');
       }
+      if (permission === 'audit_log:*') {
+        return action.startsWith('audit_log:');
+      }
 
       return false;
     });

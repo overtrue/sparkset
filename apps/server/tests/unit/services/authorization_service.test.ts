@@ -7,7 +7,9 @@ import type {
   AuthorizationUser,
   DatasourceGrant,
   DatasourcePermission,
+  GlobalAuthorizationAction,
 } from '../../../app/types/authorization.js';
+import { GLOBAL_AUTHORIZATION_ACTIONS } from '../../../app/types/authorization.js';
 
 class FakeGrantReader implements DatasourceGrantReader {
   constructor(private readonly grants: DatasourceGrant[]) {}
@@ -137,6 +139,22 @@ describe('AuthorizationService', () => {
         'action:view',
       ),
     ).toBe(false);
+  });
+
+  it('treats audit log viewing as a first-class global permission', () => {
+    const service = new AuthorizationService(new FakeGrantReader([]));
+    const action = 'audit_log:view' as GlobalAuthorizationAction;
+
+    expect(GLOBAL_AUTHORIZATION_ACTIONS).toContain('audit_log:view');
+    expect(service.canPerformGlobalAction(user({ roles: ['admin'] }), action)).toBe(true);
+    expect(service.canPerformGlobalAction(user({ permissions: ['*'] }), action)).toBe(true);
+    expect(service.canPerformGlobalAction(user({ permissions: ['audit_log:*'] }), action)).toBe(
+      true,
+    );
+    expect(service.canPerformGlobalAction(user({ permissions: ['audit_log:view'] }), action)).toBe(
+      true,
+    );
+    expect(service.canPerformGlobalAction(user(), action)).toBe(false);
   });
 
   it('does not let legacy datasource read permissions bypass datasource grants', async () => {

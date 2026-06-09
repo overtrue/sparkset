@@ -820,3 +820,27 @@
 - [x] Implement OIDC callback audit records without leaking sensitive values.
 - [x] Update env examples and deployment docs.
 - [x] Run focused validation.
+
+## Stage 36: Audit Log Query API
+
+**Goal:** Make authentication and authorization audit records searchable through a safe, permission-gated API.
+
+**Success Criteria:**
+
+- `audit_log:view` is a first-class global permission, with `admin` and `*` continuing to allow it.
+- Authenticated users without `audit_log:view` cannot list audit logs.
+- `GET /audit-logs` returns audit records ordered by newest first with cursor pagination.
+- The endpoint supports filters for `outcome`, `action`, `resourceType`, `resourceId`, and `actorUserId`.
+- Audit metadata is redacted on read for sensitive keys such as tokens, codes, passwords, API keys, and client secrets.
+- `limit` defaults to 50 and is clamped to the range 1-100.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/services/authorization_service.test.ts tests/unit/services/audit_log_service.test.ts tests/unit/controllers/audit_logs_controller.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+
+- [x] Add failing tests for `audit_log:view` global permission.
+- [x] Add failing tests for audit log filtering, cursor pagination, and metadata redaction.
+- [x] Add failing controller tests for authentication, authorization, and safe query mapping.
+- [x] Implement audit log query service and controller route.
+- [x] Run focused validation.
