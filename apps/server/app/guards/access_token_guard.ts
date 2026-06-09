@@ -12,7 +12,7 @@ import crypto from 'crypto';
 export interface AccessTokenGuardConfig {
   tokenPrefix: string; // 令牌前缀，例如 "sat_" (sparkset access token)
   tokenLength: number; // 令牌长度
-  tokenExpiry: string | null; // 默认过期时间，null 表示永不过期
+  tokenExpiry: string | null; // 默认过期时间，null 表示永不过期（仅用于显式长期 API token）
   tokenHashAlgo: 'sha256'; // 令牌哈希算法
   sessionCookieName: string; // 浏览器会话 cookie 名称
 }
@@ -42,7 +42,7 @@ export class AccessTokenGuard implements GuardContract<User> {
     this.config = {
       tokenPrefix: config?.tokenPrefix || 'sat_',
       tokenLength: config?.tokenLength || 64,
-      tokenExpiry: config?.tokenExpiry || null,
+      tokenExpiry: config?.tokenExpiry || '7d',
       tokenHashAlgo: config?.tokenHashAlgo || 'sha256',
       sessionCookieName: config?.sessionCookieName || ACCESS_TOKEN_SESSION_COOKIE,
     };

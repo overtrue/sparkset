@@ -136,7 +136,6 @@ export default class LocalAuthController {
 
       return {
         authenticated: true,
-        token,
         user: {
           id: user.id,
           username: user.username,
@@ -228,7 +227,6 @@ export default class LocalAuthController {
 
       return {
         authenticated: true,
-        token,
         user: {
           id: user.id,
           username: user.username,
@@ -306,7 +304,6 @@ export default class LocalAuthController {
 
       return {
         success: true,
-        token,
         user: {
           id: user.id,
           username: user.username,

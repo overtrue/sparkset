@@ -233,3 +233,25 @@
 - [x] Implement Bot query runtime datasource scope and creator context.
 - [x] Run focused validation.
 - [x] Commit and push: `fix(authz): enforce runtime datasource bounds`.
+
+## Stage 9: Browser Session Token Hardening
+
+**Goal:** Make browser sessions cookie-only and time-limited by default.
+
+**Success Criteria:**
+
+- Local login, registration, and refresh set the httpOnly session cookie but do not return token in JSON.
+- Directly constructed `AccessTokenGuard` instances create 7-day expiring tokens by default.
+- Dashboard no longer exposes localStorage token reads as an authentication path.
+
+**Tests:**
+
+- `pnpm --filter @sparkset/server test -- tests/unit/controllers/local_auth_controller.test.ts tests/unit/guards/access_token_guard.test.ts`
+- `pnpm --filter @sparkset/server typecheck`
+- `pnpm --filter @sparkset/dashboard lint`
+
+- [x] Add failing tests for cookie-only login/register/refresh responses and default token expiry.
+- [x] Remove browser token from auth responses and set default guard expiry to 7 days.
+- [x] Remove dashboard localStorage token reads from the auth API.
+- [x] Run focused validation.
+- [x] Commit and push: `fix(auth): harden browser session tokens`.

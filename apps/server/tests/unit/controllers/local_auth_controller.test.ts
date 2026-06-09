@@ -7,6 +7,7 @@ import { AccessTokenGuard } from '#guards/access_token_guard';
 
 const bcryptMock = vi.hoisted(() => ({
   compare: vi.fn(),
+  hash: vi.fn(),
 }));
 
 vi.mock('bcrypt', () => bcryptMock);
@@ -95,13 +96,14 @@ describe('LocalAuthController session cookies', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     bcryptMock.compare.mockReset();
+    bcryptMock.hash.mockReset();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('sets an httpOnly session cookie after a successful local login', async () => {
+  it('sets an httpOnly session cookie without returning token after a successful local login', async () => {
     const user = {
       id: 1,
       username: 'analyst',
@@ -131,12 +133,58 @@ describe('LocalAuthController session cookies', () => {
     expect(result).toEqual(
       expect.objectContaining({
         authenticated: true,
-        token: 'sat_login_token',
       }),
     );
+    expect(result).not.toHaveProperty('token');
     expect(response.cookie).toHaveBeenCalledWith(
       'sparkset_session',
       'sat_login_token',
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      }),
+    );
+  });
+
+  it('sets an httpOnly session cookie without returning token after local registration', async () => {
+    const user = {
+      id: 2,
+      username: 'newuser',
+      email: 'newuser@example.com',
+      displayName: 'New User',
+      roles: ['viewer'],
+      permissions: [],
+      provider: 'local',
+      passwordHash: 'hashed-password',
+      isActive: true,
+    };
+    vi.spyOn(User, 'query').mockReturnValue(createUserQuery(null) as never);
+    vi.spyOn(User, 'create').mockResolvedValue(user as never);
+    bcryptMock.hash.mockResolvedValue('hashed-password');
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_register_token',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().register(
+      createMockContext({
+        response,
+        body: {
+          username: 'newuser',
+          password: 'secret123',
+          email: 'newuser@example.com',
+          displayName: 'New User',
+        },
+      }),
+    );
+
+    expect(result).toEqual(expect.objectContaining({ authenticated: true }));
+    expect(result).not.toHaveProperty('token');
+    expect(response.cookie).toHaveBeenCalledWith(
+      'sparkset_session',
+      'sat_register_token',
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'lax',
@@ -164,6 +212,46 @@ describe('LocalAuthController session cookies', () => {
     expect(response.clearCookie).toHaveBeenCalledWith(
       'sparkset_session',
       expect.objectContaining({ path: '/' }),
+    );
+  });
+
+  it('refreshes the session cookie without returning token in the response body', async () => {
+    const user = {
+      id: 1,
+      username: 'analyst',
+      email: 'analyst@example.com',
+      displayName: 'Analyst',
+      roles: ['admin'],
+      permissions: ['datasource:view'],
+      provider: 'local',
+      isActive: true,
+    };
+    vi.spyOn(AccessTokenGuard.prototype, 'authenticate').mockResolvedValue(user as never);
+    vi.spyOn(AccessTokenGuard.prototype, 'revokeToken').mockResolvedValue(undefined);
+    vi.spyOn(AccessTokenGuard.prototype, 'generateToken').mockResolvedValue({
+      token: 'sat_refreshed_token',
+      accessToken: {} as Awaited<ReturnType<AccessTokenGuard['generateToken']>>['accessToken'],
+    });
+    const response = createMockResponse();
+
+    const result = await new LocalAuthController().refresh(
+      createMockContext({
+        response,
+        sessionCookie: 'sat_old_token',
+      }),
+    );
+
+    expect(result).toEqual(expect.objectContaining({ success: true }));
+    expect(result).not.toHaveProperty('token');
+    expect(AccessTokenGuard.prototype.revokeToken).toHaveBeenCalledWith('sat_old_token');
+    expect(response.cookie).toHaveBeenCalledWith(
+      'sparkset_session',
+      'sat_refreshed_token',
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      }),
     );
   });
 });

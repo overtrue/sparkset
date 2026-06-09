@@ -522,7 +522,6 @@ export interface AuthUser {
 export interface AuthResponse {
   authenticated: boolean;
   user?: AuthUser;
-  token?: string;
   error?: string;
   message?: string;
 }

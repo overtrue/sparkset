@@ -7,7 +7,7 @@
 import { API_BASE_URL } from '@/lib/config';
 import { apiPost } from '@/lib/fetch';
 
-const TOKEN_KEY = 'sparkset_access_token';
+const LEGACY_TOKEN_KEY = 'sparkset_access_token';
 
 export interface AuthUser {
   id: number;
@@ -26,7 +26,6 @@ export interface AuthUser {
 export interface AuthResponse {
   authenticated: boolean;
   user?: AuthUser;
-  token?: string;
   error?: string;
   message?: string;
 }
@@ -44,31 +43,15 @@ export interface RegisterRequest {
 }
 
 /**
- * 获取旧版本地 Access Token。
- * 仅作为兼容读取保留，Dashboard 不再写入浏览器可读 token。
- */
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-/**
  * 清理旧版浏览器可读 token。
  */
 function clearLegacyAccessToken(): void {
   if (typeof window === 'undefined') return;
 
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
 
   // 清除旧版 JS 可读 cookie。新的 sparkset_session 由服务端 httpOnly cookie 管理。
-  document.cookie = `${TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-}
-
-/**
- * 仅检查是否存在旧版本地 token；真实认证状态应使用 checkAuthStatus。
- */
-export function isAuthenticated(): boolean {
-  return !!getAccessToken();
+  document.cookie = `${LEGACY_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
 /**
