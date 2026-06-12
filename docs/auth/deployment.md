@@ -343,9 +343,3 @@ auth:
       - '172.16.0.0/12'
     headerPrefix: 'X-User-'
 ```
-
-## 🔗 相关文档
-
-- [认证系统设计](../auth-spect.md) - 架构设计
-- [实施计划](../IMPLEMENTATION_PLAN.md) - 开发计划
-- [API 文档](./api.md) - 接口说明

@@ -271,9 +271,5 @@ function AuthButton() {
 
 ## 📚 文档索引
 
-- `auth-spect.md` - 完整设计文档
-- `IMPLEMENTATION_PLAN.md` - 详细实施计划
-- `implementation_summary.md` - 实施总结
-- `STAGE2_IMPLEMENTATION.md` - 前端实施总结
 - `deployment.md` - 部署指南
 - `QUICK_REFERENCE.md` - 快速参考（本文档）

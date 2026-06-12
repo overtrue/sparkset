@@ -63,7 +63,7 @@
 
 ### 1. Planning & Staging
 
-Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
+Break complex work into 3-5 stages when needed:
 
 ```markdown
 ## Stage N: [Name]
@@ -75,7 +75,6 @@ Break complex work into 3-5 stages. Document in `IMPLEMENTATION_PLAN.md`:
 ```
 
 - Update status as you progress
-- Remove file when all stages are done
 
 ### 2. Implementation Flow
 
