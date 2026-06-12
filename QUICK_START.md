@@ -160,13 +160,6 @@ A: 检查：
 - 数据集 ID 是否有效
 - ChartSpec 是否通过验证
 
-## 📞 技术支持
-
-查看详细文档：
-
-- `IMPLEMENTATION_PLAN.md` - 完整开发计划
-- `CHARTS_IMPLEMENTATION.md` - 实现总结
-
 ## ✅ 功能清单
 
 - [x] 数据集创建/列表/详情
