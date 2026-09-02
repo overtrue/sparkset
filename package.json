@@ -42,7 +42,7 @@
     ]
   },
   "dependencies": {
-    "mysql2": "^3.16.0"
+    "mysql2": "^3.22.0"
   },
   "pnpm": {
     "patchedDependencies": {
